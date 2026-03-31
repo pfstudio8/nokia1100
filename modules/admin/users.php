@@ -75,7 +75,7 @@ Layout::renderAdminSidebar('usuarios');
                                     </span>
                                 </td>
                                 <td>
-                                    <a class="btn-delete text-red-500 font-medium hover:underline text-sm" href="eliminar_usuario.php?id=<?php echo $row['id_usuario']; ?>" 
+                                    <a class="btn-delete text-red-500 font-medium hover:underline text-sm" href="delete_user.php?id=<?php echo $row['id_usuario']; ?>" 
                                        data-confirm="¿Seguro que deseas eliminar este usuario?" data-confirm-title="Eliminar Usuario">
                                         Eliminar
                                     </a>

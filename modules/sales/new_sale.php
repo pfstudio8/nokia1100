@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/../../config/db.php';
 if (!isset($_SESSION['user_id'])) {
@@ -229,10 +229,22 @@ if ($_SESSION['role'] === 'admin') {
             cart.push({ id, nombre, precio, cantidad });
         }
 
+        // --- Flying Animation ---
+        const btnRect = document.activeElement.getBoundingClientRect(); // Usually the add button
+        const flyingEl = document.createElement('div');
+        flyingEl.className = 'flying-to-cart';
+        flyingEl.innerHTML = `<span class="material-symbols-outlined text-[16px]">inventory_2</span> ${nombre.split(' ')[0]}`; // just first word
+        flyingEl.style.left = `${btnRect.left}px`;
+        flyingEl.style.top = `${btnRect.top}px`;
+        document.body.appendChild(flyingEl);
+
+        setTimeout(() => {
+            flyingEl.remove();
+        }, 600);
+
         updateCartTable();
         select.value = "";
         cantidadInput.value = 1;
-        showAlert('Producto agregado', 'success');
     }
 
     function removeFromCart(index) {
@@ -291,10 +303,9 @@ if ($_SESSION['role'] === 'admin') {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showAlert('Venta registrada con éxito', 'success');
-                setTimeout(() => {
-                    window.location.href = '<?php echo BASE_URL . ($_SESSION['role'] === 'admin' ? '/modules/admin/dashboard.php' : '/modules/employee/dashboard.php'); ?>';
-                }, 1000);
+                cart = [];
+                updateCartTable();
+                showSuccessModal(data.id_venta);
             } else {
                 showAlert(data.message, 'error');
             }
@@ -303,6 +314,37 @@ if ($_SESSION['role'] === 'admin') {
             console.error('Error:', error);
             showAlert('Error al procesar la venta', 'error');
         });
+    }
+
+    function showSuccessModal(idVenta) {
+        const overlay = document.createElement('div');
+        overlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center';
+        overlay.innerHTML = `
+            <div class="bg-surface border border-border rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl transform transition-all scale-100">
+                <div class="w-16 h-16 bg-primary/20 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="material-symbols-outlined text-3xl">check_circle</span>
+                </div>
+                <h3 class="text-xl font-display font-semibold text-text-main mb-2">¡Venta Exitosa!</h3>
+                <p class="text-text-muted text-sm mb-6">La transacción ha sido registrada correctamente en el sistema.</p>
+                
+                <div class="flex flex-col gap-3">
+                    <a href="invoice.php?id=${idVenta}" target="_blank" onclick="closeSuccessModal(this.parentElement.parentElement.parentElement)" class="w-full bg-primary text-background font-medium py-3 px-4 rounded-xl transition-all flex justify-center items-center gap-2 hover:bg-primary/90">
+                        <span class="material-symbols-outlined">print</span> Imprimir Factura
+                    </a>
+                    <button onclick="closeSuccessModal(this.parentElement.parentElement.parentElement)" class="w-full bg-surface border border-border text-text-main font-medium py-3 px-4 rounded-xl transition-all hover:bg-border">
+                        Nueva Venta
+                    </button>
+                    <a href="<?php echo BASE_URL . ($_SESSION['role'] === 'admin' ? '/modules/admin/dashboard.php' : '/modules/employee/dashboard.php'); ?>" class="w-full text-text-muted hover:text-text-main text-sm font-medium py-2 mt-2 transition-colors">
+                        Volver al Panel
+                    </a>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+    }
+
+    function closeSuccessModal(overlay) {
+        document.body.removeChild(overlay);
     }
 
     function showAlert(msg, type) {

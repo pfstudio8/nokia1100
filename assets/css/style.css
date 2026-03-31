@@ -270,3 +270,158 @@ td {
     font-size: 0.85rem;
     color: var(--text-muted);
 }
+
+/* Page Transitions */
+body {
+    opacity: 0;
+    animation: fadeInPage 0.4s ease-out forwards;
+}
+
+@keyframes fadeInPage {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+html.is-animating body {
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* 3D Hover Effects */
+.hover-3d-perspective {
+    perspective: 1000px;
+}
+.hover-3d-target {
+    transition: transform 0.1s ease-out, box-shadow 0.2s ease-out;
+    transform-style: preserve-3d;
+}
+
+/* FAB - Floating Action Button */
+.fab-container {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 99;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1rem;
+}
+
+.fab-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(20px);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fab-container:hover .fab-menu {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+}
+
+.fab-item {
+    background: var(--surface);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.5rem 1rem 0.5rem 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: background 0.2s, color 0.2s;
+}
+
+.fab-item:hover {
+    background: var(--primary-color);
+    color: var(--text-inverse);
+    border-color: var(--primary-color);
+}
+
+.fab-item .icon-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--surface-hover);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fab-item:hover .icon-circle {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.fab-main {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    color: var(--text-inverse);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 15px -3px rgba(33, 184, 189, 0.3);
+    cursor: pointer;
+    border: none;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.fab-main:hover {
+    transform: scale(1.05);
+    background: var(--primary-hover);
+}
+
+.fab-main .material-symbols-outlined {
+    font-size: 28px;
+    transition: transform 0.3s ease;
+}
+
+.fab-container:hover .fab-main .material-symbols-outlined {
+    transform: rotate(45deg);
+}
+
+/* Animations (Generic) */
+.pulse-badge {
+    animation: pulseBadge 2s infinite;
+}
+
+@keyframes pulseBadge {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
+    70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* Flying to Cart Animation */
+.flying-to-cart {
+    position: fixed;
+    z-index: 1000;
+    pointer-events: none;
+    animation: flyToCart 0.6s cubic-bezier(0.2, 1, 0.3, 1) forwards;
+    background: var(--surface);
+    border: 1px solid var(--primary-color);
+    color: var(--text-main);
+    padding: 0.5rem 1rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+@keyframes flyToCart {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(0.6) translateY(-20px); opacity: 0.8; }
+    100% { transform: scale(0.1); opacity: 0; }
+}

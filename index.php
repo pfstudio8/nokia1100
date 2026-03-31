@@ -28,14 +28,14 @@ if (isset($_SESSION['user_id'])) {
             theme: {
                 extend: {
                     colors: {
-                        background: "#131E3A",
-                        surface: "#FFFFFF",
-                        "surface-hover": "#F0F4F8",
-                        primary: "#21b8bd", /* Cyan requested by user */
-                        secondary: "#8FAADC",
-                        border: "#8FAADC",
-                        "text-main": "#0C1F3F",
-                        "text-muted": "#2F5DA8",
+                        background: "#0A0A0B",
+                        surface: "#111113",
+                        "surface-hover": "#18181B",
+                        primary: "#21b8bd",
+                        secondary: "#E04FEE",
+                        border: "#27272A",
+                        "text-main": "#FAFAFA",
+                        "text-muted": "#A1A1AA",
                     },
                     fontFamily: {
                         sans: ["Inter", "sans-serif"],
@@ -47,8 +47,8 @@ if (isset($_SESSION['user_id'])) {
     </script>
     <style>
         body {
-            background-color: #131E3A;
-            color: #0C1F3F;
+            background-color: #0A0A0B;
+            color: #FAFAFA;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -62,23 +62,21 @@ if (isset($_SESSION['user_id'])) {
             position: relative;
             width: 100%;
             max-width: 440px;
-            /* Default Login Width */
             transition: max-width 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            /* Bouncy beautiful delay */
             z-index: 10;
             margin: auto;
         }
 
         .auth-wrapper.is-register {
             max-width: 680px;
-            /* Register Width */
         }
 
         .auth-card {
-            background: rgba(255, 255, 255, 0.9);
+            background: rgba(17, 17, 19, 0.7);
             backdrop-filter: blur(24px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            box-shadow: 0 25px 50px -12px rgba(12, 31, 63, 0.25), 0 0 0 1px rgba(143, 170, 220, 0.2);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid #27272A;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
             border-radius: 24px;
             overflow: hidden;
             position: relative;
@@ -88,9 +86,7 @@ if (isset($_SESSION['user_id'])) {
         .auth-slider {
             display: flex;
             width: 200%;
-            /* 2 panels of 100% wrapper width */
             transition: transform 0.7s cubic-bezier(0.645, 0.045, 0.355, 1);
-            /* Smooth sliding */
         }
 
         .auth-panel {
@@ -128,10 +124,10 @@ if (isset($_SESSION['user_id'])) {
         .auth-input {
             width: 100%;
             padding: 0.85rem 1rem 0.85rem 2.8rem;
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid rgba(143, 170, 220, 0.5);
+            background: #0A0A0B;
+            border: 1px solid #27272A;
             border-radius: 12px;
-            color: #0C1F3F;
+            color: #FAFAFA;
             font-size: 0.95rem;
             transition: all 0.2s;
             font-weight: 500;
@@ -142,14 +138,15 @@ if (isset($_SESSION['user_id'])) {
         }
 
         .auth-input::placeholder {
-            color: rgba(47, 93, 168, 0.5);
+            color: #64748B;
             font-weight: 400;
         }
 
         .auth-input:focus {
             outline: none;
-            border-color: #2F5DA8;
-            box-shadow: 0 0 0 3px rgba(143, 170, 220, 0.3);
+            border-color: #21b8bd;
+            background: #111113;
+            box-shadow: 0 0 0 3px rgba(33, 184, 189, 0.15);
         }
 
         .input-icon {
@@ -157,21 +154,20 @@ if (isset($_SESSION['user_id'])) {
             left: 1rem;
             top: 50%;
             transform: translateY(-50%);
-            color: #2F5DA8;
+            color: #A1A1AA;
             font-size: 1.2rem;
             pointer-events: none;
             transition: color 0.2s;
         }
 
         .auth-input:focus~.input-icon {
-            color: #0C1F3F;
+            color: #21b8bd;
         }
 
         .auth-btn {
             width: 100%;
             padding: 0.85rem;
             background: #21b8bd;
-            /* Original cyan requested */
             color: #0A0A0B;
             font-weight: 600;
             font-family: 'Outfit', sans-serif;
@@ -180,7 +176,7 @@ if (isset($_SESSION['user_id'])) {
             border: none;
             font-size: 1rem;
             cursor: pointer;
-            box-shadow: 0 4px 6px -1px rgba(79, 224, 229, 0.3);
+            box-shadow: 0 4px 6px -1px rgba(33, 184, 189, 0.3);
         }
 
         .auth-btn:hover {
@@ -188,40 +184,12 @@ if (isset($_SESSION['user_id'])) {
             box-shadow: 0 10px 20px -10px rgba(33, 184, 189, 0.5);
             background: #1a9498;
         }
-
-        /* Floating background elements */
-        .ambient-glow-1 {
-            position: absolute;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(143, 170, 220, 0.15) 0%, transparent 70%);
-            top: -200px;
-            right: -200px;
-            border-radius: 50%;
-            z-index: 0;
-            filter: blur(50px);
-            pointer-events: none;
-        }
-
-        .ambient-glow-2 {
-            position: absolute;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(47, 93, 168, 0.2) 0%, transparent 70%);
-            bottom: -150px;
-            left: -150px;
-            border-radius: 50%;
-            z-index: 0;
-            filter: blur(50px);
-            pointer-events: none;
-        }
     </style>
 </head>
 
 <body class="font-sans antialiased text-text-main selection:bg-secondary/30 selection:text-text-main">
 
-    <div class="ambient-glow-1"></div>
-    <div class="ambient-glow-2"></div>
+
 
     <!-- Determine initial state based on URL parameters -->
     <?php
@@ -236,13 +204,15 @@ if (isset($_SESSION['user_id'])) {
                 <!-- LOGIN PANEL -->
                 <div class="auth-panel login-panel flex flex-col justify-center">
                     <div class="text-center mb-8">
+                        <img src="assets/img/hero_phone.png" alt="Nokia Phone"
+                            class="w-24 h-24 mx-auto mb-4 object-contain filter drop-shadow-[0_0_15px_rgba(33,184,189,0.3)] hover:scale-105 transition-transform duration-500">
                         <h1 class="text-3xl font-bold font-display tracking-tight text-text-main">NOKIA<span
                                 class="text-primary" style="color: #21b8bd;">1100</span></h1>
                     </div>
 
                     <?php if (isset($_GET['error']) && !$isRegister): ?>
                         <div
-                            class="bg-red-50 border border-red-200 text-red-600 text-sm p-4 rounded-xl mb-6 font-medium flex gap-3 items-center">
+                            class="bg-red-500/10 border border-red-500/20 text-red-500 text-sm p-4 rounded-xl mb-6 font-medium flex gap-3 items-center">
                             <span class="material-symbols-outlined text-lg">error</span>
                             <?php echo htmlspecialchars($_GET['error']); ?>
                         </div>
@@ -250,7 +220,7 @@ if (isset($_SESSION['user_id'])) {
 
                     <?php if (isset($_GET['success']) && !$isRegister): ?>
                         <div
-                            class="bg-green-50 border border-green-200 text-green-700 text-sm p-4 rounded-xl mb-6 font-medium flex gap-3 items-center">
+                            class="bg-green-500/10 border border-green-500/20 text-green-500 text-sm p-4 rounded-xl mb-6 font-medium flex gap-3 items-center">
                             <span class="material-symbols-outlined text-lg">check_circle</span>
                             <?php echo htmlspecialchars($_GET['success']); ?>
                         </div>
@@ -274,8 +244,8 @@ if (isset($_SESSION['user_id'])) {
                                     class="block text-xs font-bold text-text-muted uppercase tracking-wider">Credencial</label>
                                 <a href="#"
                                     onclick="alert('Funcionalidad de recuperación de contraseña disponible próximamente. Por favor contacte al administrador.'); return false;"
-                                    class="text-xs font-bold text-text-muted hover:text-text-main transition-colors"
-                                    style="color: #2F5DA8;">¿Olvidaste tu contraseña?</a>
+                                    class="text-xs font-bold text-primary hover:text-primary-hover transition-colors">¿Olvidaste
+                                    tu contraseña?</a>
                             </div>
                             <div class="relative flex flex-col-reverse">
                                 <input type="password" id="login-password" name="password" required
@@ -288,17 +258,19 @@ if (isset($_SESSION['user_id'])) {
                         <button type="submit" class="auth-btn mt-6 tracking-wide">INICIAR SESIÓN</button>
                     </form>
 
-                    <div class="text-center mt-8 text-sm text-text-muted font-semibold">
+                    <div class="text-center mt-8 text-sm text-text-muted font-medium">
                         ¿No tienes permisos?
                         <button type="button" onclick="toggleAuthMode('register')"
-                            class="hover:text-text-main transition-colors hover:underline font-bold bg-transparent border-none cursor-pointer"
-                            style="color: #2F5DA8;">Solicitar Acceso</button>
+                            class="text-primary hover:text-primary-hover transition-colors hover:underline font-semibold bg-transparent border-none cursor-pointer">Solicitar
+                            Acceso</button>
                     </div>
                 </div>
 
                 <!-- REGISTER PANEL -->
                 <div class="auth-panel register-panel flex flex-col justify-center">
                     <div class="text-center mb-6">
+                        <img src="assets/img/hero_phone.png" alt="Nokia Phone"
+                            class="w-16 h-16 mx-auto mb-3 object-contain filter drop-shadow-[0_0_15px_rgba(224,79,238,0.3)] hover:scale-105 transition-transform duration-500">
                         <h1 class="text-3xl font-bold font-display tracking-tight text-text-main">NOKIA<span
                                 class="text-primary" style="color: #21b8bd;">1100</span></h1>
                         <p class="text-[10px] text-text-muted mt-2 tracking-widest uppercase font-extrabold">Registro
@@ -307,7 +279,7 @@ if (isset($_SESSION['user_id'])) {
 
                     <?php if (isset($_GET['error']) && $isRegister): ?>
                         <div
-                            class="bg-red-50 border border-red-200 text-red-600 text-sm p-4 rounded-xl mb-4 font-medium flex gap-3 items-center">
+                            class="bg-red-500/10 border border-red-500/20 text-red-500 text-sm p-4 rounded-xl mb-4 font-medium flex gap-3 items-center">
                             <span class="material-symbols-outlined text-lg">error</span>
                             <?php echo htmlspecialchars($_GET['error']); ?>
                         </div>
@@ -377,8 +349,7 @@ if (isset($_SESSION['user_id'])) {
                                 <label for="rol"
                                     class="block text-[10px] font-bold text-text-muted mb-1 uppercase tracking-wide">Nivel
                                     de Acceso</label>
-                                <select id="rol" name="rol" required
-                                    class="auth-input no-icon !p-3 !appearance-none bg-[url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20width%3D%2220%22%20height%3D%2220%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cpath%20d%3D%22M5%207l5%205%205-5z%22%20fill%3D%22%232F5DA8%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[position:calc(100%-10px)_center] pr-10">
+                                <select id="rol" name="rol" required class="auth-input no-icon !p-3">
                                     <option value="empleado">Operario (Empleado)</option>
                                     <option value="admin">Administrador Global</option>
                                 </select>
@@ -388,11 +359,11 @@ if (isset($_SESSION['user_id'])) {
                         <button type="submit" class="auth-btn mt-4 tracking-wide">CREAR NUEVA CUENTA</button>
                     </form>
 
-                    <div class="text-center mt-6 text-sm text-text-muted font-bold">
+                    <div class="text-center mt-6 text-sm text-text-muted font-medium">
                         ¿Ya tienes credenciales?
                         <button type="button" onclick="toggleAuthMode('login')"
-                            class="hover:text-text-main transition-colors hover:underline font-bold bg-transparent border-none cursor-pointer"
-                            style="color: #2F5DA8;">Acceso Autorizado</button>
+                            class="text-primary hover:text-primary-hover transition-colors hover:underline font-semibold bg-transparent border-none cursor-pointer">Acceso
+                            Autorizado</button>
                     </div>
                 </div>
 

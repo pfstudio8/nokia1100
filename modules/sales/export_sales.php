@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/../../config/db.php';
 if (!isset($_SESSION['user_id'])) {
@@ -6,33 +6,39 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-header("Content-Type: application/vnd.ms-excel");
-header("Content-Disposition: attachment; filename=ventas_" . date('Y-m-d') . ".xls");
-header("Pragma: no-cache");
-header("Expires: 0");
+header('Content-Type: text/csv; charset=utf-8');
+header('Content-Disposition: attachment; filename=ventas_' . date('Y-m-d') . '.csv');
 
-$sql = "SELECT id_venta, fecha, total, metodo_de_pago FROM venta ORDER BY fecha DESC";
+$output = fopen('php://output', 'w');
+// Add UTF-8 BOM for right encoding in Excel
+fputs($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+fputcsv($output, ['ID Venta', 'Fecha', 'Total ($)', 'Metodo de Pago', 'Producto', 'Cantidad']);
+
+$sql = "SELECT 
+            v.id_venta, 
+            v.fecha, 
+            v.total, 
+            v.metodo_de_pago,
+            COALESCE(dv.nombre_producto, p.nombre) AS producto,
+            dv.cantidad
+        FROM venta v
+        LEFT JOIN detalle_venta dv ON v.id_venta = dv.id_venta
+        LEFT JOIN producto p ON dv.id_producto = p.id_producto
+        ORDER BY v.fecha DESC";
 $result = $conn->query($sql);
-
-echo "<table border='1'>";
-echo "<tr>
-        <th>ID Venta</th>
-        <th>Fecha</th>
-        <th>Total</th>
-        <th>Método de Pago</th>
-      </tr>";
 
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
-        echo "<tr>
-                <td>{$row['id_venta']}</td>
-                <td>{$row['fecha']}</td>
-                <td>{$row['total']}</td>
-                <td>{$row['metodo_de_pago']}</td>
-              </tr>";
+        fputcsv($output, [
+            $row['id_venta'],
+            $row['fecha'],
+            number_format($row['total'], 2, '.', ''),
+            $row['metodo_de_pago'],
+            $row['producto'] ? $row['producto'] : 'Desconocido',
+            $row['cantidad'] ? $row['cantidad'] : 1
+        ]);
     }
 }
-
-echo "</table>";
+fclose($output);
 exit;
-?>

@@ -53,7 +53,7 @@ Layout::renderAdminSidebar('ventas');
             <div style="display: flex; gap: 1rem; align-items: center; justify-content: flex-end; flex: 1;">
                 <input type="text" id="search-input" placeholder="Buscar venta..." style="width: 250px; padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 0.9rem;">
                 <a href="<?php echo BASE_URL; ?>/modules/admin/dashboard.php" class="btn-back">Volver</a>
-                <a href="exportar_sales.php" class="btn-export flex items-center gap-2">
+                <a href="export_sales.php" class="btn-export flex items-center gap-2">
                     <span class="material-symbols-outlined text-sm">download</span> Exportar
                 </a>
             </div>
@@ -69,6 +69,7 @@ Layout::renderAdminSidebar('ventas');
                         <th>Cantidad</th>
                         <th>Método</th>
                         <th style="text-align: right;">Total</th>
+                        <th style="text-align: right;">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -85,11 +86,16 @@ Layout::renderAdminSidebar('ventas');
                                     </span>
                                 </td>
                                 <td style="text-align: right; font-weight: 600;">$<?php echo number_format($row['total'], 2); ?></td>
+                                <td style="text-align: right;">
+                                    <a href="invoice.php?id=<?php echo $row['id_venta']; ?>" target="_blank" class="px-3 py-1 bg-surface border border-border rounded text-sm text-text-main hover:bg-border transition inline-flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[1rem]">print</span> Factura
+                                    </a>
+                                </td>
                             </tr>
                         <?php endwhile; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="6" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            <td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">
                                 No hay ventas registradas en el sistema.
                             </td>
                         </tr>
