@@ -1,6 +1,8 @@
 <?php
-class Layout {
-    public static function renderHead($title = "NOKIA1100") {
+class Layout
+{
+    public static function renderHead($title = "NOKIA1100")
+    {
         echo '<!DOCTYPE html>
 <html class="dark" lang="es">
 <head>
@@ -48,15 +50,17 @@ class Layout {
 <body class="font-sans antialiased text-text-main selection:bg-primary/20 selection:text-primary">';
     }
 
-    public static function renderAdminSidebar($activePage = '') {
+    public static function renderAdminSidebar($activePage = '')
+    {
         $username = isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : 'Admin';
         $initial = strtoupper(substr($username, 0, 1));
-        
+
         $links = [
             ['id' => 'dashboard', 'url' => BASE_URL . '/modules/admin/dashboard.php', 'icon' => 'dashboard', 'label' => 'Dashboard'],
             ['id' => 'inventario', 'url' => BASE_URL . '/modules/inventory/inventory.php', 'icon' => 'inventory_2', 'label' => 'Inventario'],
             ['id' => 'usuarios', 'url' => BASE_URL . '/modules/admin/users.php', 'icon' => 'group', 'label' => 'Usuarios'],
             ['id' => 'ventas', 'url' => BASE_URL . '/modules/sales/sales.php', 'icon' => 'payments', 'label' => 'Ventas'],
+            ['id' => 'graficos', 'url' => BASE_URL . '/modules/sales/sales_charts.php', 'icon' => 'bar_chart', 'label' => 'Estadísticas'],
             ['id' => 'proveedores', 'url' => BASE_URL . '/modules/suppliers/suppliers.php', 'icon' => 'local_shipping', 'label' => 'Proveedores'],
             ['id' => 'perfil', 'url' => BASE_URL . '/modules/admin/profile.php', 'icon' => 'person', 'label' => 'Mi Perfil'],
         ];
@@ -69,18 +73,18 @@ class Layout {
     </div>
     
     <nav class="flex-1 px-4 space-y-1 mt-4">';
-        
+
         foreach ($links as $l) {
             $isActive = ($activePage === $l['id']);
             if ($isActive) {
-                echo '<a href="'.$l['url'].'" class="flex items-center gap-3 px-4 py-3 bg-surface rounded-lg border border-border text-primary transition-colors">
-                        <span class="material-symbols-outlined">'.$l['icon'].'</span>
-                        <span class="text-sm font-medium">'.$l['label'].'</span>
+                echo '<a href="' . $l['url'] . '" class="flex items-center gap-3 px-4 py-3 bg-surface rounded-lg border border-border text-primary transition-colors">
+                        <span class="material-symbols-outlined">' . $l['icon'] . '</span>
+                        <span class="text-sm font-medium">' . $l['label'] . '</span>
                       </a>';
             } else {
-                echo '<a href="'.$l['url'].'" class="flex items-center gap-3 px-4 py-3 text-text-muted hover:text-text-main hover:bg-surface/50 rounded-lg transition-colors">
-                        <span class="material-symbols-outlined">'.$l['icon'].'</span>
-                        <span class="text-sm font-medium">'.$l['label'].'</span>
+                echo '<a href="' . $l['url'] . '" class="flex items-center gap-3 px-4 py-3 text-text-muted hover:text-text-main hover:bg-surface/50 rounded-lg transition-colors">
+                        <span class="material-symbols-outlined">' . $l['icon'] . '</span>
+                        <span class="text-sm font-medium">' . $l['label'] . '</span>
                       </a>';
             }
         }
@@ -95,10 +99,10 @@ class Layout {
         </a>
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-primary font-display font-medium">
-                '.$initial.'
+                ' . $initial . '
             </div>
             <div>
-                <p class="text-sm font-medium text-text-main">'.$username.'</p>
+                <p class="text-sm font-medium text-text-main">' . $username . '</p>
                 <p class="text-[10px] text-text-muted uppercase tracking-widest font-medium">Admin Level</p>
             </div>
         </div>
@@ -106,7 +110,8 @@ class Layout {
 </aside>';
     }
 
-    public static function renderEmployeeSidebar($activePage = '') {
+    public static function renderEmployeeSidebar($activePage = '')
+    {
         $username = isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : 'Empleado';
         $initial = strtoupper(substr($username, 0, 1));
 
@@ -129,10 +134,10 @@ class Layout {
     <div class="px-6 mb-8 mt-4">
         <div class="flex items-center gap-3 p-3 rounded-xl border border-border bg-surface">
             <div class="w-10 h-10 flex-shrink-0 rounded-full bg-border flex items-center justify-center text-primary font-display font-medium">
-                '.$initial.'
+                ' . $initial . '
             </div>
             <div class="overflow-hidden">
-                <div class="text-sm font-medium text-text-main truncate">'.$username.'</div>
+                <div class="text-sm font-medium text-text-main truncate">' . $username . '</div>
                 <div class="text-[10px] text-text-muted uppercase tracking-widest font-semibold">Operario</div>
             </div>
         </div>
@@ -143,14 +148,14 @@ class Layout {
         foreach ($links as $l) {
             $isActive = ($activePage === $l['id']);
             if ($isActive) {
-                echo '<a href="'.$l['url'].'" class="flex items-center gap-3 px-4 py-3 bg-surface rounded-lg border border-border text-primary transition-colors">
-                        <span class="material-symbols-outlined">'.$l['icon'].'</span>
-                        <span class="text-sm font-medium">'.$l['label'].'</span>
+                echo '<a href="' . $l['url'] . '" class="flex items-center gap-3 px-4 py-3 bg-surface rounded-lg border border-border text-primary transition-colors">
+                        <span class="material-symbols-outlined">' . $l['icon'] . '</span>
+                        <span class="text-sm font-medium">' . $l['label'] . '</span>
                       </a>';
             } else {
-                echo '<a href="'.$l['url'].'" class="flex items-center gap-3 px-4 py-3 text-text-muted hover:text-text-main hover:bg-surface/50 rounded-lg transition-colors">
-                        <span class="material-symbols-outlined">'.$l['icon'].'</span>
-                        <span class="text-sm font-medium">'.$l['label'].'</span>
+                echo '<a href="' . $l['url'] . '" class="flex items-center gap-3 px-4 py-3 text-text-muted hover:text-text-main hover:bg-surface/50 rounded-lg transition-colors">
+                        <span class="material-symbols-outlined">' . $l['icon'] . '</span>
+                        <span class="text-sm font-medium">' . $l['label'] . '</span>
                       </a>';
             }
         }
@@ -166,9 +171,10 @@ class Layout {
 </nav>';
     }
 
-    public static function renderFooter() {
+    public static function renderFooter()
+    {
         echo '
-<div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col items-end pointer-events-none"></div>
+<div id="toast-container" class="fixed bottom-4 left-4 z-50 flex flex-col items-start pointer-events-none"></div>
 <script src="' . BASE_URL . '/assets/js/main.js?v=' . time() . '"></script>
 </body></html>';
     }

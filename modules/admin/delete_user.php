@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . "/../../config/db.php";
 
@@ -23,14 +23,43 @@ if ($id == 1) {
     exit();
 }
 
+// Obtener el id_persona asociado
+$sql_get = "SELECT id_persona FROM usuario WHERE id_usuario = ?";
+$stmt_get = $conn->prepare($sql_get);
+$stmt_get->bind_param("i", $id);
+$stmt_get->execute();
+$result = $stmt_get->get_result();
+$id_persona = null;
+if ($row = $result->fetch_assoc()) {
+    $id_persona = $row['id_persona'];
+}
+$stmt_get->close();
+
+// Nullificar el id_usuario en las ventas para que no dé error de constraint (y mantener el historial de ventas)
+$sql_ventas = "UPDATE venta SET id_usuario = NULL WHERE id_usuario = ?";
+$stmt_ventas = $conn->prepare($sql_ventas);
+$stmt_ventas->bind_param("i", $id);
+$stmt_ventas->execute();
+$stmt_ventas->close();
+
 // Eliminar el usuario
 $sql = "DELETE FROM usuario WHERE id_usuario = ?";
 $stmt = $conn->prepare($sql);
 $stmt->bind_param("i", $id);
 
 if ($stmt->execute()) {
+    $stmt->close();
+    // Eliminar también la persona asociada a ese usuario para no dejar registros huérfanos
+    if ($id_persona) {
+        $sql_per = "DELETE FROM persona WHERE id_persona = ?";
+        $stmt_per = $conn->prepare($sql_per);
+        $stmt_per->bind_param("i", $id_persona);
+        $stmt_per->execute();
+        $stmt_per->close();
+    }
     header("Location: users.php?success=Usuario_eliminado");
 } else {
+    $stmt->close();
     header("Location: users.php?error=Error_al_eliminar");
 }
 

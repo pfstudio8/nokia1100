@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/../../config/db.php';
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
@@ -32,22 +32,7 @@ $ventasRecientes = $conn->query("
     ORDER BY fecha DESC LIMIT 5
 ");
 
-// 6. Chart Data
-$chartDataQuery = $conn->query("
-    SELECT DATE(fecha) as dia, SUM(total) as total_dia 
-    FROM venta 
-    WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-    GROUP BY DATE(fecha)
-    ORDER BY DATE(fecha) ASC
-");
-$labels = [];
-$data = [];
-if ($chartDataQuery && $chartDataQuery->num_rows > 0) {
-    while ($row = $chartDataQuery->fetch_assoc()) {
-        $labels[] = date('d M', strtotime($row['dia']));
-        $data[] = $row['total_dia'];
-    }
-}
+
 
 Layout::renderHead('NOKIA1100 | Admin Panel');
 Layout::renderAdminSidebar('dashboard');
@@ -55,7 +40,7 @@ Layout::renderAdminSidebar('dashboard');
 
 <main class="md:ml-64 p-8 min-h-screen">
     
-    <header class="flex justify-between items-end mb-10">
+    <header class="flex justify-between items-end mb-8">
         <div>
             <h1 class="text-3xl font-display font-medium text-text-main tracking-tight">Resumen Operativo</h1>
         </div>
@@ -66,10 +51,26 @@ Layout::renderAdminSidebar('dashboard');
         </div>
     </header>
 
+    <!-- Visual Banner -->
+    <section class="mb-10 w-full overflow-hidden rounded-2xl glass-card relative h-48 sm:h-56 flex items-center shadow-lg border-border">
+        <div class="absolute inset-0 z-0 bg-surface">
+            <!-- Background Image with Blend -->
+            <img src="<?php echo BASE_URL; ?>/assets/img/nokia_store_banner.png" alt="Nokia Premium Store" class="w-full h-full object-cover opacity-30 mix-blend-lighten filter brightness-110 saturate-150 transition-all duration-700 hover:scale-105 hover:opacity-40">
+            <!-- Gradient Overlay for Contrast -->
+            <div class="absolute inset-0 bg-gradient-to-r from-background via-background/60 to-transparent"></div>
+        </div>
+        
+        <div class="relative z-10 w-full p-8 md:p-10 flex flex-col justify-center h-full max-w-3xl">
+            <span class="text-[10px] font-bold text-primary tracking-widest uppercase mb-2">Panel Global de Tienda</span>
+            <h2 class="text-3xl md:text-4xl font-display font-bold text-text-main mb-3 drop-shadow-md">Bienvenido a la Central Nokia</h2>
+            <p class="text-sm text-text-muted font-medium max-w-md leading-relaxed">Supervisa todas las operaciones, controla el inventario y analiza el rendimiento general del sistema corporativo.</p>
+        </div>
+    </section>
+
     <!-- Metrics -->
     <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
         
-        <div class="glass-card p-6 rounded-2xl flex flex-col justify-between group hover:border-border/80 transition-all">
+        <div class="glass-card hover-3d-target p-6 rounded-2xl flex flex-col justify-between group hover:border-border/80 transition-all">
             <div class="flex justify-between items-start mb-4">
                 <div class="p-2.5 bg-primary/10 text-primary rounded-xl">
                     <span class="material-symbols-outlined text-xl">payments</span>
@@ -82,7 +83,7 @@ Layout::renderAdminSidebar('dashboard');
             </div>
         </div>
 
-        <div class="glass-card p-6 rounded-2xl flex flex-col justify-between group hover:border-border/80 transition-all">
+        <div class="glass-card hover-3d-target p-6 rounded-2xl flex flex-col justify-between group hover:border-border/80 transition-all">
             <div class="flex justify-between items-start mb-4">
                 <div class="p-2.5 bg-secondary/10 text-secondary rounded-xl">
                     <span class="material-symbols-outlined text-xl">group</span>
@@ -95,13 +96,13 @@ Layout::renderAdminSidebar('dashboard');
             </div>
         </div>
 
-        <div class="glass-card p-6 rounded-2xl flex flex-col justify-between cursor-pointer hover:bg-surface-hover/50 transition-all" onclick="window.location.href='inventory.php';">
+        <div class="glass-card hover-3d-target p-6 rounded-2xl flex flex-col justify-between cursor-pointer hover:bg-surface-hover/50 transition-all" onclick="window.location.href='<?php echo BASE_URL; ?>/modules/inventory/inventory.php?filter=low_stock';">
             <div class="flex justify-between items-start mb-4">
                 <div class="p-2.5 bg-red-500/10 text-red-500 rounded-xl">
                     <span class="material-symbols-outlined text-xl">warning</span>
                 </div>
                 <?php if ($bajoStock > 0): ?>
-                    <span class="text-[10px] uppercase font-semibold text-red-400 tracking-widest bg-red-500/10 px-2 py-1 rounded">Atención</span>
+                    <span class="text-[10px] uppercase font-semibold text-red-400 tracking-widest bg-red-500/10 px-2 py-1 rounded pulse-badge">Atención</span>
                 <?php
 endif; ?>
             </div>
@@ -118,7 +119,7 @@ endif; ?>
     <!-- Tables -->
     <section class="grid grid-cols-12 gap-6">
         
-        <div class="col-span-12 lg:col-span-8 glass-card rounded-2xl overflow-hidden p-0">
+        <div class="col-span-12 glass-card rounded-2xl overflow-hidden p-0">
             <div class="p-6 border-b border-border flex justify-between items-center">
                 <h3 class="font-display text-lg font-medium">Ventas Recientes</h3>
                 <a href="<?php echo BASE_URL; ?>/modules/sales/sales.php" class="text-xs font-medium text-primary hover:underline">Ver todas</a>
@@ -158,59 +159,7 @@ else {
             </div>
         </div>
 
-        <div class="col-span-12 lg:col-span-4 flex flex-col gap-6">
-            <div class="glass-card rounded-2xl p-6 flex-1 flex flex-col">
-                <h3 class="font-display text-lg font-medium mb-6">Análisis de Ventas</h3>
-                <div class="flex-1 w-full min-h-[250px] relative">
-                    <canvas id="salesChart"></canvas>
-                </div>
-            </div>
-        </div>
-
     </section>
-
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        const ctx = document.getElementById('salesChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: <?php echo json_encode($labels); ?>,
-                datasets: [{
-                    label: 'Ingresos ($)',
-                    data: <?php echo json_encode($data); ?>,
-                    borderColor: '#10b981',
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.4,
-                    fill: true,
-                    pointBackgroundColor: '#0f172a',
-                    pointBorderColor: '#10b981',
-                    pointBorderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: 'rgba(148, 163, 184, 0.1)' },
-                        ticks: { color: '#64748b' }
-                    },
-                    x: {
-                        grid: { display: false },
-                        ticks: { color: '#64748b' }
-                    }
-                }
-            }
-        });
-    });
-    </script>
 
 </main>
 <?php Layout::renderFooter(); ?>

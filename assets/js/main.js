@@ -9,6 +9,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initConfirmModals();
     // 3. Revisar la URL en busca de respuestas PHP para mostrar Toasts
     handleUrlToasts();
+    // 4. Iniciar Hover 3D
+    initHover3D();
+    // 5. Iniciar transiciones de página suaves
+    initPageTransitions();
 });
 
 /**
@@ -25,7 +29,7 @@ function initTableSearch() {
         const rows = tableBody.querySelectorAll('tr');
 
         let hasVisibleRows = false;
-        
+
         // Eliminar fila de "sin resultados" dinámica si existe
         const noResultsRow = tableBody.querySelector('.js-no-results');
         if (noResultsRow) {
@@ -68,12 +72,12 @@ function showToast(message, type = 'info') {
     if (!container) return;
 
     const toast = document.createElement('div');
-    
+
     // Configurar iconos y colores según el tipo
     let icon = '';
     let colors = '';
-    
-    switch(type) {
+
+    switch (type) {
         case 'success':
             icon = 'check_circle';
             colors = 'bg-surface border-green-500/30 text-green-400';
@@ -90,7 +94,7 @@ function showToast(message, type = 'info') {
             icon = 'info';
             colors = 'bg-surface border-primary/30 text-primary';
     }
-    
+
     // Clases base (Tailwind + CSS Custom)
     toast.className = `toast flex items-center gap-3 p-4 mb-3 rounded-lg border shadow-lg transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto ${colors}`;
 
@@ -126,10 +130,10 @@ function showConfirmModal(title, message, confirmText = 'Confirmar', cancelText 
         // Crear overlay oscuro
         const overlay = document.createElement('div');
         overlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 transition-opacity duration-300';
-        
+
         // Colores del botón de confirmación
-        const confirmBtnClass = isDestructive 
-            ? 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20' 
+        const confirmBtnClass = isDestructive
+            ? 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20'
             : 'bg-primary/10 text-primary hover:bg-primary hover:text-background border border-primary/20';
 
         // Estructura del modal (Glassmorphism)
@@ -172,7 +176,7 @@ function showConfirmModal(title, message, confirmText = 'Confirmar', cancelText 
         // Listeners
         modal.querySelector('#modal-cancel').addEventListener('click', () => closeModal(false));
         modal.querySelector('#modal-confirm').addEventListener('click', () => closeModal(true));
-        
+
         // Cerrar al hacer clic afuera
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) closeModal(false);
@@ -194,14 +198,14 @@ function initConfirmModals() {
         const message = target.getAttribute('data-confirm');
         const title = target.getAttribute('data-confirm-title') || 'Confirmación requerida';
         const isDestructive = target.classList.contains('text-red-500') || target.classList.contains('btn-delete') || target.getAttribute('data-destructive') === 'true';
-        
+
         const confirmed = await showConfirmModal(title, message, 'Sí, continuar', 'Cancelar', isDestructive);
-        
+
         if (confirmed) {
             // Si es un enlace, navegar a su URL
             if (target.tagName.toLowerCase() === 'a' && target.href) {
                 window.location.href = target.href;
-            } 
+            }
             // Si es un submit, enviar el formulario
             else if (target.tagName.toLowerCase() === 'button' && target.type === 'submit') {
                 target.form.submit();
@@ -216,7 +220,7 @@ function initConfirmModals() {
  */
 function handleUrlToasts() {
     const urlParams = new URLSearchParams(window.location.search);
-    
+
     // Mapeo de códigos comunes a mensajes amigables
     const messages = {
         'deleted': 'Registro eliminado correctamente',
@@ -232,11 +236,65 @@ function handleUrlToasts() {
         const msg = messages[code] || 'Operación completada con éxito';
         showToast(msg, 'success');
         window.history.replaceState({}, document.title, window.location.pathname);
-    } 
+    }
     else if (urlParams.has('error')) {
         const code = urlParams.get('error');
         const msg = messages[code] || 'Ocurrió un error en la operación';
         showToast(msg, 'error');
         window.history.replaceState({}, document.title, window.location.pathname);
     }
+}
+
+/**
+ * Efecto de Hover interactivo 3D para tarjetas
+ */
+function initHover3D() {
+    document.querySelectorAll('.hover-3d-target').forEach(card => {
+        card.addEventListener('mousemove', e => {
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+
+            const rotateX = ((y - centerY) / centerY) * -5;
+            const rotateY = ((x - centerX) / centerX) * 5;
+
+            card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+        });
+
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)`;
+        });
+    });
+}
+
+/**
+ * Envuelve los enlaces en animaciones de opacidad y deslizamiento al navegar
+ */
+function initPageTransitions() {
+    document.body.addEventListener('click', e => {
+        const link = e.target.closest('a');
+        if (!link) return;
+
+        // Evitar interceptar links que abren en otra pestaña, descargas o javascript
+        if (link.target === '_blank' ||
+            link.href.startsWith('javascript:') ||
+            link.getAttribute('href')?.startsWith('#') ||
+            link.hasAttribute('download') ||
+            link.classList.contains('no-transition') ||
+            link.hasAttribute('data-confirm')) {
+            return;
+        }
+
+        // Si es un enlace interno valido
+        if (link.href && link.hostname === window.location.hostname) {
+            e.preventDefault();
+            document.documentElement.classList.add('is-animating');
+            setTimeout(() => {
+                window.location.href = link.href;
+            }, 250); // Mismo que la transición CSS
+        }
+    });
 }

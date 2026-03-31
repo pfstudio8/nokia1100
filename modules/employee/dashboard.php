@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/../../config/db.php';
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'empleado') {
@@ -26,16 +26,32 @@ Layout::renderEmployeeSidebar('dashboard');
 
 <main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen">
     
-    <header class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+    <header class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
         <div>
             <h1 class="text-3xl font-display font-medium text-text-main tracking-tight">Centro de <span class="text-primary">Operaciones</span></h1>
             <p class="text-text-muted text-xs uppercase tracking-widest mt-1 font-semibold">Terminal de Empleado</p>
         </div>
-        <a href="<?php echo BASE_URL; ?>/modules/sales/new_sale.php" class="bg-text-main text-background font-medium px-6 py-2.5 rounded-lg flex items-center gap-2 hover:bg-text-muted transition-colors">
-            <span class="material-symbols-outlined">add</span>
-            Nueva Venta Rápida
+        <a href="<?php echo BASE_URL; ?>/modules/sales/new_sale.php" class="bg-primary hover:bg-primary/90 text-background font-bold px-6 py-2.5 rounded-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5">
+            <span class="material-symbols-outlined">point_of_sale</span>
+            Nueva Venta
         </a>
     </header>
+
+    <!-- Visual Banner -->
+    <section class="mb-10 w-full overflow-hidden rounded-2xl glass-card relative h-40 sm:h-48 flex items-center shadow-lg border-border">
+        <div class="absolute inset-0 z-0 bg-surface">
+            <!-- Background Image -->
+            <img src="<?php echo BASE_URL; ?>/assets/img/nokia_store_banner.png" alt="Nokia Premium Store" class="w-full h-full object-cover opacity-25 mix-blend-lighten filter sepia-0 hover:opacity-35 transition-opacity duration-700">
+            <!-- Gradient Overlay -->
+            <div class="absolute inset-0 bg-gradient-to-r from-background via-background/70 to-transparent"></div>
+        </div>
+        
+        <div class="relative z-10 w-full p-8 flex flex-col justify-center h-full max-w-2xl">
+            <span class="text-[10px] font-bold text-secondary tracking-widest uppercase mb-1">Punto de Venta Activo</span>
+            <h2 class="text-2xl sm:text-3xl font-display font-bold text-text-main mb-2">Gestiona ventas con agilidad</h2>
+            <p class="text-sm text-text-muted font-medium max-w-sm">Accede rápido al catálogo y registra las transacciones del día.</p>
+        </div>
+    </section>
 
     <!-- Daily Performance -->
     <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">

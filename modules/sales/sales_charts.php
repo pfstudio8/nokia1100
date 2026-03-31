@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . "/../../config/db.php";
 
@@ -25,11 +25,26 @@ if ($result) {
         $totals[] = $row['daily_total'];
     }
 }
+
+// Fetch sales data grouped by payment method
+$sql_methods = "SELECT metodo_de_pago, SUM(total) as amount 
+                FROM venta 
+                GROUP BY metodo_de_pago";
+$res_methods = $conn->query($sql_methods);
+$methods = [];
+$method_amounts = [];
+
+if ($res_methods) {
+    while ($row = $res_methods->fetch_assoc()) {
+        $methods[] = empty($row['metodo_de_pago']) ? 'Otro' : $row['metodo_de_pago'];
+        $method_amounts[] = $row['amount'];
+    }
+}
 ?>
 <?php
 require_once __DIR__ . '/../../classes/Layout.php';
 Layout::renderHead('Estadísticas de Ventas - NOKIA1100');
-Layout::renderAdminSidebar('ventas');
+Layout::renderAdminSidebar('graficos');
 ?>
 <main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen">
     <div class="glass-card mb-8 border border-border/50">
@@ -43,20 +58,31 @@ Layout::renderAdminSidebar('ventas');
             </a>
         </div>
 
-        <div class="h-[60vh] mt-8 bg-surface/30 p-6 rounded-2xl border border-border/30">
-            <canvas id="salesChart"></canvas>
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+            <div class="lg:col-span-2 bg-surface/30 p-6 rounded-2xl border border-border/30 h-[50vh]">
+                <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase mb-4">Ventas por Día</h3>
+                <canvas id="salesChart"></canvas>
+            </div>
+            <div class="bg-surface/30 p-6 rounded-2xl border border-border/30 h-[50vh] flex flex-col items-center">
+                <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase mb-4 w-full text-left">Métodos de Pago</h3>
+                <div class="w-full h-full flex items-center justify-center pb-8">
+                    <canvas id="methodsChart"></canvas>
+                </div>
+            </div>
         </div>
     </div>
 </main>
 <?php Layout::renderFooter(); ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const ctx = document.getElementById('salesChart').getContext('2d');
     const computedStyle = getComputedStyle(document.body);
     const textMain = computedStyle.getPropertyValue('--tw-text-opacity') ? `rgba(250, 250, 250, 1)` : '#FAFAFA'; // approximate for dark mode
     const primary = '#4FE0E5';
     const border = 'rgba(255, 255, 255, 0.1)';
+    const textMuted = '#A1A1AA';
 
+    // Line Chart: Sales over time
+    const ctx = document.getElementById('salesChart').getContext('2d');
     const salesChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -101,11 +127,61 @@ Layout::renderAdminSidebar('ventas');
                 y: {
                     beginAtZero: true,
                     grid: { color: border },
-                    ticks: { color: '#A1A1AA', font: { family: 'Inter' } }
+                    ticks: { color: textMuted, font: { family: 'Inter' } }
                 },
                 x: {
                     grid: { color: border },
-                    ticks: { color: '#A1A1AA', font: { family: 'Inter' } }
+                    ticks: { color: textMuted, font: { family: 'Inter' } }
+                }
+            }
+        }
+    });
+
+    // Doughnut Chart: Payment Methods
+    const ctxMethods = document.getElementById('methodsChart').getContext('2d');
+    const methodsChart = new Chart(ctxMethods, {
+        type: 'doughnut',
+        data: {
+            labels: <?php echo json_encode($methods); ?>,
+            datasets: [{
+                data: <?php echo json_encode($method_amounts); ?>,
+                backgroundColor: [
+                    '#4FE0E5', // primary
+                    '#F472B6', // pink
+                    '#818CF8', // indigo
+                    '#FBBF24', // amber
+                    '#34D399'  // emerald
+                ],
+                borderColor: '#111113', // surface color approx
+                borderWidth: 4,
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: { 
+                        color: textMuted, 
+                        font: { family: 'Inter', size: 12 },
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(17, 17, 19, 0.9)',
+                    titleColor: textMain,
+                    bodyColor: '#fff',
+                    borderColor: border,
+                    borderWidth: 1,
+                    padding: 12,
+                    callbacks: {
+                        label: function(context) {
+                            return ' $' + context.raw.toFixed(2);
+                        }
+                    }
                 }
             }
         }
