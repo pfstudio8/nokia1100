@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/../../config/db.php';
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
@@ -25,7 +25,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nombre = trim($_POST['nombre']);
     $apellido = trim($_POST['apellido']);
     $username = trim($_POST['username']);
-    $password = $_POST['password']; // optional
     
     // Update persona info
     $updatePersona = $conn->prepare("UPDATE persona SET nombre = ?, apellido = ? WHERE id_persona = (SELECT id_persona FROM usuario WHERE id_usuario = ?)");
@@ -33,14 +32,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $updatePersona->execute();
 
     // Update usuario info
-    if (!empty($password)) {
-        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-        $updateUser = $conn->prepare("UPDATE usuario SET nombre_usuario = ?, contrasena = ? WHERE id_usuario = ?");
-        $updateUser->bind_param("ssi", $username, $hashed_password, $id_user);
-    } else {
-        $updateUser = $conn->prepare("UPDATE usuario SET nombre_usuario = ? WHERE id_usuario = ?");
-        $updateUser->bind_param("si", $username, $id_user);
-    }
+    $updateUser = $conn->prepare("UPDATE usuario SET nombre_usuario = ? WHERE id_usuario = ?");
+    $updateUser->bind_param("si", $username, $id_user);
     
     if($updateUser->execute()) {
         $_SESSION['username'] = $username;
@@ -85,8 +78,8 @@ Layout::renderAdminSidebar('perfil');
         <?php endif; ?>
 
         <form method="POST" action="" class="space-y-6">
-            <h3 class="text-xs uppercase font-semibold tracking-widest text-text-muted border-b border-border/50 pb-2 mb-4">Datos Personales</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <h3 class="text-xs uppercase font-semibold tracking-widest text-text-muted border-b border-border/50 pb-2 mb-6">Datos Personales</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
                     <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Nombre</label>
                     <input type="text" name="nombre" value="<?php echo htmlspecialchars($current_data['nombre']); ?>" required 
@@ -104,22 +97,16 @@ Layout::renderAdminSidebar('perfil');
                 </div>
             </div>
 
-            <h3 class="text-xs uppercase font-semibold tracking-widest text-text-muted border-b border-border/50 pb-2 mb-4 mt-8">Credenciales de Acceso</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <h3 class="text-xs uppercase font-semibold tracking-widest text-text-muted border-b border-border/50 pb-2 mb-6 mt-10">Credenciales de Acceso</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div>
                     <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide text-primary">Nombre de Usuario</label>
                     <input type="text" name="username" value="<?php echo htmlspecialchars($current_data['nombre_usuario']); ?>" required 
                            class="w-full bg-primary/5 border border-primary/20 p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm">
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Nueva Contraseña</label>
-                    <input type="password" name="password" placeholder="Solo si deseas cambiarla..." 
-                           class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm placeholder:text-text-muted/50">
-                    <p class="text-[10px] text-text-muted mt-2 tracking-wide">Déjalo en blanco para mantener la contraseña actual.</p>
-                </div>
             </div>
 
-            <div class="pt-6 border-t border-border/50 flex justify-end">
+            <div class="pt-8 mt-4 border-t border-border/50 flex justify-end">
                 <button type="submit" class="bg-text-main text-background font-medium hover:bg-text-muted transition-colors px-8 py-3 rounded-xl flex items-center gap-2">
                     <span class="material-symbols-outlined text-sm">save</span>
                     Guardar Cambios

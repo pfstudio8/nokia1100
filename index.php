@@ -242,8 +242,7 @@ if (isset($_SESSION['user_id'])) {
                             <div class="flex justify-between items-center mb-2">
                                 <label for="login-password"
                                     class="block text-xs font-bold text-text-muted uppercase tracking-wider">Credencial</label>
-                                <a href="#"
-                                    onclick="alert('Funcionalidad de recuperación de contraseña disponible próximamente. Por favor contacte al administrador.'); return false;"
+                                <a href="forgot_password.php"
                                     class="text-xs font-bold text-primary hover:text-primary-hover transition-colors">¿Olvidaste
                                     tu contraseña?</a>
                             </div>
@@ -259,10 +258,9 @@ if (isset($_SESSION['user_id'])) {
                     </form>
 
                     <div class="text-center mt-8 text-sm text-text-muted font-medium">
-                        ¿No tienes permisos?
+                        ¿Todavia no tienes una cuenta?
                         <button type="button" onclick="toggleAuthMode('register')"
-                            class="text-primary hover:text-primary-hover transition-colors hover:underline font-semibold bg-transparent border-none cursor-pointer">Solicitar
-                            Acceso</button>
+                            class="text-primary hover:text-primary-hover transition-colors hover:underline font-semibold bg-transparent border-none cursor-pointer">Registrarse</button>
                     </div>
                 </div>
 
@@ -351,7 +349,7 @@ if (isset($_SESSION['user_id'])) {
                                     de Acceso</label>
                                 <select id="rol" name="rol" required class="auth-input no-icon !p-3">
                                     <option value="empleado">Operario (Empleado)</option>
-                                    <option value="admin">Administrador Global</option>
+                                    <option value="admin">Administrador</option>
                                 </select>
                             </div>
                         </div>
@@ -360,10 +358,10 @@ if (isset($_SESSION['user_id'])) {
                     </form>
 
                     <div class="text-center mt-6 text-sm text-text-muted font-medium">
-                        ¿Ya tienes credenciales?
+                        ¿Ya tienes una cuenta?
                         <button type="button" onclick="toggleAuthMode('login')"
-                            class="text-primary hover:text-primary-hover transition-colors hover:underline font-semibold bg-transparent border-none cursor-pointer">Acceso
-                            Autorizado</button>
+                            class="text-primary hover:text-primary-hover transition-colors hover:underline font-semibold bg-transparent border-none cursor-pointer">Iniciar
+                            sesion</button>
                     </div>
                 </div>
 

@@ -13,14 +13,21 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $modelo = $_POST['modelo'] ?? '';
     $precio = $_POST['precio'] ?? 0;
     $cantidad = $_POST['cantidad'] ?? 0;
+    
+    // Nuevos campos
+    $categoria = $_POST['categoria'] ?? '';
+    $codigo = $_POST['codigo'] ?? '';
+    $descripcion = $_POST['descripcion'] ?? '';
+    $stock_minimo = $_POST['stock_minimo'] ?? 0;
 
-    if (empty($nombre) || empty($marca) || empty($modelo) || empty($precio) || $cantidad === '') {
-        header("Location: add_product.php?error=Todos los campos son obligatorios");
+    if (empty($nombre) || empty($marca) || empty($modelo) || empty($precio) || $cantidad === '' || empty($categoria)) {
+        header("Location: add_product.php?error=Los campos principales son obligatorios");
         exit();
     }
 
     $precio = floatval($precio);
     $cantidad = intval($cantidad);
+    $stock_minimo = intval($stock_minimo);
 
     // Iniciar transacción
     $conn->begin_transaction();
@@ -38,8 +45,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $stmt_prod->close();
 
         // 2. Insertar detalles del producto
-        $stmt_det = $conn->prepare("INSERT INTO producto_detalle (id_producto, marca, modelo) VALUES (?, ?, ?)");
-        $stmt_det->bind_param("iss", $id_producto, $marca, $modelo);
+        $stmt_det = $conn->prepare("INSERT INTO producto_detalle (id_producto, marca, modelo, categoria, codigo, descripcion, stock_minimo) VALUES (?, ?, ?, ?, ?, ?, ?)");
+        $stmt_det->bind_param("isssssi", $id_producto, $marca, $modelo, $categoria, $codigo, $descripcion, $stock_minimo);
         
         if (!$stmt_det->execute()) {
             throw new Exception("Error al registrar detalles del producto");
