@@ -59,6 +59,7 @@ class Layout
             ['id' => 'dashboard', 'url' => BASE_URL . '/modules/admin/dashboard.php', 'icon' => 'dashboard', 'label' => 'Dashboard'],
             ['id' => 'inventario', 'url' => BASE_URL . '/modules/inventory/inventory.php', 'icon' => 'inventory_2', 'label' => 'Inventario'],
             ['id' => 'usuarios', 'url' => BASE_URL . '/modules/admin/users.php', 'icon' => 'group', 'label' => 'Usuarios'],
+            ['id' => 'taller', 'url' => BASE_URL . '/modules/workshop/index.php', 'icon' => 'home_repair_service', 'label' => 'Taller'],
             ['id' => 'ventas', 'url' => BASE_URL . '/modules/sales/sales.php', 'icon' => 'payments', 'label' => 'Ventas'],
             ['id' => 'graficos', 'url' => BASE_URL . '/modules/sales/sales_charts.php', 'icon' => 'bar_chart', 'label' => 'Estadísticas'],
             ['id' => 'proveedores', 'url' => BASE_URL . '/modules/suppliers/suppliers.php', 'icon' => 'local_shipping', 'label' => 'Proveedores'],
@@ -118,6 +119,7 @@ class Layout
         $links = [
             ['id' => 'dashboard', 'url' => BASE_URL . '/modules/employee/dashboard.php', 'icon' => 'home', 'label' => 'Inicio'],
             ['id' => 'venta', 'url' => BASE_URL . '/modules/sales/new_sale.php', 'icon' => 'point_of_sale', 'label' => 'Generar Venta'],
+            ['id' => 'taller', 'url' => BASE_URL . '/modules/workshop/index.php', 'icon' => 'home_repair_service', 'label' => 'Taller'],
             ['id' => 'inventario', 'url' => BASE_URL . '/modules/inventory/inventory.php', 'icon' => 'inventory_2', 'label' => 'Consultar Stock'],
         ];
 
