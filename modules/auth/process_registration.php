@@ -14,7 +14,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Datos Usuario
     $username = $_POST['username'];
     $password = $_POST['password'];
-    $rol = $_POST['rol'];
+    $rol = 'empleado';
 
     // Validar campos básicos
     if (empty($nombre) || empty($apellido) || empty($dni) || empty($username) || empty($password)) {

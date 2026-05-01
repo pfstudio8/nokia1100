@@ -330,8 +330,7 @@ if (isset($_SESSION['user_id'])) {
                         <div class="grid grid-cols-2 gap-4">
                             <div class="col-span-2">
                                 <label for="reg-username"
-                                    class="block text-[10px] font-extrabold text-text-muted mb-1 uppercase tracking-wide">Usuario
-                                    Master</label>
+                                    class="block text-[10px] font-extrabold text-text-muted mb-1 uppercase tracking-wide">Usuario</label>
                                 <input type="text" id="reg-username" name="username" required
                                     class="auth-input no-icon !p-3 bg-secondary/10 hover:border-text-muted focus:border-text-main">
                             </div>
@@ -343,15 +342,6 @@ if (isset($_SESSION['user_id'])) {
                                     class="auth-input no-icon !p-3">
                             </div>
 
-                            <div>
-                                <label for="rol"
-                                    class="block text-[10px] font-bold text-text-muted mb-1 uppercase tracking-wide">Nivel
-                                    de Acceso</label>
-                                <select id="rol" name="rol" required class="auth-input no-icon !p-3">
-                                    <option value="empleado">Operario (Empleado)</option>
-                                    <option value="admin">Administrador</option>
-                                </select>
-                            </div>
                         </div>
 
                         <button type="submit" class="auth-btn mt-4 tracking-wide">CREAR NUEVA CUENTA</button>
