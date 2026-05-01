@@ -10,8 +10,11 @@ require_once __DIR__ . '/config/db.php';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recuperar Contraseña - Nokia 1100 System</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+        rel="stylesheet" />
     <script>
         tailwind.config = {
             theme: {
@@ -121,36 +124,40 @@ require_once __DIR__ . '/config/db.php';
         </div>
 
         <?php if (isset($_GET['error'])): ?>
-            <div class="bg-red-500/10 border border-red-500/20 text-red-500 text-sm p-4 rounded-xl mb-6 font-medium flex gap-3 items-center">
+            <div
+                class="bg-red-500/10 border border-red-500/20 text-red-500 text-sm p-4 rounded-xl mb-6 font-medium flex gap-3 items-center">
                 <span class="material-symbols-outlined text-lg">error</span>
                 <?php echo htmlspecialchars($_GET['error']); ?>
             </div>
         <?php endif; ?>
 
         <?php if (isset($_GET['success'])): ?>
-            <div class="bg-green-500/10 border border-green-500/20 text-green-500 text-sm p-4 rounded-xl mb-6 font-medium flex gap-3 items-center">
+            <div
+                class="bg-green-500/10 border border-green-500/20 text-green-500 text-sm p-4 rounded-xl mb-6 font-medium flex gap-3 items-center">
                 <span class="material-symbols-outlined text-lg">check_circle</span>
                 <?php echo htmlspecialchars($_GET['success']); ?>
             </div>
-            
-            <?php if(isset($_SESSION['debug_reset_link'])): ?>
-                <div class="bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs p-4 rounded-xl mb-6 overflow-hidden">
-                    <strong>[MODO DESARROLLO]</strong> Simulación de correo enviado.
-                    <a href="<?php echo htmlspecialchars($_SESSION['debug_reset_link']); ?>" class="underline text-blue-300 block mt-2 break-all">
-                        Hacer clic aquí para ir al enlace de recuperación
-                    </a>
+
+            <?php if (isset($_SESSION['mail_debug_notice'])): ?>
+                <div
+                    class="bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 text-xs p-4 rounded-xl mb-6 font-medium flex gap-3 items-center">
+                    <span class="material-symbols-outlined text-lg">warning</span>
+                    <?php echo htmlspecialchars($_SESSION['mail_debug_notice']); ?>
                 </div>
-                <?php unset($_SESSION['debug_reset_link']); ?>
+                <?php unset($_SESSION['mail_debug_notice']); ?>
             <?php endif; ?>
 
         <?php endif; ?>
 
         <form action="<?php echo BASE_URL; ?>/modules/auth/process_forgot.php" method="POST" class="space-y-5">
             <div>
-                <label for="email" class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wider">Correo Electrónico</label>
+                <label for="email" class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wider">Correo
+                    Electrónico</label>
                 <div class="relative flex flex-col-reverse">
-                    <input type="email" id="email" name="email" required placeholder="tu@email.com" class="auth-input peer">
-                    <span class="material-symbols-outlined input-icon transition-colors peer-focus:text-text-main">mail</span>
+                    <input type="email" id="email" name="email" required placeholder="tu@email.com"
+                        class="auth-input peer">
+                    <span
+                        class="material-symbols-outlined input-icon transition-colors peer-focus:text-text-main">mail</span>
                 </div>
             </div>
 
@@ -158,7 +165,9 @@ require_once __DIR__ . '/config/db.php';
         </form>
 
         <div class="text-center mt-8 text-sm text-text-muted font-medium">
-            <a href="index.php" class="text-primary hover:text-primary-hover transition-colors hover:underline font-semibold bg-transparent border-none cursor-pointer">Volver al inicio de sesión</a>
+            <a href="index.php"
+                class="text-primary hover:text-primary-hover transition-colors hover:underline font-semibold bg-transparent border-none cursor-pointer">Volver
+                al inicio de sesión</a>
         </div>
     </div>
 </body>

@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../config/config_mail.php';
 
 // Si no es POST, redirigir
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
@@ -41,25 +42,60 @@ if ($result->num_rows === 1) {
     $updateStmt->execute();
     $updateStmt->close();
 
-    // Link de recuperación
-    $resetLink = BASE_URL . "/modules/auth/reset_password.php?token=" . $token;
+    // Link de recuperación absoluto para correo
+    $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ((int) ($_SERVER['SERVER_PORT'] ?? 80) === 443);
+    $scheme = $isHttps ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $resetLink = $scheme . '://' . $host . BASE_URL . "/modules/auth/reset_password.php?token=" . $token;
 
-    // Aquí iría el código real de PHPMailer si estuviera disponible en el servidor.
-    // Como estamos desarrollando localmente, simulamos la respuesta y pasamos el link por sesión
-    // para propósitos de depuración.
+    $smtpUser = trim((string) SMTP_USER);
+    $smtpPass = preg_replace('/\s+/', '', (string) SMTP_PASS);
+    $mailSent = false;
 
-    /*
-    Ejemplo de uso de PHPMailer:
-    require_once '../../config/config_mail.php';
-    cargarPHPMailer();
-    $mail = new PHPMailer\PHPMailer\PHPMailer();
-    ... configuración SMTP ...
-    $mail->Subject = 'Recuperación de contraseña - Nokia 1100';
-    $mail->Body    = "Hola $nombre, <br><br>Haz clic en el siguiente enlace para recuperar tu contraseña:<br><a href='$resetLink'>$resetLink</a><br><br>Si no solicitaste esto, ignora este correo.";
-    $mail->send();
-    */
+    if (empty($smtpUser) || empty($smtpPass)) {
+        error_log('SMTP_USER/SMTP_PASS no configurados. Define variables de entorno para enviar correos.');
+        $_SESSION['mail_debug_notice'] = 'No se pudo enviar el correo: faltan credenciales SMTP.';
+    } elseif (cargarPHPMailer()) {
+        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
 
-    $_SESSION['debug_reset_link'] = $resetLink;
+        try {
+            $mail->isSMTP();
+            $mail->Host = SMTP_HOST;
+            $mail->SMTPAuth = true;
+            $mail->Username = $smtpUser;
+            $mail->Password = $smtpPass;
+            $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port = SMTP_PORT;
+            $mail->CharSet = 'UTF-8';
+
+            $mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
+            $mail->addAddress($email, $nombre);
+            $mail->isHTML(true);
+            $mail->Subject = 'Recuperación de contraseña - Nokia 1100';
+            $mail->Body = "
+                <p>Hola {$nombre},</p>
+                <p>Recibimos una solicitud para restablecer tu contraseña.</p>
+                <p>Haz clic en el siguiente enlace para crear una nueva contraseña:</p>
+                <p><a href=\"{$resetLink}\">Restablecer contraseña</a></p>
+                <p>Este enlace vence en 1 hora.</p>
+                <p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
+            ";
+            $mail->AltBody = "Hola {$nombre},\n\nRestablece tu contraseña con este enlace: {$resetLink}\n\nEste enlace vence en 1 hora.\n\nSi no solicitaste este cambio, ignora este correo.";
+
+            $mail->send();
+            $mailSent = true;
+        } catch (Exception $e) {
+            error_log('Error enviando correo de recuperación: ' . $mail->ErrorInfo);
+            $_SESSION['mail_debug_notice'] = 'No se pudo enviar el correo. Revisa usuario/clave SMTP (App Password de Gmail).';
+        }
+    } else {
+        error_log('PHPMailer no está disponible. Verifica la instalación.');
+        $_SESSION['mail_debug_notice'] = 'PHPMailer no está instalado en el proyecto.';
+    }
+
+    if ($mailSent) {
+        unset($_SESSION['mail_debug_notice']);
+    }
 
 }
 

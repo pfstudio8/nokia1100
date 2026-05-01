@@ -53,6 +53,18 @@ Layout::renderAdminSidebar('usuarios');
             </div>
         </div>
 
+        <?php if (isset($_GET['success'])): ?>
+            <div style="margin: 1rem 0; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid rgba(34,197,94,.25); background: rgba(34,197,94,.1); color: #86efac;">
+                <?php echo htmlspecialchars($_GET['success']); ?>
+            </div>
+        <?php endif; ?>
+
+        <?php if (isset($_GET['error'])): ?>
+            <div style="margin: 1rem 0; padding: 0.75rem 1rem; border-radius: 10px; border: 1px solid rgba(239,68,68,.25); background: rgba(239,68,68,.1); color: #fca5a5;">
+                <?php echo htmlspecialchars($_GET['error']); ?>
+            </div>
+        <?php endif; ?>
+
         <div class="table-container">
             <table>
                 <thead>
@@ -75,6 +87,14 @@ Layout::renderAdminSidebar('usuarios');
                                     </span>
                                 </td>
                                 <td>
+                                    <form action="<?php echo BASE_URL; ?>/modules/admin/update_user_role.php" method="POST" style="display:inline-flex; gap: .5rem; align-items: center; margin-right: .75rem;">
+                                        <input type="hidden" name="id_usuario" value="<?php echo (int)$row['id_usuario']; ?>">
+                                        <select name="rol" style="padding: .35rem .6rem; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text-main); font-size: .8rem;">
+                                            <option value="empleado" <?php echo $row['rol'] === 'empleado' ? 'selected' : ''; ?>>Empleado</option>
+                                            <option value="admin" <?php echo $row['rol'] === 'admin' ? 'selected' : ''; ?>>Admin</option>
+                                        </select>
+                                        <button type="submit" class="text-cyan-400 font-medium hover:underline text-sm">Guardar rol</button>
+                                    </form>
                                     <a class="btn-delete text-red-500 font-medium hover:underline text-sm" href="delete_user.php?id=<?php echo $row['id_usuario']; ?>" 
                                        data-confirm="¿Seguro que deseas eliminar este usuario?" data-confirm-title="Eliminar Usuario">
                                         Eliminar
