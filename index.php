@@ -282,6 +282,14 @@ if (isset($_SESSION['user_id'])) {
                             <?php echo htmlspecialchars($_GET['error']); ?>
                         </div>
                     <?php endif; ?>
+                    <?php if (!empty($_SESSION['mail_debug_notice'])): ?>
+                        <div
+                            class="bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 text-sm p-4 rounded-xl mb-4 font-medium flex gap-3 items-center">
+                            <span class="material-symbols-outlined text-lg">warning</span>
+                            <?php echo htmlspecialchars($_SESSION['mail_debug_notice']); ?>
+                        </div>
+                        <?php unset($_SESSION['mail_debug_notice']); ?>
+                    <?php endif; ?>
 
                     <form action="<?php echo BASE_URL; ?>/modules/auth/process_registration.php" method="POST"
                         class="space-y-4">
@@ -342,6 +350,12 @@ if (isset($_SESSION['user_id'])) {
                                     class="auth-input no-icon !p-3">
                             </div>
 
+                            <div>
+                                <label for="reg-password-confirm"
+                                    class="block text-[10px] font-bold text-text-muted mb-1 uppercase tracking-wide">Confirmar Contraseña</label>
+                                <input type="password" id="reg-password-confirm" name="password_confirm" required
+                                    class="auth-input no-icon !p-3">
+                            </div>
                         </div>
 
                         <button type="submit" class="auth-btn mt-4 tracking-wide">CREAR NUEVA CUENTA</button>
