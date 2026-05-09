@@ -225,7 +225,7 @@ Layout::renderAdminSidebar('proveedores');
         const cantidadInput = document.getElementById('cantidad');
         
         if (!nombreInput.value || !costoInput.value || parseFloat(costoInput.value) <= 0) {
-            alert('Nombre del producto y un costo unitario válido son obligatorios');
+            showPurchaseFeedback('Nombre del producto y un costo unitario válido son obligatorios', 'warning');
             return;
         }
 
@@ -292,8 +292,8 @@ Layout::renderAdminSidebar('proveedores');
         const iva = parseFloat(document.getElementById('iva').value) || 0;
         const autorizadoPor = document.getElementById('autorizado_por').value;
 
-        if (!idProveedor) { alert('Seleccione un proveedor principal'); return; }
-        if (cart.length === 0) { alert('Agregue productos a la orden de compra'); return; }
+        if (!idProveedor) { showPurchaseFeedback('Seleccione un proveedor principal', 'error'); return; }
+        if (cart.length === 0) { showPurchaseFeedback('Agregue productos a la orden de compra', 'warning'); return; }
 
         fetch('new_purchase.php', {
             method: 'POST',
@@ -310,11 +310,51 @@ Layout::renderAdminSidebar('proveedores');
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                alert('Compra registrada y stock actualizado con éxito');
-                window.location.href = '<?php echo BASE_URL; ?>/modules/suppliers/suppliers.php';
+                showPurchaseFeedback('Compra registrada y stock actualizado con éxito', 'success');
+                setTimeout(() => {
+                    window.location.href = '<?php echo BASE_URL; ?>/modules/suppliers/suppliers.php';
+                }, 800);
             } else {
-                alert('Error al registrar compra: ' + data.message);
+                showPurchaseFeedback('Error al registrar compra: ' + data.message, 'error');
             }
         });
+    }
+
+    function showPurchaseFeedback(message, type) {
+        if (typeof showToast === 'function') {
+            showToast(message, type);
+            return;
+        }
+
+        const containerId = 'toast-container';
+        let container = document.getElementById(containerId);
+        if (!container) {
+            container = document.createElement('div');
+            container.id = containerId;
+            container.className = 'fixed bottom-4 left-4 z-50 flex flex-col items-start pointer-events-none';
+            document.body.appendChild(container);
+        }
+
+        const colors = type === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
+                       type === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
+                       type === 'warning' ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400' :
+                       'bg-surface border-primary/30 text-primary';
+
+        const toast = document.createElement('div');
+        toast.className = `toast flex items-center gap-3 p-4 mb-3 rounded-lg border shadow-lg transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto ${colors}`;
+        toast.innerHTML = `
+            <span class="material-symbols-outlined shrink-0">${type === 'success' ? 'check_circle' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info'}</span>
+            <p class="text-sm font-medium text-text-main m-0 p-0 leading-tight">${message}</p>
+        `;
+
+        container.appendChild(toast);
+        requestAnimationFrame(() => {
+            toast.classList.remove('translate-x-full', 'opacity-0');
+        });
+
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-x-full');
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
     }
 </script>
