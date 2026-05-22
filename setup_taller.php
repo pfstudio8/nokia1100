@@ -2,12 +2,19 @@
 require_once __DIR__ . '/config/db.php';
 
 $queries = [
+    "CREATE TABLE IF NOT EXISTS `cliente` (
+        `id_cliente` int(11) NOT NULL AUTO_INCREMENT,
+        `nombre` varchar(150) NOT NULL,
+        `telefono` varchar(20) DEFAULT NULL,
+        `email` varchar(150) DEFAULT NULL,
+        `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (`id_cliente`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;",
+
     "CREATE TABLE IF NOT EXISTS `reparacion` (
         `id_reparacion` int(11) NOT NULL AUTO_INCREMENT,
         `codigo_orden` varchar(20) NOT NULL UNIQUE,
-        `cliente_nombre` varchar(150) NOT NULL,
-        `cliente_telefono` varchar(20) DEFAULT NULL,
-        `cliente_email` varchar(150) DEFAULT NULL,
+        `id_cliente` int(11) DEFAULT NULL,
         `equipo_marca` varchar(100) NOT NULL,
         `equipo_modelo` varchar(100) NOT NULL,
         `equipo_imei` varchar(50) DEFAULT NULL,
@@ -20,7 +27,8 @@ $queries = [
         `fecha_entrega` datetime DEFAULT NULL,
         `id_usuario_recibe` int(11) DEFAULT NULL,
         PRIMARY KEY (`id_reparacion`),
-        FOREIGN KEY (`id_usuario_recibe`) REFERENCES `usuario`(`id_usuario`) ON DELETE SET NULL
+        FOREIGN KEY (`id_usuario_recibe`) REFERENCES `usuario`(`id_usuario`) ON DELETE SET NULL,
+        FOREIGN KEY (`id_cliente`) REFERENCES `cliente`(`id_cliente`) ON DELETE RESTRICT
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;",
 
     "CREATE TABLE IF NOT EXISTS `reparacion_repuesto` (

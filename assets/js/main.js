@@ -63,7 +63,7 @@ function initTableSearch() {
 }
 
 /**
- * Función para mostrar notificaciones "Toast" flotantes
+ * Función para mostrar notificaciones "Toast" flotantes premium
  * @param {string} message - El mensaje a mostrar
  * @param {string} type - 'success', 'error', 'info', o 'warning'
  */
@@ -75,80 +75,112 @@ function showToast(message, type = 'info') {
 
     // Configurar iconos y colores según el tipo
     let icon = '';
-    let colors = '';
+    let themeClass = '';
+    let accentColor = '';
 
     switch (type) {
         case 'success':
             icon = 'check_circle';
-            colors = 'bg-surface border-green-500/30 text-green-400';
+            themeClass = 'premium-toast-success';
+            accentColor = '#22C55E';
             break;
         case 'error':
             icon = 'error';
-            colors = 'bg-surface border-red-500/30 text-red-400';
+            themeClass = 'premium-toast-error';
+            accentColor = '#ff716c';
             break;
         case 'warning':
             icon = 'warning';
-            colors = 'bg-surface border-yellow-500/30 text-yellow-400';
+            themeClass = 'premium-toast-warning';
+            accentColor = '#eab308';
             break;
         default:
             icon = 'info';
-            colors = 'bg-surface border-primary/30 text-primary';
+            themeClass = 'premium-toast-info';
+            accentColor = '#21b8bd';
     }
 
-    // Clases base (Tailwind + CSS Custom)
-    toast.className = `toast flex items-center gap-3 p-4 mb-3 rounded-lg border shadow-lg transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto ${colors}`;
-
+    toast.className = `premium-toast ${themeClass} pointer-events-auto`;
     toast.innerHTML = `
-        <span class="material-symbols-outlined shrink-0">${icon}</span>
-        <p class="text-sm font-medium text-text-main m-0 p-0 leading-tight">${message}</p>
-        <button class="ml-auto text-text-muted hover:text-text-main transition-colors focus:outline-none" onclick="this.parentElement.remove()">
-            <span class="material-symbols-outlined text-sm">close</span>
-        </button>
+        <div class="premium-toast-content">
+            <span class="material-symbols-outlined premium-toast-icon">${icon}</span>
+            <p class="premium-toast-message">${message}</p>
+            <button class="premium-toast-close" onclick="closeToast(this.closest('.premium-toast'))">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div class="premium-toast-progress" style="background-color: ${accentColor};"></div>
     `;
 
     container.appendChild(toast);
 
     // Activar animación de entrada
     setTimeout(() => {
-        toast.classList.remove('translate-x-full', 'opacity-0');
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateX(0) scale(1)';
     }, 10);
+
+    // Animación de barra de progreso
+    const progressBar = toast.querySelector('.premium-toast-progress');
+    progressBar.animate([
+        { width: '100%' },
+        { width: '0%' }
+    ], {
+        duration: 4000,
+        easing: 'linear'
+    });
 
     // Eliminar automáticamente después de 4 segundos
     setTimeout(() => {
-        toast.classList.add('opacity-0', 'translate-x-full');
-        setTimeout(() => toast.remove(), 300); // Dar tiempo a la transición CSS
+        closeToast(toast);
     }, 4000);
 }
 
+function closeToast(toast) {
+    if (!toast) return;
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateX(100px) scale(0.9)';
+    setTimeout(() => toast.remove(), 300);
+}
+
 /**
- * Muestra un modal de confirmación personalizado.
+ * Muestra un modal de confirmación personalizado de calidad Premium.
  * Retorna una promesa que se resuelve en `true` si el usuario confirma
  * o `false` si el usuario cancela.
  */
 function showConfirmModal(title, message, confirmText = 'Confirmar', cancelText = 'Cancelar', isDestructive = false) {
     return new Promise((resolve) => {
-        // Crear overlay oscuro
+        // Crear overlay oscuro con blur
         const overlay = document.createElement('div');
-        overlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center opacity-0 transition-opacity duration-300';
+        overlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-[6px] z-50 flex items-center justify-center opacity-0 transition-opacity duration-300';
 
-        // Colores del botón de confirmación
+        // Estilos e iconos para modal premium
+        const iconName = isDestructive ? 'warning' : 'help';
+        const iconBg = isDestructive ? 'bg-red-500/15 text-red-400' : 'bg-primary/15 text-primary';
         const confirmBtnClass = isDestructive
-            ? 'bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white border border-red-500/20'
-            : 'bg-primary/10 text-primary hover:bg-primary hover:text-background border border-primary/20';
+            ? 'bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/20'
+            : 'bg-primary text-background hover:bg-primary-hover font-semibold';
 
-        // Estructura del modal (Glassmorphism)
+        // Estructura del modal (Glassmorphism + Diseño Premium)
         const modal = document.createElement('div');
-        modal.className = 'bg-surface border border-border rounded-2xl shadow-2xl p-6 w-full max-w-sm transform scale-95 transition-transform duration-300';
+        modal.className = 'bg-surface border border-border/80 rounded-2xl shadow-2xl p-6 w-full max-w-sm transform scale-95 transition-all duration-300 relative overflow-hidden';
+        modal.style.boxShadow = isDestructive 
+            ? '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 35px rgba(239, 68, 68, 0.1)' 
+            : '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 35px rgba(33, 184, 189, 0.1)';
+
         modal.innerHTML = `
-            <div class="mb-6">
-                <h3 class="text-lg font-bold font-display text-text-main mb-2">${title}</h3>
+            <div class="flex flex-col items-center text-center mb-6">
+                <div class="w-12 h-12 rounded-full ${iconBg} flex items-center justify-center mb-4">
+                    <span class="material-symbols-outlined text-[28px] font-bold">${iconName}</span>
+                </div>
+                <h3 class="text-xl font-bold font-display text-text-main mb-2">${title}</h3>
                 <p class="text-sm text-text-muted leading-relaxed">${message}</p>
             </div>
-            <div class="flex gap-3 justify-end">
-                <button id="modal-cancel" type="button" class="px-4 py-2 text-sm font-medium text-text-muted hover:text-text-main hover:bg-surface-hover rounded-lg transition-colors focus:outline-none">
+            <div class="flex gap-3 w-full">
+                <button id="modal-cancel" type="button" class="flex-1 py-2.5 text-sm font-medium text-text-muted hover:text-text-main hover:bg-surface-hover rounded-xl transition-all border border-border focus:outline-none">
                     ${cancelText}
                 </button>
-                <button id="modal-confirm" type="button" class="px-4 py-2 text-sm font-medium rounded-lg transition-all focus:outline-none ${confirmBtnClass}">
+                <button id="modal-confirm" type="button" class="flex-1 py-2.5 text-sm font-medium rounded-xl transition-all focus:outline-none ${confirmBtnClass}">
                     ${confirmText}
                 </button>
             </div>
@@ -161,16 +193,18 @@ function showConfirmModal(title, message, confirmText = 'Confirmar', cancelText 
         requestAnimationFrame(() => {
             overlay.classList.remove('opacity-0');
             modal.classList.remove('scale-95');
+            modal.classList.add('scale-100');
         });
 
         // Funciones para cerrar
         const closeModal = (result) => {
             overlay.classList.add('opacity-0');
+            modal.classList.remove('scale-100');
             modal.classList.add('scale-95');
             setTimeout(() => {
                 overlay.remove();
                 resolve(result);
-            }, 300); // Esperar que termine la animación
+            }, 300);
         };
 
         // Listeners
@@ -216,7 +250,6 @@ function initConfirmModals() {
 
 /**
  * Revisa la URL por parámetros "success" o "error" y lanza un Toast automáticamente.
- * Útil para feedback de PHP después de redigir, ej: ?success=deleted
  */
 function handleUrlToasts() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -233,13 +266,13 @@ function handleUrlToasts() {
 
     if (urlParams.has('success')) {
         const code = urlParams.get('success');
-        const msg = messages[code] || 'Operación completada con éxito';
+        const msg = messages[code] || decodeURIComponent(code);
         showToast(msg, 'success');
         window.history.replaceState({}, document.title, window.location.pathname);
     }
     else if (urlParams.has('error')) {
         const code = urlParams.get('error');
-        const msg = messages[code] || 'Ocurrió un error en la operación';
+        const msg = messages[code] || decodeURIComponent(code);
         showToast(msg, 'error');
         window.history.replaceState({}, document.title, window.location.pathname);
     }

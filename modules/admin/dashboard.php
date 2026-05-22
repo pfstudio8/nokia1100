@@ -32,7 +32,26 @@ $ventasRecientes = $conn->query("
     ORDER BY fecha DESC LIMIT 5
 ");
 
+// 6. Top Selling Products
+$topProductos = $conn->query("
+    SELECT p.nombre, SUM(dv.cantidad) as total_vendido, SUM(dv.cantidad * dv.precio_unitario) as total_recaudado
+    FROM detalle_venta dv
+    INNER JOIN producto p ON dv.id_producto = p.id_producto
+    GROUP BY dv.id_producto, p.nombre
+    ORDER BY total_vendido DESC
+    LIMIT 4
+");
 
+// 7. Critical Stock Items
+$stockCritico = $conn->query("
+    SELECT p.nombre, i.cantidad, pd.stock_minimo
+    FROM inventario i
+    INNER JOIN producto p ON i.id_producto = p.id_producto
+    LEFT JOIN producto_detalle pd ON p.id_producto = pd.id_producto
+    WHERE i.cantidad <= IFNULL(pd.stock_minimo, 5) AND p.is_active = 1
+    ORDER BY i.cantidad ASC
+    LIMIT 3
+");
 
 Layout::renderHead('NOKIA1100 | Admin Panel');
 Layout::renderAdminSidebar('dashboard');
@@ -115,49 +134,51 @@ endif; ?>
         </div>
         
     </section>
-
-    <!-- Tables -->
-    <section class="grid grid-cols-12 gap-6">
+    <!-- Tables (Ventas Recientes full-width) -->
+    <section class="grid grid-cols-1 gap-6">
         
-        <div class="col-span-12 glass-card rounded-2xl overflow-hidden p-0">
-            <div class="p-6 border-b border-border flex justify-between items-center">
-                <h3 class="font-display text-lg font-medium">Ventas Recientes</h3>
-                <a href="<?php echo BASE_URL; ?>/modules/sales/sales.php" class="text-xs font-medium text-primary hover:underline">Ver todas</a>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left">
-                    <thead>
-                        <tr class="bg-surface/50 border-b border-border">
-                            <th class="px-6 py-4">ID Venta</th>
-                            <th class="px-6 py-4">Fecha</th>
-                            <th class="px-6 py-4">Método</th>
-                            <th class="px-6 py-4 text-right">Monto</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-border/50">
-                        <?php
-if ($ventasRecientes && $ventasRecientes->num_rows > 0) {
-    while ($v = $ventasRecientes->fetch_assoc()) {
-        $date = date("d M Y H:i", strtotime($v['fecha']));
-        $metodo = $v['metodo_de_pago'] ? $v['metodo_de_pago'] : 'N/A';
-        echo "<tr class='hover:bg-surface/30 transition-colors'>
-                                    <td class='px-6 py-4 text-sm font-medium text-primary'>#TX-{$v['id_venta']}</td>
-                                    <td class='px-6 py-4 text-sm text-text-muted'>{$date}</td>
-                                    <td class='px-6 py-4 text-sm'>
-                                        <span class='px-2 py-1 rounded border border-border text-[10px] font-medium text-text-muted uppercase tracking-wider'>{$metodo}</span>
-                                    </td>
-                                    <td class='px-6 py-4 text-sm font-medium text-text-main text-right'>$" . number_format($v['total'], 2) . "</td>
-                                </tr>";
-    }
-}
-else {
-    echo "<tr><td colspan='4' class='px-6 py-8 text-center text-sm text-text-muted'>No hay transacciones registradas</td></tr>";
-}
-?>
-                    </tbody>
-                </table>
-            </div>
+        <!-- Ventas Recientes -->
+        <div class="col-span-12 glass-card rounded-2xl overflow-hidden p-0 flex flex-col justify-between">
+            <div>
+                <div class="p-6 border-b border-border flex justify-between items-center">
+                    <h3 class="font-display text-lg font-medium">Ventas Recientes</h3>
+                    <a href="<?php echo BASE_URL; ?>/modules/sales/sales.php" class="text-xs font-medium text-primary hover:underline">Ver todas</a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="bg-surface/50 border-b border-border">
+                                <th class="px-6 py-4">ID Venta</th>
+                                <th class="px-6 py-4">Fecha</th>
+                                <th class="px-6 py-4">Método</th>
+                                <th class="px-6 py-4 text-right">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-border/50">
+                            <?php
+                            if ($ventasRecientes && $ventasRecientes->num_rows > 0) {
+                                while ($v = $ventasRecientes->fetch_assoc()) {
+                                    $date = date("d M Y H:i", strtotime($v['fecha']));
+                                    $metodo = $v['metodo_de_pago'] ? $v['metodo_de_pago'] : 'N/A';
+                                    echo "<tr class='hover:bg-surface/30 transition-colors'>
+                                                <td class='px-6 py-4 text-sm font-medium text-primary'>#TX-{$v['id_venta']}</td>
+                                                <td class='px-6 py-4 text-sm text-text-muted'>{$date}</td>
+                                                <td class='px-6 py-4 text-sm'>
+                                                    <span class='px-2 py-1 rounded border border-border text-[10px] font-medium text-text-muted uppercase tracking-wider'>{$metodo}</span>
+                                                </td>
+                                                <td class='px-6 py-4 text-sm font-medium text-text-main text-right'>$" . number_format($v['total'], 2) . "</td>
+                                            </tr>";
+                                }
+                            }
+                            else {
+                                echo "<tr><td colspan='4' class='px-6 py-8 text-center text-sm text-text-muted'>No hay transacciones registradas</td></tr>";
+                            }
+                            ?>
+                        </tbody>
+                    </table>
+                </div>
         </div>
+    </div>
 
     </section>
 

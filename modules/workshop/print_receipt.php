@@ -11,7 +11,10 @@ if (!$id_reparacion) {
     die("ID no válido.");
 }
 
-$sql_rep = "SELECT * FROM reparacion WHERE id_reparacion = $id_reparacion";
+$sql_rep = "SELECT r.*, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono, c.email AS cliente_email 
+            FROM reparacion r
+            LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
+            WHERE r.id_reparacion = $id_reparacion";
 $res_rep = $conn->query($sql_rep);
 if ($res_rep->num_rows === 0) {
     die("Orden no encontrada.");

@@ -1,6 +1,9 @@
 <?php
+// index.php - Pantalla de Acceso Premium Nokia 1100 System
 session_start();
 require_once __DIR__ . '/config/db.php';
+
+// Si ya tiene sesión activa, redirigir según su rol
 if (isset($_SESSION['user_id'])) {
     if ($_SESSION['role'] === 'admin') {
         header("Location: " . BASE_URL . "/modules/admin/dashboard.php");
@@ -11,20 +14,26 @@ if (isset($_SESSION['user_id'])) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="es">
+<html class="dark" lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso - Nokia 1100 System</title>
+    <title>Acceso Corporativo - Nokia 1100 System</title>
+    
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap"
-        rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-        rel="stylesheet" />
+    
+    <!-- Google Fonts & Material Symbols -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    
+    <!-- Estilos Personalizados del Sistema -->
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css?v=<?php echo time(); ?>">
+
     <script>
         tailwind.config = {
+            darkMode: "class",
             theme: {
                 extend: {
                     colors: {
@@ -45,327 +54,245 @@ if (isset($_SESSION['user_id'])) {
             },
         }
     </script>
+    
     <style>
         body {
-            background-color: #0A0A0B;
+            background-color: #070708;
             color: #FAFAFA;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
             overflow-x: hidden;
             position: relative;
-            padding: 2rem 1rem;
+            padding: 1.5rem;
         }
 
-        .auth-wrapper {
-            position: relative;
+        .main-auth-container {
             width: 100%;
-            max-width: 440px;
-            transition: max-width 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            max-width: 480px;
             z-index: 10;
-            margin: auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
-        .auth-wrapper.is-register {
-            max-width: 680px;
+        @media (min-width: 768px) {
+            .main-auth-container {
+                max-width: 480px;
+            }
+            .main-auth-container.is-register {
+                max-width: 580px;
+            }
         }
 
-        .auth-card {
-            background: rgba(17, 17, 19, 0.7);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid #27272A;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
-            border-radius: 24px;
+        .auth-glass-card {
+            background: rgba(17, 17, 19, 0.65);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(33, 184, 189, 0.03);
+            border-radius: 28px;
             overflow: hidden;
             position: relative;
             width: 100%;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         .auth-slider {
             display: flex;
             width: 200%;
-            transition: transform 0.7s cubic-bezier(0.645, 0.045, 0.355, 1);
+            transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1);
         }
 
         .auth-panel {
             width: 50%;
-            padding: 3rem;
+            padding: 2.5rem;
             flex-shrink: 0;
-            transition: opacity 0.5s ease;
+            transition: opacity 0.4s ease;
         }
 
-        .auth-wrapper.is-register .auth-slider {
+        .main-auth-container.is-register .auth-slider {
             transform: translateX(-50%);
         }
 
-        .auth-wrapper.is-register .login-panel {
+        .main-auth-container.is-register .login-panel {
             opacity: 0;
             pointer-events: none;
             visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0s 0.3s;
+            transition: opacity 0.2s ease, visibility 0s 0.2s;
         }
 
-        .auth-wrapper:not(.is-register) .register-panel {
+        .main-auth-container:not(.is-register) .register-panel {
             opacity: 0;
             pointer-events: none;
             visibility: hidden;
-            transition: opacity 0.3s ease, visibility 0s 0.3s;
+            transition: opacity 0.2s ease, visibility 0s 0.2s;
         }
 
-        .auth-wrapper:not(.is-register) .login-panel,
-        .auth-wrapper.is-register .register-panel {
+        .main-auth-container:not(.is-register) .login-panel,
+        .main-auth-container.is-register .register-panel {
             opacity: 1;
             visibility: visible;
-            transition: opacity 0.5s ease 0.2s, visibility 0s 0s;
+            transition: opacity 0.4s ease 0.15s, visibility 0s 0s;
         }
 
-        .auth-input {
-            width: 100%;
-            padding: 0.85rem 1rem 0.85rem 2.8rem;
-            background: #0A0A0B;
-            border: 1px solid #27272A;
-            border-radius: 12px;
-            color: #FAFAFA;
-            font-size: 0.95rem;
-            transition: all 0.2s;
-            font-weight: 500;
+        .brand-logo-glow {
+            filter: drop-shadow(0 0 20px rgba(33,184,189,0.25));
+            transition: all 0.5s ease;
         }
 
-        .auth-input.no-icon {
-            padding-left: 1rem;
+        .main-auth-container.is-register .brand-logo-glow {
+            filter: drop-shadow(0 0 20px rgba(224,79,238,0.20));
         }
 
-        .auth-input::placeholder {
-            color: #64748B;
-            font-weight: 400;
-        }
-
-        .auth-input:focus {
-            outline: none;
-            border-color: #21b8bd;
-            background: #111113;
-            box-shadow: 0 0 0 3px rgba(33, 184, 189, 0.15);
-        }
-
-        .input-icon {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #A1A1AA;
-            font-size: 1.2rem;
-            pointer-events: none;
-            transition: color 0.2s;
-        }
-
-        .auth-input:focus~.input-icon {
-            color: #21b8bd;
-        }
-
-        .auth-btn {
-            width: 100%;
-            padding: 0.85rem;
-            background: #21b8bd;
-            color: #0A0A0B;
-            font-weight: 600;
-            font-family: 'Outfit', sans-serif;
-            border-radius: 12px;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: none;
-            font-size: 1rem;
-            cursor: pointer;
-            box-shadow: 0 4px 6px -1px rgba(33, 184, 189, 0.3);
-        }
-
-        .auth-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px -10px rgba(33, 184, 189, 0.5);
-            background: #1a9498;
-        }
     </style>
 </head>
 
-<body class="font-sans antialiased text-text-main selection:bg-secondary/30 selection:text-text-main">
+<body class="font-sans antialiased text-text-main selection:bg-primary/20 selection:text-primary">
 
+    <!-- Fondo de Mallas Animadas de Neón -->
+    <div class="ambient-glow-container">
+        <div class="ambient-glow-circle-1"></div>
+        <div class="ambient-glow-circle-2"></div>
+    </div>
 
-
-    <!-- Determine initial state based on URL parameters -->
     <?php
     $isRegister = isset($_GET['action']) && $_GET['action'] === 'register';
     $wrapperClass = $isRegister ? 'is-register' : '';
     ?>
-
-    <div class="auth-wrapper <?php echo $wrapperClass; ?>" id="authWrapper">
-        <div class="auth-card">
+    <div class="main-auth-container <?php echo $wrapperClass; ?>" id="authWrapper">
+        
+        <!-- Tarjeta de Acceso Glassmorphism Centrada -->
+        <div class="auth-glass-card">
             <div class="auth-slider">
 
-                <!-- LOGIN PANEL -->
+                <!-- PANEL 1: INICIAR SESIÓN -->
                 <div class="auth-panel login-panel flex flex-col justify-center">
                     <div class="text-center mb-8">
-                        <img src="assets/img/hero_phone.png" alt="Nokia Phone"
-                            class="w-24 h-24 mx-auto mb-4 object-contain filter drop-shadow-[0_0_15px_rgba(33,184,189,0.3)] hover:scale-105 transition-transform duration-500">
-                        <h1 class="text-3xl font-bold font-display tracking-tight text-text-main">NOKIA<span
-                                class="text-primary" style="color: #21b8bd;">1100</span></h1>
+                        <h1 class="text-3xl font-extrabold font-display tracking-tight text-text-main">
+                            NOKIA<span class="text-primary" id="brandColor">1100</span>
+                        </h1>
+                        <p class="text-xs text-text-muted mt-1 uppercase tracking-widest font-semibold text-[10px]">Iniciar Sesion</p>
                     </div>
 
-                    <?php if (isset($_GET['error']) && !$isRegister): ?>
-                        <div
-                            class="bg-red-500/10 border border-red-500/20 text-red-500 text-sm p-4 rounded-xl mb-6 font-medium flex gap-3 items-center">
-                            <span class="material-symbols-outlined text-lg">error</span>
-                            <?php echo htmlspecialchars($_GET['error']); ?>
-                        </div>
-                    <?php endif; ?>
+                    <div class="mb-6">
+                        <h2 class="text-xl font-display font-medium text-text-main">Identificación de Usuario</h2>
+                    </div>
 
-                    <?php if (isset($_GET['success']) && !$isRegister): ?>
-                        <div
-                            class="bg-green-500/10 border border-green-500/20 text-green-500 text-sm p-4 rounded-xl mb-6 font-medium flex gap-3 items-center">
-                            <span class="material-symbols-outlined text-lg">check_circle</span>
-                            <?php echo htmlspecialchars($_GET['success']); ?>
+                    <form action="<?php echo BASE_URL; ?>/modules/auth/auth.php" method="POST" class="space-y-4">
+                        <div class="premium-form-group">
+                            <input type="text" id="login-username" name="username" required placeholder=" " class="premium-form-input peer">
+                            <span class="material-symbols-outlined premium-form-icon">account_circle</span>
+                            <label for="login-username" class="premium-form-label">Nombre de usuario</label>
                         </div>
-                    <?php endif; ?>
 
-                    <form action="<?php echo BASE_URL; ?>/modules/auth/auth.php" method="POST" class="space-y-5">
-                        <div>
-                            <label for="login-username"
-                                class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wider">Identificación</label>
-                            <div class="relative flex flex-col-reverse">
-                                <input type="text" id="login-username" name="username" required
-                                    placeholder="Ingresar usuario" class="auth-input peer">
-                                <span
-                                    class="material-symbols-outlined input-icon transition-colors peer-focus:text-text-main">account_circle</span>
+                        <div class="premium-form-group">
+                            <div class="flex justify-between items-center mb-1 absolute right-2 -top-5 z-20">
+                                <a href="forgot_password.php" class="text-[11px] font-semibold text-primary hover:underline transition-all">¿Olvidaste la clave?</a>
                             </div>
+                            <input type="password" id="login-password" name="password" required placeholder=" " class="premium-form-input peer">
+                            <span class="material-symbols-outlined premium-form-icon">lock</span>
+                            <label for="login-password" class="premium-form-label">Contraseña</label>
                         </div>
 
-                        <div>
-                            <div class="flex justify-between items-center mb-2">
-                                <label for="login-password"
-                                    class="block text-xs font-bold text-text-muted uppercase tracking-wider">Credencial</label>
-                                <a href="forgot_password.php"
-                                    class="text-xs font-bold text-primary hover:text-primary-hover transition-colors">¿Olvidaste
-                                    tu contraseña?</a>
-                            </div>
-                            <div class="relative flex flex-col-reverse">
-                                <input type="password" id="login-password" name="password" required
-                                    placeholder="••••••••" class="auth-input peer">
-                                <span
-                                    class="material-symbols-outlined input-icon transition-colors peer-focus:text-text-main">lock</span>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="auth-btn mt-6 tracking-wide">INICIAR SESIÓN</button>
+                        <button type="submit" class="auth-btn mt-6 tracking-wide uppercase flex items-center justify-center gap-2">
+                            <span>Ingresar al Sistema</span>
+                            <span class="material-symbols-outlined text-[18px]">login</span>
+                        </button>
                     </form>
 
-                    <div class="text-center mt-8 text-sm text-text-muted font-medium">
-                        ¿Todavia no tienes una cuenta?
-                        <button type="button" onclick="toggleAuthMode('register')"
-                            class="text-primary hover:text-primary-hover transition-colors hover:underline font-semibold bg-transparent border-none cursor-pointer">Registrarse</button>
+                    <div class="text-center mt-8 text-xs text-text-muted font-medium border-t border-border/40 pt-6">
+                        ¿Aún no tienes una cuenta corporativa? 
+                        <button type="button" onclick="toggleAuthMode('register')" class="text-primary hover:underline font-semibold bg-transparent border-none cursor-pointer">Registrarme</button>
                     </div>
                 </div>
 
-                <!-- REGISTER PANEL -->
+                <!-- PANEL 2: REGISTRO EMPRESARIAL -->
                 <div class="auth-panel register-panel flex flex-col justify-center">
-                    <div class="text-center mb-6">
-                        <img src="assets/img/hero_phone.png" alt="Nokia Phone"
-                            class="w-16 h-16 mx-auto mb-3 object-contain filter drop-shadow-[0_0_15px_rgba(224,79,238,0.3)] hover:scale-105 transition-transform duration-500">
-                        <h1 class="text-3xl font-bold font-display tracking-tight text-text-main">NOKIA<span
-                                class="text-primary" style="color: #21b8bd;">1100</span></h1>
-                        <p class="text-[10px] text-text-muted mt-2 tracking-widest uppercase font-extrabold">Registro
-                            Empresarial</p>
+                    <div class="text-center mb-6 md:hidden">
+                        <h1 class="text-2xl font-bold font-display tracking-tight text-text-main">NOKIA<span class="text-primary">1100</span></h1>
+                        <p class="text-[10px] text-text-muted mt-1 tracking-widest uppercase font-extrabold">Registro de Operador</p>
                     </div>
 
-                    <?php if (isset($_GET['error']) && $isRegister): ?>
-                        <div
-                            class="bg-red-500/10 border border-red-500/20 text-red-500 text-sm p-4 rounded-xl mb-4 font-medium flex gap-3 items-center">
-                            <span class="material-symbols-outlined text-lg">error</span>
-                            <?php echo htmlspecialchars($_GET['error']); ?>
-                        </div>
-                    <?php endif; ?>
-                    <?php if (!empty($_SESSION['mail_debug_notice'])): ?>
-                        <div
-                            class="bg-yellow-500/10 border border-yellow-500/20 text-yellow-300 text-sm p-4 rounded-xl mb-4 font-medium flex gap-3 items-center">
-                            <span class="material-symbols-outlined text-lg">warning</span>
-                            <?php echo htmlspecialchars($_SESSION['mail_debug_notice']); ?>
-                        </div>
-                        <?php unset($_SESSION['mail_debug_notice']); ?>
-                    <?php endif; ?>
+                    <div class="mb-5">
+                        <h2 class="text-xl font-display font-medium text-text-main">Registrarse</h2>
+                    </div>
 
-                    <form action="<?php echo BASE_URL; ?>/modules/auth/process_registration.php" method="POST"
-                        class="space-y-4">
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="nombre"
-                                    class="block text-[10px] font-bold text-text-muted mb-1 uppercase tracking-wide">Nombre</label>
-                                <input type="text" id="nombre" name="nombre" required class="auth-input no-icon !p-3">
+                    <form action="<?php echo BASE_URL; ?>/modules/auth/process_registration.php" method="POST" class="space-y-3.5">
+                        
+                        <!-- Datos Personales -->
+                        <div class="grid grid-cols-2 gap-3.5">
+                            <div class="premium-form-group">
+                                <input type="text" id="nombre" name="nombre" required placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
+                                <span class="material-symbols-outlined premium-form-icon text-[18px]">person</span>
+                                <label for="nombre" class="premium-form-label !left-10">Nombre</label>
                             </div>
-                            <div>
-                                <label for="apellido"
-                                    class="block text-[10px] font-bold text-text-muted mb-1 uppercase tracking-wide">Apellido</label>
-                                <input type="text" id="apellido" name="apellido" required
-                                    class="auth-input no-icon !p-3">
+                            <div class="premium-form-group">
+                                <input type="text" id="apellido" name="apellido" required placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
+                                <span class="material-symbols-outlined premium-form-icon text-[18px]">person</span>
+                                <label for="apellido" class="premium-form-label !left-10">Apellido</label>
                             </div>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="dni"
-                                    class="block text-[10px] font-bold text-text-muted mb-1 uppercase tracking-wide">DNI</label>
-                                <input type="text" id="dni" name="dni" required class="auth-input no-icon !p-3">
+                        <div class="grid grid-cols-2 gap-3.5">
+                            <div class="premium-form-group">
+                                <input type="text" id="dni" name="dni" required placeholder=" " class="premium-form-input peer !p-3.5 !pl-10" pattern="[0-9]{7,10}" title="El DNI debe tener entre 7 y 10 dígitos">
+                                <span class="material-symbols-outlined premium-form-icon text-[18px]">badge</span>
+                                <label for="dni" class="premium-form-label !left-10">DNI</label>
                             </div>
-                            <div>
-                                <label for="email"
-                                    class="block text-[10px] font-bold text-text-muted mb-1 uppercase tracking-wide">Email</label>
-                                <input type="email" id="email" name="email" required class="auth-input no-icon !p-3">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="telefono"
-                                    class="block text-[10px] font-bold text-text-muted mb-1 uppercase tracking-wide">Teléfono</label>
-                                <input type="text" id="telefono" name="telefono" class="auth-input no-icon !p-3">
-                            </div>
-                            <div>
-                                <label for="direccion"
-                                    class="block text-[10px] font-bold text-text-muted mb-1 uppercase tracking-wide">Dirección</label>
-                                <input type="text" id="direccion" name="direccion" class="auth-input no-icon !p-3">
+                            <div class="premium-form-group">
+                                <input type="email" id="email" name="email" required placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
+                                <span class="material-symbols-outlined premium-form-icon text-[18px]">mail</span>
+                                <label for="email" class="premium-form-label !left-10">Email</label>
                             </div>
                         </div>
 
-                        <div class="h-px bg-slate-200 my-4"></div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="col-span-2">
-                                <label for="reg-username"
-                                    class="block text-[10px] font-extrabold text-text-muted mb-1 uppercase tracking-wide">Usuario</label>
-                                <input type="text" id="reg-username" name="username" required
-                                    class="auth-input no-icon !p-3 bg-secondary/10 hover:border-text-muted focus:border-text-main">
+                        <div class="grid grid-cols-2 gap-3.5">
+                            <div class="premium-form-group">
+                                <input type="text" id="telefono" name="telefono" placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
+                                <span class="material-symbols-outlined premium-form-icon text-[18px]">call</span>
+                                <label for="telefono" class="premium-form-label !left-10">Teléfono</label>
                             </div>
-
-                            <div>
-                                <label for="reg-password"
-                                    class="block text-[10px] font-bold text-text-muted mb-1 uppercase tracking-wide">Contraseña</label>
-                                <input type="password" id="reg-password" name="password" required
-                                    class="auth-input no-icon !p-3">
-                            </div>
-
-                            <div>
-                                <label for="reg-password-confirm"
-                                    class="block text-[10px] font-bold text-text-muted mb-1 uppercase tracking-wide">Confirmar Contraseña</label>
-                                <input type="password" id="reg-password-confirm" name="password_confirm" required
-                                    class="auth-input no-icon !p-3">
+                            <div class="premium-form-group">
+                                <input type="text" id="direccion" name="direccion" placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
+                                <span class="material-symbols-outlined premium-form-icon text-[18px]">home</span>
+                                <label for="direccion" class="premium-form-label !left-10">Dirección</label>
                             </div>
                         </div>
 
-                        <button type="submit" class="auth-btn mt-4 tracking-wide">CREAR NUEVA CUENTA</button>
+                        <div class="h-[1px] bg-border/50 my-1"></div>
+
+                        <!-- Credenciales -->
+                        <div class="premium-form-group">
+                            <input type="text" id="reg-username" name="username" required placeholder=" " class="premium-form-input peer">
+                            <span class="material-symbols-outlined premium-form-icon">account_circle</span>
+                            <label for="reg-username" class="premium-form-label">Nombre de usuario deseado</label>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3.5">
+                            <div class="premium-form-group">
+                                <input type="password" id="reg-password" name="password" required minlength="6" placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
+                                <span class="material-symbols-outlined premium-form-icon text-[18px]">lock</span>
+                                <label for="reg-password" class="premium-form-label !left-10">Contraseña</label>
+                            </div>
+                            <div class="premium-form-group">
+                                <input type="password" id="reg-password-confirm" name="password_confirm" required minlength="6" placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
+                                <span class="material-symbols-outlined premium-form-icon text-[18px]">key</span>
+                                <label for="reg-password-confirm" class="premium-form-label !left-10">Confirmar</label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="auth-btn mt-3 tracking-wide uppercase flex items-center justify-center gap-2" style="background: var(--secondary-color); box-shadow: 0 4px 6px -1px rgba(224, 79, 238, 0.3);">
+                            <span>Registrar Cuenta</span>
+                            <span class="material-symbols-outlined text-[18px]">how_to_reg</span>
+                        </button>
                     </form>
 
-                    <div class="text-center mt-6 text-sm text-text-muted font-medium">
-                        ¿Ya tienes una cuenta?
-                        <button type="button" onclick="toggleAuthMode('login')"
-                            class="text-primary hover:text-primary-hover transition-colors hover:underline font-semibold bg-transparent border-none cursor-pointer">Iniciar
-                            sesion</button>
+                    <div class="text-center mt-6 text-xs text-text-muted font-medium border-t border-border/40 pt-5">
+                        ¿Ya posees una cuenta de operador? 
+                        <button type="button" onclick="toggleAuthMode('login')" class="text-primary hover:underline font-semibold bg-transparent border-none cursor-pointer">Iniciar Sesión</button>
                     </div>
                 </div>
 
@@ -373,12 +300,24 @@ if (isset($_SESSION['user_id'])) {
         </div>
     </div>
 
+    <!-- Contenedor Unificado para Notificaciones Toasts Flotantes -->
+    <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col items-end pointer-events-none gap-2"></div>
+
+    <!-- Cargar Scripts del Sistema para animaciones Toasts y decodificación de URL -->
+    <script src="<?php echo BASE_URL; ?>/assets/js/main.js?v=<?php echo time(); ?>"></script>
+
+    <!-- Script de Gestión de Acceso -->
     <script>
+        // Conmutador del modo Auth (Login / Registro)
         function toggleAuthMode(mode) {
             const wrapper = document.getElementById('authWrapper');
+            const brandColor = document.getElementById('brandColor');
+            
             if (mode === 'register') {
                 wrapper.classList.add('is-register');
-                // Agregar timeout sutil para cambiar la URL y que no rompa el estilo visual inmediato
+                
+                if (brandColor) brandColor.style.color = '#E04FEE'; // Magenta en Registro
+                
                 setTimeout(() => {
                     const params = new URLSearchParams(window.location.search);
                     params.set('action', 'register');
@@ -386,6 +325,9 @@ if (isset($_SESSION['user_id'])) {
                 }, 300);
             } else {
                 wrapper.classList.remove('is-register');
+                
+                if (brandColor) brandColor.style.color = '#21b8bd'; // Cian en Login
+                
                 setTimeout(() => {
                     const params = new URLSearchParams(window.location.search);
                     params.delete('action');

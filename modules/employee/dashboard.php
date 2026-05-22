@@ -71,58 +71,63 @@ Layout::renderEmployeeSidebar('dashboard');
         </div>
     </section>
 
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <!-- Products -->
-        <div class="lg:col-span-8 space-y-6">
-            <div class="flex items-center justify-between">
-                <h3 class="font-display font-medium text-lg text-text-main">Catálogo Destacado</h3>
-                <a href="<?php echo BASE_URL; ?>/modules/inventory/inventory.php" class="text-[10px] font-semibold uppercase tracking-widest text-primary hover:underline">Ver todo</a>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                <?php
-if ($productos && $productos->num_rows > 0) {
-    while ($p = $productos->fetch_assoc()) {
-        echo "<div class='glass-card p-4 rounded-xl hover:bg-surface-hover/50 transition-colors'>
-                            <div class='aspect-video rounded-lg bg-surface flex items-center justify-center mb-4 text-text-muted'>
-                                <span class='material-symbols-outlined text-4xl opacity-50'>smartphone</span>
-                            </div>
-                            <div class='text-sm font-medium text-text-main truncate'>{$p['nombre']}</div>
-                            <div class='text-primary font-medium text-sm mt-1'>$" . number_format($p['precio'], 2) . "</div>
-                        </div>";
-    }
-}
-else {
-    echo "<p class='text-sm text-text-muted'>No hay productos registrados</p>";
-}
-?>
-            </div>
-        </div>
-
-        <!-- Recent flow -->
-        <div class="lg:col-span-4 space-y-6">
-            <h3 class="font-display font-medium text-lg text-text-main">Últimas Transacciones</h3>
-            <div class="glass-card rounded-2xl overflow-hidden p-0">
-                <div class="divide-y divide-border/50">
+    <div class="grid grid-cols-1 gap-8">
+        <!-- Contenido Principal: Catálogo y Transacciones -->
+        <div class="space-y-8">
+            
+            <!-- Productos -->
+            <div class="space-y-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-display font-medium text-lg text-text-main">Catálogo Destacado</h3>
+                    <a href="<?php echo BASE_URL; ?>/modules/inventory/inventory.php" class="text-[10px] font-semibold uppercase tracking-widest text-primary hover:underline">Ver todo</a>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                     <?php
-if ($ventasRecientes && $ventasRecientes->num_rows > 0) {
-    while ($v = $ventasRecientes->fetch_assoc()) {
-        $monto = number_format($v['total'], 2);
-        $metodo = $v['metodo_de_pago'] ? $v['metodo_de_pago'] : 'N/A';
-        echo "<div class='p-4 hover:bg-surface/30 transition-colors flex justify-between items-center'>
-                                <div>
-                                    <div class='text-sm font-medium text-primary'>#TX-{$v['id_venta']}</div>
-                                    <div class='text-[10px] font-semibold uppercase tracking-wider text-text-muted mt-1'>{$metodo}</div>
-                                </div>
-                                <div class='text-sm font-medium text-text-main text-right'>$$monto</div>
-                            </div>";
-    }
-}
-else {
-    echo "<div class='p-4 text-sm text-text-muted'>No hay transacciones</div>";
-}
-?>
+                    if ($productos && $productos->num_rows > 0) {
+                        while ($p = $productos->fetch_assoc()) {
+                            echo "<div class='glass-card p-4 rounded-xl hover:bg-surface-hover/50 transition-colors'>
+                                                <div class='aspect-video rounded-lg bg-surface flex items-center justify-center mb-4 text-text-muted'>
+                                                    <span class='material-symbols-outlined text-4xl opacity-50'>smartphone</span>
+                                                </div>
+                                                <div class='text-sm font-medium text-text-main truncate'>{$p['nombre']}</div>
+                                                <div class='text-primary font-medium text-sm mt-1'>$" . number_format($p['precio'], 2) . "</div>
+                                            </div>";
+                        }
+                    }
+                    else {
+                        echo "<p class='text-sm text-text-muted'>No hay productos registrados</p>";
+                    }
+                    ?>
                 </div>
             </div>
+
+            <!-- Últimas Transacciones -->
+            <div class="space-y-6">
+                <h3 class="font-display font-medium text-lg text-text-main">Últimas Transacciones</h3>
+                <div class="glass-card rounded-2xl overflow-hidden p-0">
+                    <div class="divide-y divide-border/50">
+                        <?php
+                        if ($ventasRecientes && $ventasRecientes->num_rows > 0) {
+                            while ($v = $ventasRecientes->fetch_assoc()) {
+                                $monto = number_format($v['total'], 2);
+                                $metodo = $v['metodo_de_pago'] ? $v['metodo_de_pago'] : 'N/A';
+                                echo "<div class='p-4 hover:bg-surface/30 transition-colors flex justify-between items-center'>
+                                                        <div>
+                                                            <div class='text-sm font-medium text-primary'>#TX-{$v['id_venta']}</div>
+                                                            <div class='text-[10px] font-semibold uppercase tracking-wider text-text-muted mt-1'>{$metodo}</div>
+                                                        </div>
+                                                        <div class='text-sm font-medium text-text-main text-right'>$$monto</div>
+                                                    </div>";
+                            }
+                        }
+                        else {
+                            echo "<div class='p-4 text-sm text-text-muted'>No hay transacciones</div>";
+                        }
+                        ?>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 

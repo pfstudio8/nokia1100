@@ -1,17 +1,20 @@
 <?php
 require_once __DIR__ . '/config/db.php';
 
-$codigo = isset($_GET['code']) ? $conn->real_escape_string($_GET['code']) : '';
+$codigo = isset($_GET['code']) ? trim($_GET['code']) : '';
 $order_found = false;
 $repair = null;
 
 if ($codigo) {
-    $sql = "SELECT codigo_orden, equipo_marca, equipo_modelo, estado FROM reparacion WHERE codigo_orden = '$codigo'";
-    $result = $conn->query($sql);
+    $stmt = $conn->prepare("SELECT codigo_orden, equipo_marca, equipo_modelo, estado FROM reparacion WHERE codigo_orden = ?");
+    $stmt->bind_param("s", $codigo);
+    $stmt->execute();
+    $result = $stmt->get_result();
     if ($result && $result->num_rows > 0) {
         $repair = $result->fetch_assoc();
         $order_found = true;
     }
+    $stmt->close();
 }
 ?>
 <!DOCTYPE html>
