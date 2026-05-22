@@ -176,7 +176,7 @@ class Layout
     public static function renderFooter()
     {
         echo '
-<div id="toast-container" class="fixed bottom-4 left-4 z-50 flex flex-col items-start pointer-events-none"></div>
+<div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col items-end pointer-events-none gap-2"></div>
 <script src="' . BASE_URL . '/assets/js/main.js?v=' . time() . '"></script>
 </body></html>';
     }

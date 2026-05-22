@@ -12,18 +12,19 @@ $search = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : 
 
 $where_parts = [];
 if ($estado_filter) {
-    $where_parts[] = "estado = '" . $conn->real_escape_string($estado_filter) . "'";
+    $where_parts[] = "r.estado = '" . $conn->real_escape_string($estado_filter) . "'";
 }
 if ($search) {
-    $where_parts[] = "(codigo_orden LIKE '%$search%' OR cliente_nombre LIKE '%$search%' OR equipo_marca LIKE '%$search%' OR equipo_modelo LIKE '%$search%')";
+    $where_parts[] = "(r.codigo_orden LIKE '%$search%' OR c.nombre LIKE '%$search%' OR r.equipo_marca LIKE '%$search%' OR r.equipo_modelo LIKE '%$search%')";
 }
 
 $where_clause = count($where_parts) > 0 ? " WHERE " . implode(" AND ", $where_parts) : "";
 
-$sql = "SELECT id_reparacion, codigo_orden, cliente_nombre, equipo_marca, equipo_modelo, estado, fecha_ingreso, presupuesto 
-        FROM reparacion 
+$sql = "SELECT r.id_reparacion, r.codigo_orden, c.nombre AS cliente_nombre, r.equipo_marca, r.equipo_modelo, r.estado, r.fecha_ingreso, r.presupuesto 
+        FROM reparacion r
+        LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
         $where_clause 
-        ORDER BY fecha_ingreso DESC";
+        ORDER BY r.fecha_ingreso DESC";
 
 $result = $conn->query($sql);
 $repairs = [];

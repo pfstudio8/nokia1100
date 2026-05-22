@@ -1,73 +1,79 @@
 <?php
+// modules/admin/delete_user.php  ←  BAJA LÓGICA (no borra físicamente)
 session_start();
 require_once __DIR__ . "/../../config/db.php";
+require_once __DIR__ . "/../../config/audit.php";
 
-// Solo el admin puede borrar
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header("Location: " . BASE_URL . "/index.php");
     exit();
 }
 
-
-// Verificar que haya un id recibido
 if (!isset($_GET['id']) || empty($_GET['id'])) {
-    header("Location: users.php?error=No_id");
+    header("Location: users.php?error=ID no especificado");
     exit();
 }
 
-$id = intval($_GET['id']);
+$id          = intval($_GET['id']);
+$id_admin    = (int) $_SESSION['user_id'];
 
-// Proteger borrar solo si el usuario destino actualmente tiene rol admin
-$sql_get = "SELECT id_persona, rol FROM usuario WHERE id_usuario = ?";
-$stmt_get = $conn->prepare($sql_get);
-$stmt_get->bind_param("i", $id);
-$stmt_get->execute();
-$result = $stmt_get->get_result();
-
-$id_persona = null;
-$rol_destino = null;
-if ($row = $result->fetch_assoc()) {
-    $id_persona = $row['id_persona'];
-    $rol_destino = $row['rol'];
-}
-$stmt_get->close();
-
-if ($rol_destino === 'admin') {
-    header("Location: users.php?error=No se puede eliminar un usuario con rol admin");
+// No puede darse de baja a sí mismo
+if ($id === $id_admin) {
+    header("Location: users.php?error=No podés desactivar tu propia cuenta");
     exit();
 }
 
-// Obtener el id_persona asociado
-// (id_persona ya fue obtenido junto con el rol)
-
-// Nullificar el id_usuario en las ventas para que no dé error de constraint (y mantener el historial de ventas)
-$sql_ventas = "UPDATE venta SET id_usuario = NULL WHERE id_usuario = ?";
-$stmt_ventas = $conn->prepare($sql_ventas);
-$stmt_ventas->bind_param("i", $id);
-$stmt_ventas->execute();
-$stmt_ventas->close();
-
-// Eliminar el usuario
-$sql = "DELETE FROM usuario WHERE id_usuario = ?";
-$stmt = $conn->prepare($sql);
+// Obtener datos del usuario objetivo
+$stmt = $conn->prepare("SELECT id_persona, rol, nombre_usuario, is_active FROM usuario WHERE id_usuario = ?");
 $stmt->bind_param("i", $id);
+$stmt->execute();
+$result = $stmt->get_result();
+$row = $result->fetch_assoc();
+$stmt->close();
+
+if (!$row) {
+    header("Location: users.php?error=Usuario no encontrado");
+    exit();
+}
+
+// No se puede desactivar a otro admin
+if ($row['rol'] === 'admin') {
+    header("Location: users.php?error=No se puede desactivar un usuario con rol admin");
+    exit();
+}
+
+// ── RESTAURAR si ya está inactivo ─────────────────────────────────────────────
+if ((int)$row['is_active'] === 0) {
+    $stmt = $conn->prepare(
+        "UPDATE usuario SET is_active = 1, fecha_baja = NULL, motivo_baja = NULL WHERE id_usuario = ?"
+    );
+    $stmt->bind_param("i", $id);
+    $stmt->execute();
+    $stmt->close();
+
+    audit_log($conn, 'USER_RESTORE', $id_admin, 'usuario', $id,
+        "Usuario restaurado: {$row['nombre_usuario']}");
+
+    header("Location: users.php?success=Usuario restaurado correctamente");
+    exit();
+}
+
+// ── BAJA LÓGICA ───────────────────────────────────────────────────────────────
+$motivo     = 'Desactivado por administrador';
+$fecha_baja = date('Y-m-d H:i:s');
+
+$stmt = $conn->prepare(
+    "UPDATE usuario SET is_active = 0, fecha_baja = ?, motivo_baja = ? WHERE id_usuario = ?"
+);
+$stmt->bind_param("ssi", $fecha_baja, $motivo, $id);
 
 if ($stmt->execute()) {
     $stmt->close();
-    // Eliminar también la persona asociada a ese usuario para no dejar registros huérfanos
-    if ($id_persona) {
-        $sql_per = "DELETE FROM persona WHERE id_persona = ?";
-        $stmt_per = $conn->prepare($sql_per);
-        $stmt_per->bind_param("i", $id_persona);
-        $stmt_per->execute();
-        $stmt_per->close();
-    }
-    header("Location: users.php?success=Usuario_eliminado");
+    audit_log($conn, 'USER_DELETE', $id_admin, 'usuario', $id,
+        "Baja lógica aplicada a: {$row['nombre_usuario']}");
+    header("Location: users.php?success=Usuario desactivado (baja lógica)");
 } else {
     $stmt->close();
-    header("Location: users.php?error=Error_al_eliminar");
+    header("Location: users.php?error=Error al desactivar usuario");
 }
-
-$stmt->close();
-$conn->close();
-?>
+exit();

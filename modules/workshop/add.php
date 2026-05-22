@@ -9,7 +9,6 @@ require_once __DIR__ . '/../../classes/Layout.php';
 
 $error = '';
 $success = '';
-
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $cliente_nombre = $conn->real_escape_string($_POST['cliente_nombre']);
     $cliente_telefono = $conn->real_escape_string($_POST['cliente_telefono']);
@@ -27,11 +26,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Generar código de orden (fecha + random)
     $codigo_orden = date('ym') . mt_rand(1000, 9999);
     $id_usuario = $_SESSION['user_id'];
+
+    // Buscar cliente existente o crear uno nuevo
+    $res_client = $conn->query("SELECT id_cliente FROM cliente WHERE nombre = '$cliente_nombre' AND telefono = '$cliente_telefono'");
+    if ($res_client && $res_client->num_rows > 0) {
+        $id_cliente = $res_client->fetch_assoc()['id_cliente'];
+    } else {
+        $conn->query("INSERT INTO cliente (nombre, telefono, email) VALUES ('$cliente_nombre', '$cliente_telefono', '$cliente_email')");
+        $id_cliente = $conn->insert_id;
+    }
     
-    $sql = "INSERT INTO reparacion (codigo_orden, cliente_nombre, cliente_telefono, cliente_email,
+    $sql = "INSERT INTO reparacion (codigo_orden, id_cliente,
             equipo_marca, equipo_modelo, equipo_imei, falla_declarada, observaciones,
             presupuesto, id_usuario_recibe) 
-            VALUES ('$codigo_orden', '$cliente_nombre', '$cliente_telefono', '$cliente_email', 
+            VALUES ('$codigo_orden', $id_cliente, 
             '$equipo_marca', '$equipo_modelo', '$equipo_imei', '$falla', '$observaciones',
             $presupuesto, $id_usuario)";
             
