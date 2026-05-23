@@ -1,6 +1,6 @@
-﻿<?php
+<?php
 // verificar.php
-require_once '../config/bd.php';
+require_once '../config/db.php';
 
 if (isset($_GET['token'])) {
     $token = $_GET['token'];
