@@ -115,7 +115,7 @@ input:focus, select:focus {
 }
 
 /* Buttons */
-button, .btn-primary, .btn-add {
+button:not([data-sileo-toast]):not([data-sileo-button]):not([data-sileo-viewport] *), .btn-primary, .btn-add {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -133,7 +133,7 @@ button, .btn-primary, .btn-add {
     text-decoration: none;
 }
 
-button:hover, .btn-primary:hover, .btn-add:hover {
+button:not([data-sileo-toast]):not([data-sileo-button]):not([data-sileo-viewport] *):hover, .btn-primary:hover, .btn-add:hover {
     background: var(--primary-hover);
     transform: translateY(-1px);
 }
@@ -432,103 +432,7 @@ html.is-animating body {
     100% { transform: scale(0.1); opacity: 0; }
 }
 
-/* Premium Toast System */
-.premium-toast {
-    position: relative;
-    width: 340px;
-    background: rgba(17, 17, 19, 0.85);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 14px;
-    padding: 1rem 1.25rem;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-    opacity: 0;
-    transform: translateX(100px) scale(0.9);
-    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
-    overflow: hidden;
-    margin-bottom: 0.75rem;
-}
-
-.premium-toast-content {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.premium-toast-icon {
-    font-size: 1.6rem !important;
-    flex-shrink: 0;
-}
-
-.premium-toast-message {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: var(--text-main);
-    line-height: 1.4;
-    flex-grow: 1;
-    margin: 0 !important;
-}
-
-.premium-toast-close {
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.25rem;
-    border-radius: 50%;
-    transition: all 0.2s ease;
-    flex-shrink: 0;
-}
-
-.premium-toast-close:hover {
-    color: var(--text-main);
-    background: rgba(255, 255, 255, 0.08);
-}
-
-.premium-toast-progress {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    height: 3px;
-    width: 0;
-}
-
-/* Toast Accent Glows */
-.premium-toast-success {
-    border-left: 4px solid var(--success);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(34, 197, 94, 0.15);
-}
-.premium-toast-success .premium-toast-icon {
-    color: var(--success);
-}
-
-.premium-toast-error {
-    border-left: 4px solid var(--error);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 113, 108, 0.15);
-}
-.premium-toast-error .premium-toast-icon {
-    color: var(--error);
-}
-
-.premium-toast-warning {
-    border-left: 4px solid #eab308;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(234, 179, 8, 0.15);
-}
-.premium-toast-warning .premium-toast-icon {
-    color: #eab308;
-}
-
-.premium-toast-info {
-    border-left: 4px solid var(--primary-color);
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(33, 184, 189, 0.15);
-}
-.premium-toast-info .premium-toast-icon {
-    color: var(--primary-color);
-}
+/* Toast System: Now handled entirely by Sileo React bundle */
 
 /* Form inputs & styles inside premium modal */
 .premium-modal-card {
@@ -800,5 +704,62 @@ html.is-animating body {
 
 .premium-form-input:focus ~ .premium-form-icon {
     color: var(--primary-color);
+}
+
+/* ============================================================
+   Toast / Notification Overrides (Sileo)
+   Centrado, más grande y visible para el usuario
+   ============================================================ */
+
+/* Viewport: mayor z-index y padding top para visibilidad */
+[data-sileo-viewport] {
+    z-index: 99999 !important;
+    padding: 1.25rem !important;
+}
+
+/* Toast: más ancho y alto */
+[data-sileo-toast] {
+    --sileo-width: 450px !important;
+    --sileo-height: 52px !important;
+}
+
+/* Título del toast: más grande y legible */
+[data-sileo-title] {
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.01em;
+}
+
+/* Badge/icono: ligeramente más grande */
+[data-sileo-badge] {
+    height: 28px !important;
+    width: 28px !important;
+}
+
+/* SVG canvas (la burbuja de fondo): glassmorphism oscuro */
+[data-sileo-toast] [data-sileo-svg] rect,
+[data-sileo-toast] [data-sileo-svg] path {
+    fill: rgba(17, 17, 19, 0.92) !important;
+    stroke: rgba(255, 255, 255, 0.08) !important;
+    stroke-width: 1 !important;
+}
+
+/* Sombra premium en el toast */
+[data-sileo-toast][data-ready="true"] {
+    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 12px rgba(33, 184, 189, 0.08));
+}
+
+/* Descripción si existe */
+[data-sileo-description] {
+    font-size: 0.9rem !important;
+    color: var(--text-muted) !important;
+    opacity: 1 !important;
+}
+
+/* Responsive: en pantallas chicas el toast ocupa casi todo el ancho */
+@media (max-width: 520px) {
+    [data-sileo-toast] {
+        --sileo-width: calc(100vw - 2rem) !important;
+    }
 }
 
