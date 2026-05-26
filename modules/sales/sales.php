@@ -27,19 +27,102 @@ Layout::renderHead('Historial de Ventas - Nokia 1100');
 Layout::renderAdminSidebar('ventas');
 ?>
 <style>
-    .btn-export {
+    /* Premium GSAP Download Button */
+    .btn-export-premium {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 150px;
+        height: 42px;
         background: var(--text-main);
-        padding: 0.5rem 1rem;
-        text-decoration: none;
-        color: var(--text-inverse);
-        border-radius: 8px;
+        color: var(--text-inverse) !important;
         font-weight: 600;
-        font-size: 0.85rem;
-        border: 1px solid var(--border);
-        transition: all 0.2s;
+        border-radius: 24px;
+        border: none;
+        cursor: pointer;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        padding: 0 1.5rem;
     }
-    .btn-export:hover { 
-        background: var(--text-muted); 
+    .btn-export-premium:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(255, 255, 255, 0.08);
+    }
+    .btn-export-premium.loading {
+        background: var(--surface) !important;
+        border: 1px solid var(--border);
+        color: var(--text-main) !important;
+        cursor: not-allowed;
+    }
+    .btn-export-premium.complete {
+        background: var(--success) !important;
+        color: var(--background) !important;
+        box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+    }
+    .btn-export-premium .button-text {
+        transition: transform 0.4s ease, opacity 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.85rem;
+    }
+    .btn-export-premium.loading .button-text {
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+    .btn-export-premium .progress-percent {
+        position: absolute;
+        left: 1.5rem;
+        font-family: monospace;
+        font-size: 0.85rem;
+        opacity: 0;
+        transform: translateY(30px);
+        transition: transform 0.4s ease, opacity 0.3s ease;
+        color: var(--primary-color);
+        font-weight: bold;
+    }
+    .btn-export-premium.loading .progress-percent {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    .btn-export-premium .icon-container {
+        position: absolute;
+        right: 1.25rem;
+        width: 24px;
+        height: 24px;
+        transition: all 0.4s ease;
+    }
+    .btn-export-premium.loading .icon-container {
+        right: 50%;
+        transform: translateX(50%);
+    }
+
+    /* SVG and morph path styles requested by the user */
+    .button svg {
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: var(--sw, 3px); 
+        stroke-linecap: round; 
+        stroke-linejoin: round;
+        width: 24px;
+        height: 24px;
+    }
+    .button circle { 
+        width: 24px; 
+        height: 24px;
+        transform: rotate(-90deg);
+        transform-origin: center;
+        stroke-dasharray: 62.8;
+        stroke-dashoffset: 62.8;
+        stroke: var(--primary-color);
+        transition: stroke-dashoffset 0.1s linear;
+    }
+    .button .icon {
+        --sw: 2px;
+        width: 24px;
+        height: 24px;
     }
 </style>
 
@@ -53,9 +136,21 @@ Layout::renderAdminSidebar('ventas');
             <div style="display: flex; gap: 1rem; align-items: center; justify-content: flex-end; flex: 1;">
                 <input type="text" id="search-input" placeholder="Buscar venta..." style="width: 250px; padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 0.9rem;">
                 <a href="<?php echo BASE_URL; ?>/modules/admin/dashboard.php" class="btn-back">Volver</a>
-                <a href="export_sales.php" class="btn-export flex items-center gap-2">
-                    <span class="material-symbols-outlined text-sm">download</span> Exportar
-                </a>
+                <button type="button" id="exportBtn" class="btn-export-premium button relative">
+                    <span class="button-text">
+                        <span class="material-symbols-outlined text-sm">download</span> Exportar
+                    </span>
+                    <span class="progress-percent">0%</span>
+                    <div class="icon-container">
+                        <div class="icon">
+                            <svg viewBox="0 0 24 24">
+                                <circle cx="12" cy="12" r="10" />
+                                <path class="arrow-path" d="M12 4v12 M8 12l4 4 4-4" />
+                                <path class="line-path" d="M2 16 Q12 16 22 16" />
+                            </svg>
+                        </div>
+                    </div>
+                </button>
             </div>
         </div>
 
@@ -105,4 +200,138 @@ Layout::renderAdminSidebar('ventas');
         </div>
     </div>
 </main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const button = document.getElementById('exportBtn');
+    if (!button) return;
+
+    // Track active tweens for cancellation
+    let activeTweens = [];
+    let isAnimating = false;
+
+    function resetButton() {
+        // Kill all active GSAP tweens
+        activeTweens.forEach(tw => tw.kill());
+        activeTweens = [];
+        isAnimating = false;
+
+        const countElem = button.querySelector('.progress-percent');
+        const arrowPath = button.querySelector('.arrow-path');
+        const linePath = button.querySelector('.line-path');
+        const circle = button.querySelector('circle');
+
+        button.classList.remove('loading', 'complete');
+        button.querySelector('.button-text').innerHTML = '<span class="material-symbols-outlined text-sm">download</span> Exportar';
+        countElem.innerHTML = '0%';
+        circle.style.strokeDashoffset = 62.8;
+        arrowPath.style.strokeDasharray = '';
+        arrowPath.style.transform = '';
+        linePath.setAttribute('d', 'M2 16 Q12 16 22 16');
+    }
+
+    button.addEventListener('click', (e) => {
+        e.preventDefault();
+
+        // Si está animando, cancelar
+        if (isAnimating) {
+            resetButton();
+            if (typeof window.showToast === 'function') {
+                window.showToast('Exportación cancelada', 'info');
+            }
+            return;
+        }
+
+        // Si completó, ignorar hasta que se reinicie solo
+        if (button.classList.contains('complete')) return;
+
+        isAnimating = true;
+        button.classList.add('loading');
+        
+        const countElem = button.querySelector('.progress-percent');
+        const arrowPath = button.querySelector('.arrow-path');
+        const linePath = button.querySelector('.line-path');
+        const circle = button.querySelector('circle');
+        
+        // Proxy reactivo para las propiedades de la animación SVG
+        const svgPath = new Proxy({
+            f: 0,
+            l: 0,
+            s: 1,
+            y: 22
+        }, {
+            set(target, key, value) {
+                target[key] = value;
+                
+                if (key === 'y') {
+                    linePath.setAttribute('d', `M2 16 Q12 ${value} 22 16`);
+                }
+                
+                if (key === 'f' || key === 'l') {
+                    arrowPath.style.strokeDasharray = `${value} 100`;
+                }
+                
+                if (key === 's') {
+                    arrowPath.style.transform = `translateY(${svgPath.y - 16}px) scale(${value / 2})`;
+                    arrowPath.style.transformOrigin = 'center';
+                }
+                return true;
+            }
+        });
+        
+        // 1. Primer paso de la flecha (delay reducido)
+        const tw1 = gsap.to(svgPath, {
+            f: 2,
+            l: 38,
+            duration: 0.2,
+            delay: 0.05
+        });
+        
+        // 2. Rebote elástico (delay reducido)
+        const tw2 = gsap.to(svgPath, {
+            s: 2,
+            y: 16,
+            duration: 0.5,
+            delay: 0.05,
+            ease: "elastic.out(1, 0.4)"
+        });
+        
+        // 3. Conteo numérico de porcentaje (duración reducida)
+        const count = { number: 0 };
+        const tw3 = gsap.to(count, {
+            number: 100,
+            duration: 1.5,
+            delay: 0.3,
+            onUpdate() {
+                const currentVal = Math.round(count.number);
+                countElem.innerHTML = currentVal + "%";
+                
+                const offset = 62.8 - (62.8 * currentVal / 100);
+                circle.style.strokeDashoffset = offset;
+            },
+            onComplete() {
+                isAnimating = false;
+                activeTweens = [];
+                button.classList.remove('loading');
+                button.classList.add('complete');
+                button.querySelector('.button-text').innerHTML = '<span class="material-symbols-outlined text-[1rem]">check</span> ¡Exportado!';
+                
+                // Desencadenar la descarga física del CSV
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = 'export_sales.php';
+                document.body.appendChild(iframe);
+                setTimeout(() => iframe.remove(), 1000);
+                
+                // Restaurar el botón a su estado inicial después de 2.5s
+                setTimeout(() => {
+                    resetButton();
+                }, 2500);
+            }
+        });
+
+        activeTweens = [tw1, tw2, tw3];
+    });
+});
+</script>
 <?php Layout::renderFooter(); ?>

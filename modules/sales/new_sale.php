@@ -296,27 +296,5 @@ async function submitSale() {
     .catch(() => showToast('Error de conexión al procesar la venta', 'error'));
 }
 
-function showSuccessModal(idVenta) {
-    const overlay = document.createElement('div');
-    overlay.className = 'fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center';
-    overlay.innerHTML = `
-        <div class="bg-surface border border-border rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
-            <div class="w-16 h-16 bg-primary/20 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
-                <span class="material-symbols-outlined text-3xl">check_circle</span>
-            </div>
-            <h3 class="text-xl font-display font-semibold text-text-main mb-2">¡Venta Exitosa!</h3>
-            <p class="text-text-muted text-sm mb-6">La transacción fue registrada correctamente.</p>
-            <div class="flex flex-col gap-3">
-                <a href="invoice.php?id=${idVenta}" target="_blank"
-                   class="w-full bg-primary text-background font-medium py-3 px-4 rounded-xl transition-all flex justify-center items-center gap-2 hover:bg-primary/90">
-                    <span class="material-symbols-outlined">print</span> Imprimir Factura
-                </a>
-                <button onclick="this.closest('.fixed').remove()"
-                    class="w-full bg-surface border border-border text-text-main font-medium py-3 px-4 rounded-xl hover:bg-border">
-                    Nueva Venta
-                </button>
-            </div>
-        </div>`;
-    document.body.appendChild(overlay);
-}
+// showSuccessModal is now defined globally by the Sileo React bundle
 </script>

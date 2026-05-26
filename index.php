@@ -19,7 +19,7 @@ if (isset($_SESSION['user_id'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Acceso Corporativo - Nokia 1100 System</title>
+    <title>Login - Sistema Nokia1100 </title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -68,83 +68,287 @@ if (isset($_SESSION['user_id'])) {
             padding: 1.5rem;
         }
 
-        .main-auth-container {
-            width: 100%;
-            max-width: 480px;
-            z-index: 10;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @media (min-width: 768px) {
-            .main-auth-container {
-                max-width: 480px;
-            }
-            .main-auth-container.is-register {
-                max-width: 580px;
-            }
-        }
-
-        .auth-glass-card {
+        /* Contenedor principal estilo Glassmorphism Double Slider */
+        .double-slider-container {
             background: rgba(17, 17, 19, 0.65);
             backdrop-filter: blur(25px);
             -webkit-backdrop-filter: blur(25px);
             border: 1px solid rgba(255, 255, 255, 0.06);
-            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(33, 184, 189, 0.03);
             border-radius: 28px;
-            overflow: hidden;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), 0 0 40px rgba(33, 184, 189, 0.03);
             position: relative;
-            width: 100%;
-            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            overflow: hidden;
+            width: 850px;
+            max-width: 100%;
+            min-height: 640px;
+            transition: all 0.6s ease-in-out;
+            z-index: 10;
         }
 
-        .auth-slider {
-            display: flex;
-            width: 200%;
-            transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1);
+        .form-container {
+            position: absolute;
+            top: 0;
+            height: 100%;
+            transition: all 0.6s ease-in-out;
+            background: transparent;
         }
 
-        .auth-panel {
+        .sign-in-container {
+            left: 0;
             width: 50%;
+            z-index: 2;
             padding: 2.5rem;
-            flex-shrink: 0;
-            transition: opacity 0.4s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
-        .main-auth-container.is-register .auth-slider {
-            transform: translateX(-50%);
-        }
-
-        .main-auth-container.is-register .login-panel {
+        .double-slider-container.right-panel-active .sign-in-container {
+            transform: translateX(100%);
             opacity: 0;
+            z-index: 1;
             pointer-events: none;
-            visibility: hidden;
-            transition: opacity 0.2s ease, visibility 0s 0.2s;
         }
 
-        .main-auth-container:not(.is-register) .register-panel {
+        .sign-up-container {
+            left: 0;
+            width: 50%;
             opacity: 0;
-            pointer-events: none;
-            visibility: hidden;
-            transition: opacity 0.2s ease, visibility 0s 0.2s;
+            z-index: 1;
+            padding: 2.5rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
-        .main-auth-container:not(.is-register) .login-panel,
-        .main-auth-container.is-register .register-panel {
+        .double-slider-container.right-panel-active .sign-up-container {
+            transform: translateX(100%);
             opacity: 1;
-            visibility: visible;
-            transition: opacity 0.4s ease 0.15s, visibility 0s 0s;
+            z-index: 5;
+            animation: show 0.6s;
         }
 
-        .brand-logo-glow {
-            filter: drop-shadow(0 0 20px rgba(33,184,189,0.25));
-            transition: all 0.5s ease;
+        @keyframes show {
+            0%, 49.99% {
+                opacity: 0;
+                z-index: 1;
+            }
+            50%, 100% {
+                opacity: 1;
+                z-index: 5;
+            }
         }
 
-        .main-auth-container.is-register .brand-logo-glow {
-            filter: drop-shadow(0 0 20px rgba(224,79,238,0.20));
+        .overlay-container {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 50%;
+            height: 100%;
+            overflow: hidden;
+            transition: transform 0.6s ease-in-out;
+            z-index: 100;
+        }
+
+        .double-slider-container.right-panel-active .overlay-container {
+            transform: translateX(-100%);
+        }
+
+        .overlay {
+            background: linear-gradient(160deg, #0d1517 0%, #0f1214 30%, #111113 50%, #130f16 70%, #0e0a10 100%);
+            background-repeat: no-repeat;
+            background-size: cover;
+            color: #FFFFFF;
+            position: relative;
+            left: -100%;
+            height: 100%;
+            width: 200%;
+            transform: translateX(0);
+            transition: transform 0.6s ease-in-out;
+            overflow: hidden;
+        }
+
+        /* Subtle animated mesh glows inside overlay */
+        .overlay::before {
+            content: '';
+            position: absolute;
+            top: -30%;
+            left: -20%;
+            width: 70%;
+            height: 70%;
+            background: radial-gradient(circle, rgba(33, 184, 189, 0.15) 0%, transparent 70%);
+            filter: blur(60px);
+            animation: overlayGlow1 12s infinite alternate ease-in-out;
+            pointer-events: none;
+        }
+
+        .overlay::after {
+            content: '';
+            position: absolute;
+            bottom: -25%;
+            right: -15%;
+            width: 65%;
+            height: 65%;
+            background: radial-gradient(circle, rgba(224, 79, 238, 0.12) 0%, transparent 70%);
+            filter: blur(70px);
+            animation: overlayGlow2 15s infinite alternate-reverse ease-in-out;
+            pointer-events: none;
+        }
+
+        @keyframes overlayGlow1 {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(15%, 20%) scale(1.2); }
+            100% { transform: translate(-5%, 10%) scale(0.95); }
+        }
+
+        @keyframes overlayGlow2 {
+            0% { transform: translate(0, 0) scale(1); }
+            50% { transform: translate(-10%, -15%) scale(1.15); }
+            100% { transform: translate(8%, -5%) scale(0.9); }
+        }
+
+        /* Subtle grid pattern on overlay */
+        .overlay-panel::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        /* Accent border glow on the overlay container edge */
+        .overlay-container::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(33, 184, 189, 0.4) 0%, rgba(224, 79, 238, 0.3) 50%, transparent 100%);
+            z-index: 101;
+            pointer-events: none;
+            transition: opacity 0.6s ease-in-out;
+        }
+
+        .double-slider-container.right-panel-active .overlay-container::after {
+            left: auto;
+            right: 0;
+        }
+
+        .double-slider-container.right-panel-active .overlay {
+            transform: translateX(50%);
+        }
+
+        .overlay-panel {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            padding: 0 2.5rem;
+            text-align: center;
+            top: 0;
+            height: 100%;
+            width: 50%;
+            transform: translateX(0);
+            transition: transform 0.6s ease-in-out;
+        }
+
+        .overlay-left {
+            transform: translateX(-20%);
+        }
+
+        .double-slider-container.right-panel-active .overlay-left {
+            transform: translateX(0);
+        }
+
+        .overlay-right {
+            right: 0;
+            transform: translateX(0);
+        }
+
+        .double-slider-container.right-panel-active .overlay-right {
+            transform: translateX(20%);
+        }
+
+        /* Estilo para los botones fantasmas */
+        .auth-btn-ghost {
+            background-color: transparent !important;
+            border: 1.5px solid rgba(33, 184, 189, 0.5) !important;
+            color: #FFFFFF !important;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 10px 36px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s ease-in-out;
+            margin-top: 1.25rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        .auth-btn-ghost:hover {
+            background-color: rgba(33, 184, 189, 0.15) !important;
+            border-color: rgba(33, 184, 189, 0.8) !important;
+            box-shadow: 0 0 20px rgba(33, 184, 189, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .auth-btn-ghost:active {
+            transform: scale(0.95);
+        }
+
+        @media (max-width: 767px) {
+            .double-slider-container {
+                width: 100%;
+                max-width: 480px;
+                min-height: 580px;
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+            }
+            .overlay-container {
+                display: none;
+            }
+            .form-container {
+                position: relative;
+                width: 100% !important;
+                height: auto;
+                transform: none !important;
+                opacity: 1 !important;
+                display: none;
+            }
+            .double-slider-container:not(.right-panel-active) .sign-in-container {
+                display: flex;
+            }
+            .double-slider-container.right-panel-active .sign-up-container {
+                display: flex;
+            }
+            .mobile-toggle {
+                display: block !important;
+            }
+        }
+        
+        .mobile-toggle {
+            display: none;
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        .mobile-toggle button {
+            background: transparent;
+            border: none;
+            color: var(--primary-color);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
         }
 
     </style>
@@ -160,148 +364,159 @@ if (isset($_SESSION['user_id'])) {
 
     <?php
     $isRegister = isset($_GET['action']) && $_GET['action'] === 'register';
-    $wrapperClass = $isRegister ? 'is-register' : '';
+    $wrapperClass = $isRegister ? 'right-panel-active' : '';
     ?>
-    <div class="main-auth-container <?php echo $wrapperClass; ?>" id="authWrapper">
+    <div class="double-slider-container <?php echo $wrapperClass; ?>" id="authContainer">
         
-        <!-- Tarjeta de Acceso Glassmorphism Centrada -->
-        <div class="auth-glass-card">
-            <div class="auth-slider">
-
-                <!-- PANEL 1: INICIAR SESIÓN -->
-                <div class="auth-panel login-panel flex flex-col justify-center">
-                    <div class="text-center mb-8">
-                        <h1 class="text-3xl font-extrabold font-display tracking-tight text-text-main">
-                            NOKIA<span class="text-primary" id="brandColor">1100</span>
-                        </h1>
-                        <p class="text-xs text-text-muted mt-1 uppercase tracking-widest font-semibold text-[10px]">Iniciar Sesion</p>
-                    </div>
-
-                    <div class="mb-6">
-                        <h2 class="text-xl font-display font-medium text-text-main">Identificación de Usuario</h2>
-                    </div>
-
-                    <form action="<?php echo BASE_URL; ?>/modules/auth/auth.php" method="POST" class="space-y-4">
-                        <div class="premium-form-group">
-                            <input type="text" id="login-username" name="username" required placeholder=" " class="premium-form-input peer">
-                            <span class="material-symbols-outlined premium-form-icon">account_circle</span>
-                            <label for="login-username" class="premium-form-label">Nombre de usuario</label>
-                        </div>
-
-                        <div class="premium-form-group">
-                            <div class="flex justify-between items-center mb-1 absolute right-2 -top-5 z-20">
-                                <a href="forgot_password.php" class="text-[11px] font-semibold text-primary hover:underline transition-all">¿Olvidaste la clave?</a>
-                            </div>
-                            <input type="password" id="login-password" name="password" required placeholder=" " class="premium-form-input peer">
-                            <span class="material-symbols-outlined premium-form-icon">lock</span>
-                            <label for="login-password" class="premium-form-label">Contraseña</label>
-                        </div>
-
-                        <button type="submit" class="auth-btn mt-6 tracking-wide uppercase flex items-center justify-center gap-2">
-                            <span>Ingresar al Sistema</span>
-                            <span class="material-symbols-outlined text-[18px]">login</span>
-                        </button>
-                    </form>
-
-                    <div class="text-center mt-8 text-xs text-text-muted font-medium border-t border-border/40 pt-6">
-                        ¿Aún no tienes una cuenta corporativa? 
-                        <button type="button" onclick="toggleAuthMode('register')" class="text-primary hover:underline font-semibold bg-transparent border-none cursor-pointer">Registrarme</button>
-                    </div>
+        <!-- PANEL 1: REGISTRO -->
+        <div class="form-container sign-up-container">
+            <div class="flex flex-col justify-center h-full">
+                <div class="text-center mb-4 md:hidden">
+                    <h1 class="text-2xl font-bold font-display tracking-tight text-text-main">NOKIA<span class="text-primary">1100</span></h1>
+                    <p class="text-[10px] text-text-muted mt-1 tracking-widest uppercase font-extrabold">Registro de Operador</p>
                 </div>
 
-                <!-- PANEL 2: REGISTRO EMPRESARIAL -->
-                <div class="auth-panel register-panel flex flex-col justify-center">
-                    <div class="text-center mb-6 md:hidden">
-                        <h1 class="text-2xl font-bold font-display tracking-tight text-text-main">NOKIA<span class="text-primary">1100</span></h1>
-                        <p class="text-[10px] text-text-muted mt-1 tracking-widest uppercase font-extrabold">Registro de Operador</p>
-                    </div>
-
-                    <div class="mb-5">
-                        <h2 class="text-xl font-display font-medium text-text-main">Registrarse</h2>
-                    </div>
-
-                    <form action="<?php echo BASE_URL; ?>/modules/auth/process_registration.php" method="POST" class="space-y-3.5">
-                        
-                        <!-- Datos Personales -->
-                        <div class="grid grid-cols-2 gap-3.5">
-                            <div class="premium-form-group">
-                                <input type="text" id="nombre" name="nombre" required placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
-                                <span class="material-symbols-outlined premium-form-icon text-[18px]">person</span>
-                                <label for="nombre" class="premium-form-label !left-10">Nombre</label>
-                            </div>
-                            <div class="premium-form-group">
-                                <input type="text" id="apellido" name="apellido" required placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
-                                <span class="material-symbols-outlined premium-form-icon text-[18px]">person</span>
-                                <label for="apellido" class="premium-form-label !left-10">Apellido</label>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3.5">
-                            <div class="premium-form-group">
-                                <input type="text" id="dni" name="dni" required placeholder=" " class="premium-form-input peer !p-3.5 !pl-10" pattern="[0-9]{7,10}" title="El DNI debe tener entre 7 y 10 dígitos">
-                                <span class="material-symbols-outlined premium-form-icon text-[18px]">badge</span>
-                                <label for="dni" class="premium-form-label !left-10">DNI</label>
-                            </div>
-                            <div class="premium-form-group">
-                                <input type="email" id="email" name="email" required placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
-                                <span class="material-symbols-outlined premium-form-icon text-[18px]">mail</span>
-                                <label for="email" class="premium-form-label !left-10">Email</label>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3.5">
-                            <div class="premium-form-group">
-                                <input type="text" id="telefono" name="telefono" placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
-                                <span class="material-symbols-outlined premium-form-icon text-[18px]">call</span>
-                                <label for="telefono" class="premium-form-label !left-10">Teléfono</label>
-                            </div>
-                            <div class="premium-form-group">
-                                <input type="text" id="direccion" name="direccion" placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
-                                <span class="material-symbols-outlined premium-form-icon text-[18px]">home</span>
-                                <label for="direccion" class="premium-form-label !left-10">Dirección</label>
-                            </div>
-                        </div>
-
-                        <div class="h-[1px] bg-border/50 my-1"></div>
-
-                        <!-- Credenciales -->
-                        <div class="premium-form-group">
-                            <input type="text" id="reg-username" name="username" required placeholder=" " class="premium-form-input peer">
-                            <span class="material-symbols-outlined premium-form-icon">account_circle</span>
-                            <label for="reg-username" class="premium-form-label">Nombre de usuario deseado</label>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-3.5">
-                            <div class="premium-form-group">
-                                <input type="password" id="reg-password" name="password" required minlength="6" placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
-                                <span class="material-symbols-outlined premium-form-icon text-[18px]">lock</span>
-                                <label for="reg-password" class="premium-form-label !left-10">Contraseña</label>
-                            </div>
-                            <div class="premium-form-group">
-                                <input type="password" id="reg-password-confirm" name="password_confirm" required minlength="6" placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
-                                <span class="material-symbols-outlined premium-form-icon text-[18px]">key</span>
-                                <label for="reg-password-confirm" class="premium-form-label !left-10">Confirmar</label>
-                            </div>
-                        </div>
-
-                        <button type="submit" class="auth-btn mt-3 tracking-wide uppercase flex items-center justify-center gap-2" style="background: var(--secondary-color); box-shadow: 0 4px 6px -1px rgba(224, 79, 238, 0.3);">
-                            <span>Registrar Cuenta</span>
-                            <span class="material-symbols-outlined text-[18px]">how_to_reg</span>
-                        </button>
-                    </form>
-
-                    <div class="text-center mt-6 text-xs text-text-muted font-medium border-t border-border/40 pt-5">
-                        ¿Ya posees una cuenta de operador? 
-                        <button type="button" onclick="toggleAuthMode('login')" class="text-primary hover:underline font-semibold bg-transparent border-none cursor-pointer">Iniciar Sesión</button>
-                    </div>
+                <div class="mb-4">
+                    <h2 class="text-xl font-display font-medium text-text-main">Registrarse</h2>
                 </div>
 
+                <form action="<?php echo BASE_URL; ?>/modules/auth/process_registration.php" method="POST" class="space-y-3">
+                    
+                    <!-- Datos Personales -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="premium-form-group">
+                            <input type="text" id="nombre" name="nombre" required placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
+                            <span class="material-symbols-outlined premium-form-icon text-[18px]">person</span>
+                            <label for="nombre" class="premium-form-label !left-10">Nombre</label>
+                        </div>
+                        <div class="premium-form-group">
+                            <input type="text" id="apellido" name="apellido" required placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
+                            <span class="material-symbols-outlined premium-form-icon text-[18px]">person</span>
+                            <label for="apellido" class="premium-form-label !left-10">Apellido</label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="premium-form-group">
+                            <input type="text" id="dni" name="dni" required placeholder=" " class="premium-form-input peer !p-3.5 !pl-10" pattern="[0-9]{7,10}" title="El DNI debe tener entre 7 y 10 dígitos">
+                            <span class="material-symbols-outlined premium-form-icon text-[18px]">badge</span>
+                            <label for="dni" class="premium-form-label !left-10">DNI</label>
+                        </div>
+                        <div class="premium-form-group">
+                            <input type="email" id="email" name="email" required placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
+                            <span class="material-symbols-outlined premium-form-icon text-[18px]">mail</span>
+                            <label for="email" class="premium-form-label !left-10">Email</label>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="premium-form-group">
+                            <input type="text" id="telefono" name="telefono" placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
+                            <span class="material-symbols-outlined premium-form-icon text-[18px]">call</span>
+                            <label for="telefono" class="premium-form-label !left-10">Teléfono</label>
+                        </div>
+                        <div class="premium-form-group">
+                            <input type="text" id="direccion" name="direccion" placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
+                            <span class="material-symbols-outlined premium-form-icon text-[18px]">home</span>
+                            <label for="direccion" class="premium-form-label !left-10">Dirección</label>
+                        </div>
+                    </div>
+
+                    <div class="h-[1px] bg-border/50 my-1"></div>
+
+                    <!-- Credenciales -->
+                    <div class="premium-form-group">
+                        <input type="text" id="reg-username" name="username" required placeholder=" " class="premium-form-input peer">
+                        <span class="material-symbols-outlined premium-form-icon">account_circle</span>
+                        <label for="reg-username" class="premium-form-label">Nombre de usuario deseado</label>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="premium-form-group">
+                            <input type="password" id="reg-password" name="password" required minlength="6" placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
+                            <span class="material-symbols-outlined premium-form-icon text-[18px]">lock</span>
+                            <label for="reg-password" class="premium-form-label !left-10">Contraseña</label>
+                        </div>
+                        <div class="premium-form-group">
+                            <input type="password" id="reg-password-confirm" name="password_confirm" required minlength="6" placeholder=" " class="premium-form-input peer !p-3.5 !pl-10">
+                            <span class="material-symbols-outlined premium-form-icon text-[18px]">key</span>
+                            <label for="reg-password-confirm" class="premium-form-label !left-10">Confirmar</label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="auth-btn mt-3 tracking-wide uppercase flex items-center justify-center gap-2" style="background: var(--secondary-color); box-shadow: 0 4px 6px -1px rgba(224, 79, 238, 0.3);">
+                        <span>Registrar Cuenta</span>
+                        <span class="material-symbols-outlined text-[18px]">how_to_reg</span>
+                    </button>
+                </form>
+
+                <div class="mobile-toggle">
+                    ¿Ya posees una cuenta de operador? 
+                    <button type="button" onclick="toggleAuthMode('login')">Iniciar Sesión</button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Contenedor Unificado para Notificaciones Toasts Flotantes -->
-    <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col items-end pointer-events-none gap-2"></div>
+        <!-- PANEL 2: INICIAR SESIÓN -->
+        <div class="form-container sign-in-container">
+            <div class="flex flex-col justify-center h-full">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-extrabold font-display tracking-tight text-text-main">
+                        NOKIA<span class="text-primary" id="brandColor">1100</span>
+                    </h1>
+                    <p class="text-xs text-text-muted mt-1 uppercase tracking-widest font-semibold text-[10px]">Iniciar Sesión</p>
+                </div>
+
+                <div class="mb-6">
+                    <h2 class="text-xl font-display font-medium text-text-main">Identificación de Usuario</h2>
+                </div>
+
+                <form action="<?php echo BASE_URL; ?>/modules/auth/auth.php" method="POST" class="space-y-4">
+                    <div class="premium-form-group">
+                        <input type="text" id="login-username" name="username" required placeholder=" " class="premium-form-input peer">
+                        <span class="material-symbols-outlined premium-form-icon">account_circle</span>
+                        <label for="login-username" class="premium-form-label">Nombre de usuario</label>
+                    </div>
+
+                    <div class="premium-form-group">
+                        <div class="flex justify-between items-center mb-1 absolute right-2 -top-5 z-20">
+                            <a href="forgot_password.php" class="text-[11px] font-semibold text-primary hover:underline transition-all">¿Olvidaste la clave?</a>
+                        </div>
+                        <input type="password" id="login-password" name="password" required placeholder=" " class="premium-form-input peer">
+                        <span class="material-symbols-outlined premium-form-icon">lock</span>
+                        <label for="login-password" class="premium-form-label">Contraseña</label>
+                    </div>
+
+                    <button type="submit" class="auth-btn mt-6 tracking-wide uppercase flex items-center justify-center gap-2">
+                        <span>Ingresar al Sistema</span>
+                        <span class="material-symbols-outlined text-[18px]">login</span>
+                    </button>
+                </form>
+
+                <div class="mobile-toggle">
+                    ¿Aún no tienes una cuenta corporativa? 
+                    <button type="button" onclick="toggleAuthMode('register')">Registrarme</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CAPA DE COBERTURA SLIDER (OVERLAY) -->
+        <div class="overlay-container">
+            <div class="overlay">
+                <div class="overlay-panel overlay-left">
+                    <h1 class="text-2xl font-bold font-display text-text-main">¡Bienvenido de Nuevo!</h1>
+                    <p class="text-sm text-text-main/80 mt-3 max-w-xs leading-relaxed" style="font-weight: 300;">Para mantenerte conectado con nosotros por favor inicia sesión con tu cuenta corporativa</p>
+                    <button class="auth-btn-ghost" id="signIn" onclick="toggleAuthMode('login')">Iniciar Sesión</button>
+                </div>
+                <div class="overlay-panel overlay-right">
+                    <h1 class="text-2xl font-bold font-display text-text-main">¿Eres nuevo?</h1>
+                    <p class="text-sm text-text-main/80 mt-3 max-w-xs leading-relaxed" style="font-weight: 300;">Ingresa tus datos personales y comienza tu jornada con el sistema de control Nokia 1100</p>
+                    <button class="auth-btn-ghost" id="signUp" onclick="toggleAuthMode('register')">Registrarme</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
 
     <!-- Cargar React y Sileo Toast Bundle -->
     <script src="<?php echo BASE_URL; ?>/assets/js/sileo-toaster.bundle.js?v=<?php echo time(); ?>"></script>
@@ -313,12 +528,11 @@ if (isset($_SESSION['user_id'])) {
     <script>
         // Conmutador del modo Auth (Login / Registro)
         function toggleAuthMode(mode) {
-            const wrapper = document.getElementById('authWrapper');
+            const container = document.getElementById('authContainer');
             const brandColor = document.getElementById('brandColor');
             
             if (mode === 'register') {
-                wrapper.classList.add('is-register');
-                
+                container.classList.add('right-panel-active');
                 if (brandColor) brandColor.style.color = '#E04FEE'; // Magenta en Registro
                 
                 setTimeout(() => {
@@ -327,8 +541,7 @@ if (isset($_SESSION['user_id'])) {
                     window.history.pushState({}, '', '?' + params.toString());
                 }, 300);
             } else {
-                wrapper.classList.remove('is-register');
-                
+                container.classList.remove('right-panel-active');
                 if (brandColor) brandColor.style.color = '#21b8bd'; // Cian en Login
                 
                 setTimeout(() => {
