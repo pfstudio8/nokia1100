@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/../../config/db.php';
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
@@ -323,38 +323,6 @@ Layout::renderAdminSidebar('proveedores');
     function showPurchaseFeedback(message, type) {
         if (typeof showToast === 'function') {
             showToast(message, type);
-            return;
         }
-
-        const containerId = 'toast-container';
-        let container = document.getElementById(containerId);
-        if (!container) {
-            container = document.createElement('div');
-            container.id = containerId;
-            container.className = 'fixed bottom-4 left-4 z-50 flex flex-col items-start pointer-events-none';
-            document.body.appendChild(container);
-        }
-
-        const colors = type === 'success' ? 'bg-green-500/10 border-green-500/30 text-green-400' :
-                       type === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-400' :
-                       type === 'warning' ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400' :
-                       'bg-surface border-primary/30 text-primary';
-
-        const toast = document.createElement('div');
-        toast.className = `toast flex items-center gap-3 p-4 mb-3 rounded-lg border shadow-lg transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto ${colors}`;
-        toast.innerHTML = `
-            <span class="material-symbols-outlined shrink-0">${type === 'success' ? 'check_circle' : type === 'error' ? 'error' : type === 'warning' ? 'warning' : 'info'}</span>
-            <p class="text-sm font-medium text-text-main m-0 p-0 leading-tight">${message}</p>
-        `;
-
-        container.appendChild(toast);
-        requestAnimationFrame(() => {
-            toast.classList.remove('translate-x-full', 'opacity-0');
-        });
-
-        setTimeout(() => {
-            toast.classList.add('opacity-0', 'translate-x-full');
-            setTimeout(() => toast.remove(), 300);
-        }, 4000);
     }
 </script>

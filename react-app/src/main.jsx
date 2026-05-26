@@ -150,7 +150,7 @@ function App() {
   return (
     <>
       <Toaster 
-        position="top-center"
+        position="top-right"
         theme="dark"
         richColors={true}
       />

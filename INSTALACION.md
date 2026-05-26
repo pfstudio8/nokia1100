@@ -66,10 +66,10 @@ O dejalo así si querés forzar la verificación (recomendado para producción).
 
 | Ítem                                       | Estado  |
 |--------------------------------------------|---------|
-| Sin alerts nativos del navegador            | ✅ Reemplazados por showToast/showConfirmModal |
-| ABM de usuarios con baja lógica            | ✅ Soft delete + restaurar en users.php       |
-| Validación de email por envío de correo    | ✅ Login bloquea si `verificado = 0`          |
-| Seguridad y Auditoría                      | ✅ Tabla audit_log + logging en login/ventas  |
-| Validación de unicidad (DNI)               | ✅ Agregado en process_registration.php       |
-| Validación de formato email                | ✅ filter_var en process_registration.php     |
-| Exclusión del propio usuario al editar     | ✅ delete_user bloquea self-disable           |
+| Sin alerts nativos del navegador            | Reemplazados por showToast/showConfirmModal |
+| ABM de usuarios con baja lógica            |  Soft delete + restaurar en users.php       |
+| Validación de email por envío de correo    |  Login bloquea si `verificado = 0`          |
+| Seguridad y Auditoría                      |  Tabla audit_log + logging en login/ventas  |
+| Validación de unicidad (DNI)               |  Agregado en process_registration.php       |
+| Validación de formato email                |  filter_var en process_registration.php     |
+| Exclusión del propio usuario al editar     |  delete_user bloquea self-disable           |
