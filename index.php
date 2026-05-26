@@ -303,6 +303,9 @@ if (isset($_SESSION['user_id'])) {
     <!-- Contenedor Unificado para Notificaciones Toasts Flotantes -->
     <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col items-end pointer-events-none gap-2"></div>
 
+    <!-- Cargar React y Sileo Toast Bundle -->
+    <script src="<?php echo BASE_URL; ?>/assets/js/sileo-toaster.bundle.js?v=<?php echo time(); ?>"></script>
+
     <!-- Cargar Scripts del Sistema para animaciones Toasts y decodificación de URL -->
     <script src="<?php echo BASE_URL; ?>/assets/js/main.js?v=<?php echo time(); ?>"></script>
 
