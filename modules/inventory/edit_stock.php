@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/../../config/db.php';
 if (!isset($_SESSION['user_id'])) {
@@ -57,19 +57,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } else {
         $conn->begin_transaction();
         try {
-            // 1. Update producto
+            // Actualizo el nombre y el precio del producto en la base de datos
             $stmt = $conn->prepare("UPDATE producto SET nombre = ?, precio = ? WHERE id_producto = ?");
             $stmt->bind_param("sdi", $nombre, $precio, $id_producto);
             if (!$stmt->execute()) throw new Exception("Error al actualizar producto");
             $stmt->close();
 
-            // 2. Update producto_detalle
+            // Modifico la marca y el modelo si es que se cambiaron
             $stmt = $conn->prepare("UPDATE producto_detalle SET marca = ?, modelo = ? WHERE id_producto = ?");
             $stmt->bind_param("ssi", $marca, $modelo, $id_producto);
             if (!$stmt->execute()) throw new Exception("Error al actualizar detalles");
             $stmt->close();
 
-            // 3. Update inventario
+            // Actualizo la cantidad física de unidades disponibles en el inventario
             $stmt = $conn->prepare("UPDATE inventario SET cantidad = ? WHERE id_producto = ?");
             $stmt->bind_param("ii", $cantidad, $id_producto);
             if (!$stmt->execute()) throw new Exception("Error al actualizar inventario");

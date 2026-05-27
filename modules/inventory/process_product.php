@@ -33,7 +33,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $conn->begin_transaction();
 
     try {
-        // 1. Insertar producto
+        // Registro el producto base con su nombre, precio y lo dejo activo
         $stmt_prod = $conn->prepare("INSERT INTO producto (nombre, precio, is_active) VALUES (?, ?, 1)");
         $stmt_prod->bind_param("sd", $nombre, $precio);
         
@@ -44,7 +44,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $id_producto = $conn->insert_id;
         $stmt_prod->close();
 
-        // 2. Insertar detalles del producto
+        // Guardo la marca, modelo, categoría, código de barras, descripción y stock mínimo permitido
         $stmt_det = $conn->prepare("INSERT INTO producto_detalle (id_producto, marca, modelo, categoria, codigo, descripcion, stock_minimo) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $stmt_det->bind_param("isssssi", $id_producto, $marca, $modelo, $categoria, $codigo, $descripcion, $stock_minimo);
         
@@ -53,7 +53,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         }
         $stmt_det->close();
 
-        // 3. Insertar inventario inicial
+        // Inicializo las unidades de stock que ingresan de este producto
         $stmt_inv = $conn->prepare("INSERT INTO inventario (id_producto, cantidad) VALUES (?, ?)");
         $stmt_inv->bind_param("ii", $id_producto, $cantidad);
         

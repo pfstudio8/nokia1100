@@ -62,14 +62,14 @@ $check2->close();
 $conn->begin_transaction();
 
 try {
-    // 1. Persona
+    // Inserto los datos personales (nombre, apellido, DNI, etc.) de la persona que se está registrando
     $stmt = $conn->prepare("INSERT INTO persona (nombre, apellido, dni, telefono, email, direccion) VALUES (?, ?, ?, ?, ?, ?)");
     $stmt->bind_param("ssssss", $nombre, $apellido, $dni, $telefono, $email, $direccion);
     if (!$stmt->execute()) throw new Exception("Error al registrar persona");
     $id_persona = $conn->insert_id;
     $stmt->close();
 
-    // 2. Usuario — verificado=1 por defecto (registro manual por admin/empleado)
+    // Le creo la cuenta. Si es el primerísimo usuario del sistema lo hago admin; si no, empleado
     $hashed   = password_hash($password, PASSWORD_DEFAULT);
     
     // Si es el primer usuario del sistema, se le asigna el rol de administrador automáticamente

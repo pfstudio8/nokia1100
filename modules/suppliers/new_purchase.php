@@ -33,14 +33,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                 $total_compra += $item['costo'] * $item['cantidad'];
             }
 
-            // 1. Create Purchase Header
+            // Creo la cabecera de la compra con los datos del proveedor, fecha, total de la compra y quién autorizó
             $stmt = $conn->prepare("INSERT INTO compra (id_proveedor, fecha, total, descripcion, tiempo_entrega, iva, autorizado_por) VALUES (?, ?, ?, ?, ?, ?, ?)");
             $stmt->bind_param("isdssds", $id_proveedor, $fecha, $total_compra, $descripcion, $tiempo_entrega, $iva, $autorizado_por);
             if (!$stmt->execute()) throw new Exception("Error al crear compra");
             $id_compra = $conn->insert_id;
             $stmt->close();
 
-            // 2. Process Each Item: Create Product (if needed) and Update Inventory
+            // Reviso cada ítem comprado: si el producto no existe en la base de datos lo creo, y después le sumo las unidades al stock del inventario
             foreach ($items as $item) {
                 $id_producto = null;
                 

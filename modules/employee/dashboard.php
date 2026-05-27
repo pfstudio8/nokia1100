@@ -7,17 +7,17 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'empleado') {
 }
 require_once __DIR__ . '/../../classes/Layout.php';
 
-// 1. Daily Metrics
+// Saco cuánto dinero se vendió hoy y cuántas transacciones hicimos en total en este día
 $hoy = date('Y-m-d');
 $resVentasHoy = $conn->query("SELECT SUM(total) as total_hoy, COUNT(*) as transacciones FROM venta WHERE DATE(fecha) = '$hoy'");
 $hoyData = $resVentasHoy ? $resVentasHoy->fetch_assoc() : ['total_hoy' => 0, 'transacciones' => 0];
 $totalHoy = $hoyData['total_hoy'] ? $hoyData['total_hoy'] : 0;
 $transHoy = $hoyData['transacciones'] ? $hoyData['transacciones'] : 0;
 
-// 2. Recent Transactions (last 5)
+// Traigo las últimas 5 ventas realizadas para mostrarlas rápidas en su panel
 $ventasRecientes = $conn->query("SELECT id_venta, fecha, total, metodo_de_pago FROM venta ORDER BY fecha DESC LIMIT 5");
 
-// 3. Products for Quick Add / Views
+// Traigo 4 productos activos del catálogo para mostrarlos como destacados
 $productos = $conn->query("SELECT id_producto, nombre, precio FROM producto WHERE is_active = 1 LIMIT 4");
 
 Layout::renderHead('NOKIA1100 | Centro de Operaciones');
