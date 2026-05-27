@@ -7,32 +7,32 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 }
 require_once __DIR__ . '/../../classes/Layout.php';
 
-// 1. Total Sales
+// Traigo la suma de todas las ventas de la base de datos para ver la facturación total
 $resVentas = $conn->query("SELECT SUM(total) as total_ventas FROM venta");
 $totalVentas = ($resVentas && $resVentas->num_rows > 0) ? $resVentas->fetch_assoc()['total_ventas'] : 0;
 if (!$totalVentas)
     $totalVentas = 0;
 
-// 2. Transacciones 
+// Cuento cuántas transacciones de venta registramos en total en el sistema
 $resTrans = $conn->query("SELECT COUNT(*) as total_transacciones FROM venta");
 $totalTrans = ($resTrans && $resTrans->num_rows > 0) ? $resTrans->fetch_assoc()['total_transacciones'] : 0;
 
-// 3. Active Users
+// Cuento la cantidad de usuarios que están registrados y activos en la plataforma
 $resUsuarios = $conn->query("SELECT COUNT(*) as total_usuarios FROM usuario");
 $totalUsuarios = ($resUsuarios && $resUsuarios->num_rows > 0) ? $resUsuarios->fetch_assoc()['total_usuarios'] : 0;
 
-// 4. Low Stock Alerts (<= 5)
+// Chequeo cuántos productos activos tienen 5 unidades o menos de stock para alertar en el panel
 $resStock = $conn->query("SELECT COUNT(*) as bajo_stock FROM inventario i INNER JOIN producto p ON i.id_producto = p.id_producto WHERE i.cantidad <= 5 AND p.is_active = 1");
 $bajoStock = ($resStock && $resStock->num_rows > 0) ? $resStock->fetch_assoc()['bajo_stock'] : 0;
 
-// 5. Recent Sales
+// Saco las últimas 5 ventas ordenadas por fecha para mostrarlas en la tablita de recientes
 $ventasRecientes = $conn->query("
     SELECT id_venta, fecha, total, metodo_de_pago
     FROM venta 
     ORDER BY fecha DESC LIMIT 5
 ");
 
-// 6. Top Selling Products
+// Hago la consulta para calcular los 4 productos más vendidos y cuánto recaudó cada uno
 $topProductos = $conn->query("
     SELECT p.nombre, SUM(dv.cantidad) as total_vendido, SUM(dv.cantidad * dv.precio_unitario) as total_recaudado
     FROM detalle_venta dv
@@ -42,7 +42,7 @@ $topProductos = $conn->query("
     LIMIT 4
 ");
 
-// 7. Critical Stock Items
+// Busco los productos que estén con stock igual o menor a su mínimo permitido para mostrarlos como críticos
 $stockCritico = $conn->query("
     SELECT p.nombre, i.cantidad, pd.stock_minimo
     FROM inventario i

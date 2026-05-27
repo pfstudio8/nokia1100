@@ -35,19 +35,19 @@ if ($total > 0) {
 $conn->begin_transaction();
 
 try {
-    // 1. Delete from inventario
+    // Borro primero la cantidad de stock que tiene este producto del inventario
     $stmt = $conn->prepare("DELETE FROM inventario WHERE id_producto = ?");
     $stmt->bind_param("i", $id_producto);
     if (!$stmt->execute()) throw new Exception("Error al eliminar de inventario");
     $stmt->close();
 
-    // 2. Delete from producto_detalle
+    // Elimino la marca, modelo y otros detalles específicos del producto
     $stmt = $conn->prepare("DELETE FROM producto_detalle WHERE id_producto = ?");
     $stmt->bind_param("i", $id_producto);
     if (!$stmt->execute()) throw new Exception("Error al eliminar detalles");
     $stmt->close();
 
-    // 3. Delete from producto
+    // Finalmente borro el producto de la tabla principal para que no quede rastro
     $stmt = $conn->prepare("DELETE FROM producto WHERE id_producto = ?");
     $stmt->bind_param("i", $id_producto);
     if (!$stmt->execute()) throw new Exception("Error al eliminar producto");

@@ -3,16 +3,15 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. Iniciar Búsqueda en Tiempo Real en Tablas
+    // Arranco el buscador en tiempo real para filtrar las filas de las tablas mientras escribo
     initTableSearch();
-    // 2. Iniciar interceptores de modales de confirmación
+    // Activo los modales bonitos de confirmación cuando toco botones de borrar o confirmar algo
     initConfirmModals();
-    // 3. Revisar la URL en busca de respuestas PHP para mostrar Toasts
+    // Si la URL viene con algún parámetro de éxito o error, lanzo la notificación toast emergente
     handleUrlToasts();
-    // 4. Iniciar Hover 3D
+    // Le meto el efecto de inclinación 3D interactivo a las tarjetas del panel cuando les paso el cursor
     initHover3D();
-    // 5. Iniciar transiciones de página suaves
-    initPageTransitions();
+    // Hago que las páginas carguen con un efecto de transición suave y opacidad al navegar por los enlaces
 });
 
 /**

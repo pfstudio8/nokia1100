@@ -100,7 +100,7 @@ $checkDni->close();
 $conn->begin_transaction();
 
 try {
-    // 1. Insertar en la tabla persona
+    // Primero guardo los datos personales del nuevo usuario en la tabla de personas
     $stmtPersona = $conn->prepare("INSERT INTO persona (nombre, apellido, dni, telefono, email, direccion) VALUES (?, ?, ?, ?, ?, ?)");
     $stmtPersona->bind_param("ssssss", $nombre, $apellido, $dni, $telefono, $email, $direccion);
     if (!$stmtPersona->execute()) {
@@ -109,7 +109,7 @@ try {
     $id_persona = $conn->insert_id;
     $stmtPersona->close();
 
-    // 2. Insertar en la tabla usuario (marcando verificado = 1, is_active = 1, sin token)
+    // Después le creo su cuenta de usuario activa, ya verificada y con la contraseña encriptada
     $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
     
     $stmtUsuario = $conn->prepare(
@@ -125,7 +125,7 @@ try {
 
     $conn->commit();
 
-    // 3. Registrar acción en auditoría
+    // Dejo guardado en el log de auditoría que yo fui quien creó a este usuario con su respectivo rol
     $id_admin = (int)$_SESSION['user_id'];
     audit_log($conn, 'USER_CREATE', $id_admin, 'usuario', $id_nuevo_usuario, "Administrador creó usuario directamente: $username ($nombre $apellido) con rol $rol");
 

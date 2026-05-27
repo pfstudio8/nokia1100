@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once __DIR__ . '/../../config/db.php';
 if (!isset($_SESSION['user_id'])) {
@@ -23,20 +23,20 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } else {
         $conn->begin_transaction();
         try {
-            // 1. Insertar en producto
+            // Creo el producto principal guardando su nombre y el precio de venta
             $stmt = $conn->prepare("INSERT INTO producto (nombre, precio) VALUES (?, ?)");
             $stmt->bind_param("sd", $nombre, $precio);
             if (!$stmt->execute()) throw new Exception("Error al insertar producto");
             $id_producto = $conn->insert_id;
             $stmt->close();
 
-            // 2. Insertar en producto_detalle
+            // Le asocio la marca y el modelo en la tabla de detalles del producto
             $stmt = $conn->prepare("INSERT INTO producto_detalle (id_producto, marca, modelo) VALUES (?, ?, ?)");
             $stmt->bind_param("iss", $id_producto, $marca, $modelo);
             if (!$stmt->execute()) throw new Exception("Error al insertar detalles");
             $stmt->close();
 
-            // 3. Insertar en inventario
+            // Le meto la cantidad inicial de stock físico en la tabla de inventario
             $stmt = $conn->prepare("INSERT INTO inventario (id_producto, cantidad) VALUES (?, ?)");
             $stmt->bind_param("ii", $id_producto, $cantidad);
             if (!$stmt->execute()) throw new Exception("Error al insertar inventario");

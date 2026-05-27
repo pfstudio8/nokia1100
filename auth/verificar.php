@@ -5,7 +5,7 @@ require_once '../config/db.php';
 if (isset($_GET['token'])) {
     $token = $_GET['token'];
     
-    // 1. Buscar el usuario con ese token y que no haya expirado
+    // Busco si existe algún usuario con este token de verificación y que todavía no esté vencido
     $now = date('Y-m-d H:i:s');
     
     // Preparamos consulta

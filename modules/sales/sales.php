@@ -279,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // 1. Primer paso de la flecha (delay reducido)
+        // Muevo un poquito la flecha del botón hacia abajo para iniciar la animación
         const tw1 = gsap.to(svgPath, {
             f: 2,
             l: 38,
@@ -287,7 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
             delay: 0.05
         });
         
-        // 2. Rebote elástico (delay reducido)
+        // Le meto un rebote elástico a la flecha como si cayera físicamente en el botón
         const tw2 = gsap.to(svgPath, {
             s: 2,
             y: 16,
@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ease: "elastic.out(1, 0.4)"
         });
         
-        // 3. Conteo numérico de porcentaje (duración reducida)
+        // Hago que suba el porcentaje visual de 0% a 100% mientras se llena el círculo de progreso
         const count = { number: 0 };
         const tw3 = gsap.to(count, {
             number: 100,
