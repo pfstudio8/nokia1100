@@ -132,9 +132,7 @@ if ($_SESSION['role'] === 'admin') {
                                         <a href="edit_stock.php?id=<?php echo $row['id_producto']; ?>" class="w-8 h-8 rounded-lg flex items-center justify-center bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-background transition-colors" title="Editar">
                                             <span class="material-symbols-outlined text-[16px]">edit</span>
                                         </a>
-                                        <a href="delete_product.php?id=<?php echo $row['id_producto']; ?>" class="w-8 h-8 rounded-lg flex items-center justify-center bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500 hover:text-white transition-colors" data-confirm="¿Estás seguro de que deseas eliminar este producto?" data-confirm-title="Eliminar Producto" title="Eliminar">
-                                            <span class="material-symbols-outlined text-[16px]">delete</span>
-                                        </a>
+                                        <!-- Solo se permite editar o cambiar estado del producto desde la tabla -->
                                     </div>
                                 </td>
                                 <?php endif; ?>
@@ -199,8 +197,8 @@ if ($_SESSION['role'] === 'admin') {
                         <a href="edit_stock.php?id=<?php echo $row['id_producto']; ?>" class="w-10 h-10 rounded-full bg-primary text-background hover:scale-110 flex items-center justify-center transition-transform shadow-lg" title="Editar">
                             <span class="material-symbols-outlined text-[18px]">edit</span>
                         </a>
-                        <a href="delete_product.php?id=<?php echo $row['id_producto']; ?>" class="w-10 h-10 rounded-full bg-surface border border-border text-red-500 hover:bg-red-500 hover:text-white flex items-center justify-center transition-all shadow-lg" data-confirm="¿Estás seguro de que deseas eliminar este producto?" data-confirm-title="Eliminar Producto" title="Eliminar">
-                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                        <a href="change_status.php?id=<?php echo $row['id_producto']; ?>" class="w-10 h-10 rounded-full bg-surface border border-border text-text-muted hover:text-text-main flex items-center justify-center transition-all shadow-lg" title="<?php echo $row['is_active'] ? 'Desactivar' : 'Activar'; ?>">
+                            <span class="material-symbols-outlined text-[18px]"><?php echo $row['is_active'] ? 'toggle_on' : 'toggle_off'; ?></span>
                         </a>
                     </div>
                     <?php endif; ?>

@@ -28,7 +28,27 @@ $stmt->fetch();
 $stmt->close();
 
 if ($total > 0) {
-    header("Location: " . BASE_URL . "/modules/inventory/inventory.php?error=has_sales");
+    // Si tiene ventas o compras asociadas, hacemos un borrado lógico (is_active = 0)
+    // para no romper la integridad referencial de los reportes e histórico
+    $conn->begin_transaction();
+    try {
+        $stmt = $conn->prepare("UPDATE producto SET is_active = 0 WHERE id_producto = ?");
+        $stmt->bind_param("i", $id_producto);
+        $stmt->execute();
+        $stmt->close();
+
+        // Eliminamos el stock del inventario para este producto
+        $stmt = $conn->prepare("DELETE FROM inventario WHERE id_producto = ?");
+        $stmt->bind_param("i", $id_producto);
+        $stmt->execute();
+        $stmt->close();
+
+        $conn->commit();
+        header("Location: " . BASE_URL . "/modules/inventory/inventory.php?success=deleted");
+    } catch (Exception $e) {
+        $conn->rollback();
+        header("Location: " . BASE_URL . "/modules/inventory/inventory.php?error=" . urlencode($e->getMessage()));
+    }
     exit();
 }
 
