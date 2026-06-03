@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Le meto el efecto de inclinación 3D interactivo a las tarjetas del panel cuando les paso el cursor
     initHover3D();
     // Hago que las páginas carguen con un efecto de transición suave y opacidad al navegar por los enlaces
+    initPageTransitions();
 });
 
 /**
