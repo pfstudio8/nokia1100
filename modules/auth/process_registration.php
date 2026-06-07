@@ -18,7 +18,7 @@ $direccion = trim($_POST['direccion'] ?? '');
 $username  = trim($_POST['username']  ?? '');
 $password  = $_POST['password']       ?? '';
 
-// ── Validaciones ─────────────────────────────────────────────────────────────
+//Validaciones
 if (empty($nombre) || empty($apellido) || empty($dni) || empty($username) || empty($password)) {
     header("Location: " . BASE_URL . "/index.php?action=register&error=Completá todos los campos requeridos");
     exit();
@@ -34,7 +34,7 @@ if (strlen($password) < 6) {
     exit();
 }
 
-// ── Unicidad: usuario ─────────────────────────────────────────────────────────
+//Unicidad: usuario
 $check = $conn->prepare("SELECT id_usuario FROM usuario WHERE nombre_usuario = ?");
 $check->bind_param("s", $username);
 $check->execute();
@@ -46,7 +46,7 @@ if ($check->num_rows > 0) {
 }
 $check->close();
 
-// ── Unicidad: DNI ─────────────────────────────────────────────────────────────
+//Unicidad: DNI
 $check2 = $conn->prepare("SELECT id_persona FROM persona WHERE dni = ?");
 $check2->bind_param("s", $dni);
 $check2->execute();
@@ -58,7 +58,7 @@ if ($check2->num_rows > 0) {
 }
 $check2->close();
 
-// ── Transacción ───────────────────────────────────────────────────────────────
+//Transacción
 $conn->begin_transaction();
 
 try {
