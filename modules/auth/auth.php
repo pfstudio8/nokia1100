@@ -26,7 +26,7 @@ $stmt->bind_param("s", $username);
 $stmt->execute();
 $result = $stmt->get_result();
 
-// ── Usuario no encontrado ────────────────────────────────────────────────────
+//Usuario no encontrado
 if ($result->num_rows !== 1) {
     $stmt->close();
     audit_log($conn, 'LOGIN_FAIL', null, 'usuario', null,
@@ -38,7 +38,7 @@ if ($result->num_rows !== 1) {
 $row = $result->fetch_assoc();
 $stmt->close();
 
-// ── Contraseña incorrecta ────────────────────────────────────────────────────
+//Contraseña incorrecta
 if (!password_verify($password, $row['contrasena'])) {
     audit_log($conn, 'LOGIN_FAIL', $row['id_usuario'], 'usuario', $row['id_usuario'],
         "Contraseña incorrecta para: $username", $username);
@@ -46,7 +46,7 @@ if (!password_verify($password, $row['contrasena'])) {
     exit();
 }
 
-// ── Cuenta desactivada (baja lógica) ─────────────────────────────────────────
+//Cuenta desactivada (baja lógica)
 if ((int)$row['is_active'] === 0) {
     audit_log($conn, 'LOGIN_FAIL', $row['id_usuario'], 'usuario', $row['id_usuario'],
         "Intento de login en cuenta desactivada: $username", $username);
@@ -54,7 +54,7 @@ if ((int)$row['is_active'] === 0) {
     exit();
 }
 
-// ── Email no verificado ───────────────────────────────────────────────────────
+//Email no verificado
 if ((int)$row['verificado'] === 0) {
     audit_log($conn, 'LOGIN_FAIL', $row['id_usuario'], 'usuario', $row['id_usuario'],
         "Login bloqueado: email sin verificar para $username", $username);
@@ -62,7 +62,7 @@ if ((int)$row['verificado'] === 0) {
     exit();
 }
 
-// ── Login exitoso ─────────────────────────────────────────────────────────────
+//Login exitoso 
 $_SESSION['user_id']  = $row['id_usuario'];
 $_SESSION['username'] = $row['nombre_usuario'];
 $_SESSION['role']     = $row['rol'];
