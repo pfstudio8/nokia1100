@@ -42,7 +42,7 @@ if ($row['rol'] === 'admin') {
     exit();
 }
 
-// ── RESTAURAR si ya está inactivo ─────────────────────────────────────────────
+//RESTAURAR si ya está inactiv
 if ((int)$row['is_active'] === 0) {
     $stmt = $conn->prepare(
         "UPDATE usuario SET is_active = 1, fecha_baja = NULL, motivo_baja = NULL WHERE id_usuario = ?"
@@ -58,7 +58,7 @@ if ((int)$row['is_active'] === 0) {
     exit();
 }
 
-// ── BAJA LÓGICA ───────────────────────────────────────────────────────────────
+//BAJA LÓGICA
 $motivo     = 'Desactivado por administrador';
 $fecha_baja = date('Y-m-d H:i:s');
 
