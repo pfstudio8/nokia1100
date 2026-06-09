@@ -22,11 +22,11 @@ if ($id_usuario <= 0) {
     exit();
 }
 
-// Convert array of modules into a comma-separated string
-// If empty, save it as an empty string to represent "no modules allowed"
+// Convertir el array de módulos en una cadena separada por comas
+// Si está vacío, guardarlo como cadena vacía para representar "sin módulos permitidos"
 $modulos_str = implode(',', $modulos);
 
-// 1. Retrieve the username of the user being modified for the audit log
+// 1. Obtener el nombre de usuario del usuario que está siendo modificado para el registro de auditoría
 $stmt = $conn->prepare("SELECT nombre_usuario FROM usuario WHERE id_usuario = ?");
 $stmt->bind_param("i", $id_usuario);
 $stmt->execute();
@@ -35,16 +35,16 @@ $user_row = $res->fetch_assoc();
 $target_username = $user_row ? $user_row['nombre_usuario'] : "ID $id_usuario";
 $stmt->close();
 
-// 2. Update the user's allowed modules in the database
+// 2. Actualizar los módulos permitidos del usuario en la base de datos
 $stmt = $conn->prepare("UPDATE usuario SET modulos_permitidos = ? WHERE id_usuario = ?");
 $stmt->bind_param("si", $modulos_str, $id_usuario);
 
 if ($stmt->execute()) {
-    // Log in audit log
+    // Registrar en el log de auditoría
     $desc = "Permisos de módulos actualizados para $target_username a: [" . ($modulos_str ?: 'Ninguno') . "]";
     audit_log(
         $conn, 
-        'ROLE_CHANGE', // Re-using standard ROLE_CHANGE or we can use any action code
+        'ROLE_CHANGE', // Reutilizamos ROLE_CHANGE o podemos usar cualquier código de acción
         $_SESSION['user_id'], 
         'usuario', 
         $id_usuario, 
