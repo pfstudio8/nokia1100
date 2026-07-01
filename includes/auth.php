@@ -4,10 +4,7 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-/**
- * Middleware to protect Store routes.
- * Redirects to Store Login if the customer is not authenticated.
- */
+// Middleware para proteger rutas de la tienda. Redirige al login de tienda si el cliente no está autenticado.
 function require_cliente_auth() {
     if (!isset($_SESSION['cliente_id'])) {
         header("Location: /nokia1100/tienda/login.php?error=Inicia sesión para continuar");
@@ -15,10 +12,7 @@ function require_cliente_auth() {
     }
 }
 
-/**
- * Middleware to protect Admin/Stock routes.
- * Redirects to Admin Login if the admin/employee is not authenticated.
- */
+// Middleware para proteger rutas de administración e inventario. Redirige al login de administración si no está autenticado.
 function require_admin_auth() {
     if (!isset($_SESSION['admin_id'])) {
         header("Location: /nokia1100/admin/login.php?error=Acceso restringido");

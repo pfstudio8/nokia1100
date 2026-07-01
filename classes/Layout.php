@@ -13,53 +13,95 @@ class Layout
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="' . BASE_URL . '/assets/css/style.css?v=' . time() . '">
-    <script>
-      tailwind.config = {
-        darkMode: "class",
-        theme: {
-          extend: {
-            colors: {
-              background: "#0A0A0B",
-              surface: "#111113",
-              "surface-hover": "#18181B",
-              primary: "#21b8bd",
-              secondary: "#E04FEE",
-              border: "#27272A",
-              "text-main": "#FAFAFA",
-              "text-muted": "#A1A1AA",
-            },
-            fontFamily: {
-              sans: ["Inter", "sans-serif"],
-              display: ["Outfit", "sans-serif"],
-            },
-          },
-        },
-      }
-    </script>
-    <style>
-      .material-symbols-outlined { font-variation-settings: \'FILL\' 0, \'wght\' 300, \'GRAD\' 0, \'opsz\' 24; }
-      body { background-color: #0A0A0B; color: #FAFAFA; }
-      .glass-card {
-        background: rgba(17, 17, 19, 0.7);
-        backdrop-filter: blur(16px);
-        border: 1px solid #27272A;
-      }
-      main a { transition: all 0.2s ease; }
-    </style>
+    <script src="' . BASE_URL . '/assets/js/tailwind_config.js"></script>
 </head>
 <body class="font-sans antialiased text-text-main selection:bg-primary/20 selection:text-primary">';
+    }
+
+    public static function getAllowedModules($userId)
+    {
+        global $conn;
+        if (!isset($conn)) {
+            return null;
+        }
+        $stmt = $conn->prepare("SELECT modulos_permitidos FROM usuario WHERE id_usuario = ?");
+        if ($stmt) {
+            $stmt->bind_param("i", $userId);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            if ($row = $res->fetch_assoc()) {
+                if ($row['modulos_permitidos'] !== null) {
+                    return explode(',', $row['modulos_permitidos']);
+                }
+            }
+            $stmt->close();
+        }
+        return null;
+    }
+
+    public static function checkAccess($moduleId)
+    {
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
+        }
+
+        if (!isset($_SESSION['user_id'])) {
+            header("Location: " . BASE_URL . "/index.php");
+            exit();
+        }
+
+        $rol = $_SESSION['role'] ?? 'empleado';
+
+        // Restricción para rol Invitado (guest)
+        if ($rol === 'guest') {
+            $allowedModules = ['dashboard', 'inventario'];
+            if (!in_array($moduleId, $allowedModules)) {
+                header("Location: " . BASE_URL . "/modules/employee/dashboard.php?error=No+tiene+permiso+para+acceder+a+ese+módulo");
+                exit();
+            }
+            // Evitar que un invitado intente acceder a páginas de administración por URL
+            $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+            if (strpos($requestUri, '/modules/admin/') !== false) {
+                header("Location: " . BASE_URL . "/modules/employee/dashboard.php?error=No+tiene+permiso+para+acceder+a+ese+módulo");
+                exit();
+            }
+            return;
+        }
+
+        // Hardening para que operarios/empleados tampoco puedan acceder a URLs de administración
+        if ($rol !== 'admin') {
+            $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+            if (strpos($requestUri, '/modules/admin/') !== false) {
+                header("Location: " . BASE_URL . "/modules/employee/dashboard.php?error=No+tiene+permiso+para+acceder+a+ese+módulo");
+                exit();
+            }
+        }
+
+        $userId = $_SESSION['user_id'];
+        $allowed = self::getAllowedModules($userId);
+
+        if ($allowed !== null && !in_array($moduleId, $allowed)) {
+            $redirectUrl = ($rol === 'admin')
+                ? BASE_URL . "/modules/admin/dashboard.php?error=No+tiene+permiso+para+acceder+a+ese+módulo"
+                : BASE_URL . "/modules/employee/dashboard.php?error=No+tiene+permiso+para+acceder+a+ese+módulo";
+            header("Location: " . $redirectUrl);
+            exit();
+        }
     }
 
     public static function renderAdminSidebar($activePage = '')
     {
         $username = isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : 'Admin';
         $initial = strtoupper(substr($username, 0, 1));
+        $userId = $_SESSION['user_id'] ?? null;
+        $allowed = $userId ? self::getAllowedModules($userId) : null;
 
         $links = [
             ['id' => 'dashboard', 'url' => BASE_URL . '/modules/admin/dashboard.php', 'icon' => 'dashboard', 'label' => 'Dashboard'],
             ['id' => 'inventario', 'url' => BASE_URL . '/modules/inventory/inventory.php', 'icon' => 'inventory_2', 'label' => 'Inventario'],
             ['id' => 'usuarios', 'url' => BASE_URL . '/modules/admin/users.php', 'icon' => 'group', 'label' => 'Usuarios'],
             ['id' => 'taller', 'url' => BASE_URL . '/modules/workshop/index.php', 'icon' => 'home_repair_service', 'label' => 'Taller'],
+            ['id' => 'clientes', 'url' => BASE_URL . '/modules/clients/clients.php', 'icon' => 'contact_page', 'label' => 'Clientes'],
             ['id' => 'ventas', 'url' => BASE_URL . '/modules/sales/sales.php', 'icon' => 'payments', 'label' => 'Ventas'],
             ['id' => 'graficos', 'url' => BASE_URL . '/modules/sales/sales_charts.php', 'icon' => 'bar_chart', 'label' => 'Estadísticas'],
             ['id' => 'proveedores', 'url' => BASE_URL . '/modules/suppliers/suppliers.php', 'icon' => 'local_shipping', 'label' => 'Proveedores'],
@@ -76,6 +118,9 @@ class Layout
     <nav class="flex-1 px-4 space-y-1 mt-4">';
 
         foreach ($links as $l) {
+            if ($allowed !== null && !in_array($l['id'], $allowed)) {
+                continue;
+            }
             $isActive = ($activePage === $l['id']);
             if ($isActive) {
                 echo '<a href="' . $l['url'] . '" class="flex items-center gap-3 px-4 py-3 bg-surface rounded-lg border border-border text-primary transition-colors">
@@ -115,13 +160,24 @@ class Layout
     {
         $username = isset($_SESSION['username']) ? htmlspecialchars($_SESSION['username']) : 'Empleado';
         $initial = strtoupper(substr($username, 0, 1));
+        $userId = $_SESSION['user_id'] ?? null;
+        $allowed = $userId ? self::getAllowedModules($userId) : null;
+        $role = $_SESSION['role'] ?? 'empleado';
 
         $links = [
             ['id' => 'dashboard', 'url' => BASE_URL . '/modules/employee/dashboard.php', 'icon' => 'home', 'label' => 'Inicio'],
             ['id' => 'venta', 'url' => BASE_URL . '/modules/sales/new_sale.php', 'icon' => 'point_of_sale', 'label' => 'Generar Venta'],
             ['id' => 'taller', 'url' => BASE_URL . '/modules/workshop/index.php', 'icon' => 'home_repair_service', 'label' => 'Taller'],
+            ['id' => 'clientes', 'url' => BASE_URL . '/modules/clients/clients.php', 'icon' => 'contact_page', 'label' => 'Clientes'],
             ['id' => 'inventario', 'url' => BASE_URL . '/modules/inventory/inventory.php', 'icon' => 'inventory_2', 'label' => 'Consultar Stock'],
         ];
+
+        // Restringir enlaces visibles si es invitado
+        if ($role === 'guest') {
+            $links = array_filter($links, function($l) {
+                return in_array($l['id'], ['dashboard', 'inventario']);
+            });
+        }
 
         echo '
 <header class="md:hidden border-b border-border bg-background p-4 flex justify-between items-center fixed top-0 w-full z-50">
@@ -140,7 +196,7 @@ class Layout
             </div>
             <div class="overflow-hidden">
                 <div class="text-sm font-medium text-text-main truncate">' . $username . '</div>
-                <div class="text-[10px] text-text-muted uppercase tracking-widest font-semibold">Operario</div>
+                <div class="text-[10px] text-text-muted uppercase tracking-widest font-semibold">' . ($role === 'guest' ? 'Invitado' : 'Operario') . '</div>
             </div>
         </div>
     </div>
@@ -148,6 +204,9 @@ class Layout
     <div class="flex-1 px-4 space-y-1">';
 
         foreach ($links as $l) {
+            if ($allowed !== null && !in_array($l['id'], $allowed)) {
+                continue;
+            }
             $isActive = ($activePage === $l['id']);
             if ($isActive) {
                 echo '<a href="' . $l['url'] . '" class="flex items-center gap-3 px-4 py-3 bg-surface rounded-lg border border-border text-primary transition-colors">
@@ -177,6 +236,7 @@ class Layout
     {
         echo '
 <script src="' . BASE_URL . '/assets/js/sileo-toaster.bundle.js?v=' . time() . '"></script>
+<script src="' . BASE_URL . '/assets/js/export-helper.js?v=' . time() . '"></script>
 <script src="' . BASE_URL . '/assets/js/main.js?v=' . time() . '"></script>
 </body></html>';
     }

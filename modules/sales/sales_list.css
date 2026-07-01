@@ -1,0 +1,98 @@
+/* assets/css/pages/sales_list.css */
+/* Premium GSAP Download Button */
+.btn-export-premium {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 150px;
+    height: 42px;
+    background: var(--text-main);
+    color: var(--text-inverse) !important;
+    font-weight: 600;
+    border-radius: 24px;
+    border: none;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    padding: 0 1.5rem;
+}
+.btn-export-premium:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(255, 255, 255, 0.08);
+}
+.btn-export-premium.loading {
+    background: var(--surface) !important;
+    border: 1px solid var(--border);
+    color: var(--text-main) !important;
+    cursor: not-allowed;
+}
+.btn-export-premium.complete {
+    background: var(--success) !important;
+    color: var(--background) !important;
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+}
+.btn-export-premium .button-text {
+    transition: transform 0.4s ease, opacity 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+}
+.btn-export-premium.loading .button-text {
+    transform: translateY(-30px);
+    opacity: 0;
+}
+.btn-export-premium .progress-percent {
+    position: absolute;
+    left: 1.5rem;
+    font-family: monospace;
+    font-size: 0.85rem;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: transform 0.4s ease, opacity 0.3s ease;
+    color: var(--primary-color);
+    font-weight: bold;
+}
+.btn-export-premium.loading .progress-percent {
+    opacity: 1;
+    transform: translateY(0);
+}
+.btn-export-premium .icon-container {
+    position: absolute;
+    right: 1.25rem;
+    width: 24px;
+    height: 24px;
+    transition: all 0.4s ease;
+}
+.btn-export-premium.loading .icon-container {
+    right: 50%;
+    transform: translateX(50%);
+}
+
+/* SVG and morph path styles requested by the user */
+.button svg {
+    display: block;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: var(--sw, 3px); 
+    stroke-linecap: round; 
+    stroke-linejoin: round;
+    width: 24px;
+    height: 24px;
+}
+.button circle { 
+    width: 24px; 
+    height: 24px;
+    transform: rotate(-90deg);
+    transform-origin: center;
+    stroke-dasharray: 62.8;
+    stroke-dashoffset: 62.8;
+    stroke: var(--primary-color);
+    transition: stroke-dashoffset 0.1s linear;
+}
+.button .icon {
+    --sw: 2px;
+    width: 24px;
+    height: 24px;
+}
