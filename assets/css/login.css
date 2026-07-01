@@ -1,0 +1,395 @@
+/* assets/css/pages/login.css */
+body {
+    background: #0A0A0B !important;
+    color: #FAFAFA !important;
+    min-height: 100vh !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    overflow-x: hidden !important;
+    position: relative !important;
+    padding: 1.5rem !important;
+    font-family: 'Inter', sans-serif !important;
+}
+
+/* Contenedor principal estilo Glassmorphism Double Slider */
+.double-slider-container {
+    background: rgba(17, 17, 19, 0.75) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    border-radius: 24px !important;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6) !important;
+    position: relative !important;
+    overflow: hidden !important;
+    width: 850px !important;
+    max-width: 100% !important;
+    min-height: 580px !important;
+    transition: all 0.6s ease-in-out !important;
+    z-index: 10 !important;
+    border: 1px solid #27272A !important;
+}
+
+.form-container {
+    position: absolute !important;
+    top: 0 !important;
+    height: 100% !important;
+    transition: all 0.6s ease-in-out !important;
+    background: transparent !important;
+    width: 50% !important;
+    padding: 3rem 2.5rem !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+}
+
+.double-slider-container h2 {
+    font-size: 32px !important;
+    font-weight: 800 !important;
+    margin-bottom: 1rem !important;
+    color: #FAFAFA !important;
+    text-align: left !important;
+    font-family: 'Outfit', sans-serif !important;
+}
+
+.sign-in-container {
+    left: 0 !important;
+    z-index: 2 !important;
+    opacity: 1 !important;
+    transform: translateX(0) !important;
+    pointer-events: auto !important;
+}
+
+.double-slider-container.right-panel-active .sign-in-container {
+    transform: translateX(-50px) !important;
+    opacity: 0 !important;
+    z-index: 1 !important;
+    pointer-events: none !important;
+}
+
+.sign-up-container {
+    right: 0 !important;
+    z-index: 1 !important;
+    opacity: 0 !important;
+    transform: translateX(50px) !important;
+    pointer-events: none !important;
+}
+
+.double-slider-container.right-panel-active .sign-up-container {
+    transform: translateX(0) !important;
+    opacity: 1 !important;
+    z-index: 5 !important;
+    pointer-events: auto !important;
+}
+
+.overlay-container {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    z-index: 100 !important;
+}
+
+.overlay {
+    background: #000000 !important;
+    color: #ffffff !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    height: 100% !important;
+    width: 100% !important;
+    pointer-events: auto !important;
+    clip-path: polygon(48% 0, 100% 0, 100% 100%, 66% 100%) !important;
+    transition: clip-path 0.6s cubic-bezier(0.76, 0, 0.24, 1) !important;
+}
+
+.double-slider-container.right-panel-active .overlay {
+    clip-path: polygon(0 0, 52% 0, 34% 100%, 0 100%) !important;
+}
+
+.overlay-panel {
+    position: absolute !important;
+    display: flex !important;
+    justify-content: center !important;
+    flex-direction: column !important;
+    top: 0 !important;
+    height: 100% !important;
+    width: 35% !important;
+    transition: all 0.6s ease-in-out !important;
+}
+
+.overlay-panel h1 {
+    font-size: 34px !important;
+    font-weight: 800 !important;
+    margin-bottom: 0.75rem !important;
+    color: #ffffff !important;
+    font-family: 'Outfit', sans-serif !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1px !important;
+}
+
+.overlay-panel p {
+    font-size: 13px !important;
+    font-weight: 300 !important;
+    line-height: 1.6 !important;
+    color: rgba(255, 255, 255, 0.75) !important;
+    margin-bottom: 1.5rem !important;
+    text-align: left !important;
+}
+
+.overlay-left {
+    left: 0 !important;
+    padding-left: 3.5rem !important;
+    padding-right: 1.5rem !important;
+    align-items: flex-start !important;
+    opacity: 0 !important;
+    transform: translateX(-50px) !important;
+    pointer-events: none !important;
+}
+
+.double-slider-container.right-panel-active .overlay-left {
+    opacity: 1 !important;
+    transform: translateX(0) !important;
+    pointer-events: auto !important;
+}
+
+.overlay-right {
+    right: 0 !important;
+    padding-right: 3.5rem !important;
+    padding-left: 1.5rem !important;
+    align-items: flex-start !important;
+    opacity: 1 !important;
+    transform: translateX(0) !important;
+    pointer-events: auto !important;
+}
+
+.double-slider-container.right-panel-active .overlay-right {
+    opacity: 0 !important;
+    transform: translateX(50px) !important;
+    pointer-events: none !important;
+}
+
+/* Estilos de Campos de Entrada Diagonal Split */
+.double-slider-container .input-box {
+    position: relative !important;
+    margin: 15px 0 !important;
+    border-bottom: 2px solid #27272A !important;
+    background: transparent !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    transition: border-color 0.3s ease !important;
+}
+
+.double-slider-container .sign-in-container .input-box:focus-within {
+    border-color: #21b8bd !important;
+}
+.double-slider-container .sign-up-container .input-box:focus-within {
+    border-color: #E04FEE !important;
+}
+
+.double-slider-container input {
+    width: 100% !important;
+    height: 40px !important;
+    background: transparent !important;
+    border: none !important;
+    outline: none !important;
+    font-size: 15px !important;
+    color: #FAFAFA !important;
+    font-weight: 500 !important;
+    padding: 0 30px 0 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+.double-slider-container label {
+    display: inline-block !important;
+    margin-bottom: 0 !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    font-size: 15px !important;
+    color: #A1A1AA !important;
+    pointer-events: none !important;
+    transition: all 0.3s ease !important;
+    text-transform: none !important;
+    letter-spacing: normal !important;
+    font-weight: 500 !important;
+    background: transparent !important;
+    padding: 0 !important;
+}
+
+.double-slider-container .sign-in-container input:focus ~ label,
+.double-slider-container .sign-in-container input:not(:placeholder-shown) ~ label {
+    top: -5px !important;
+    font-size: 12px !important;
+    color: #21b8bd !important;
+    font-weight: 600 !important;
+}
+.double-slider-container .sign-up-container input:focus ~ label,
+.double-slider-container .sign-up-container input:not(:placeholder-shown) ~ label {
+    top: -5px !important;
+    font-size: 12px !important;
+    color: #E04FEE !important;
+    font-weight: 600 !important;
+}
+
+.double-slider-container .input-box i {
+    position: absolute !important;
+    right: 5px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    font-size: 18px !important;
+    background: transparent !important;
+    padding: 0 !important;
+}
+.double-slider-container .sign-in-container .input-box i {
+    color: #21b8bd !important;
+}
+.double-slider-container .sign-up-container .input-box i {
+    color: #E04FEE !important;
+}
+
+/* Botón de Estilo Píldora */
+.double-slider-container .sign-in-container button.auth-btn-pill {
+    width: 100% !important;
+    height: 45px !important;
+    background: #21b8bd !important;
+    color: #0A0A0B !important;
+    border: none !important;
+    border-radius: 40px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    margin-top: 1.5rem !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 8px 20px rgba(33, 184, 189, 0.25) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    padding: 0 !important;
+    transform: none !important;
+}
+.double-slider-container .sign-in-container button.auth-btn-pill:hover {
+    background: #1a9498 !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 12px 24px rgba(33, 184, 189, 0.35) !important;
+}
+
+.double-slider-container .sign-up-container button.auth-btn-pill {
+    width: 100% !important;
+    height: 45px !important;
+    background: #E04FEE !important;
+    color: #0A0A0B !important;
+    border: none !important;
+    border-radius: 40px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    margin-top: 1.5rem !important;
+    transition: all 0.3s ease !important;
+    box-shadow: 0 8px 20px rgba(224, 79, 238, 0.25) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.5rem !important;
+    padding: 0 !important;
+    transform: none !important;
+}
+.double-slider-container .sign-up-container button.auth-btn-pill:hover {
+    background: #c03ebd !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 12px 24px rgba(224, 79, 238, 0.35) !important;
+}
+
+.double-slider-container button.auth-btn-pill:active {
+    transform: translateY(0) !important;
+}
+
+.double-slider-container .toggle-link {
+    text-align: center !important;
+    margin-top: 1.5rem !important;
+    font-size: 13px !important;
+    color: #A1A1AA !important;
+    font-weight: 500 !important;
+}
+
+.double-slider-container .sign-in-container .toggle-link button {
+    color: #21b8bd !important;
+    font-weight: 700 !important;
+    text-decoration: underline !important;
+    background: transparent !important;
+    border: none !important;
+    cursor: pointer !important;
+    display: inline !important;
+    font-size: 13px !important;
+}
+.double-slider-container .sign-up-container .toggle-link button {
+    color: #E04FEE !important;
+    font-weight: 700 !important;
+    text-decoration: underline !important;
+    background: transparent !important;
+    border: none !important;
+    cursor: pointer !important;
+    display: inline !important;
+    font-size: 13px !important;
+}
+
+.forgot-link {
+    text-align: right !important;
+    margin-top: -5px !important;
+}
+
+.forgot-link a {
+    font-size: 12px !important;
+    color: #A1A1AA !important;
+    font-weight: 500 !important;
+    transition: color 0.3s !important;
+}
+
+.forgot-link a:hover {
+    color: #21b8bd !important;
+    text-decoration: underline !important;
+}
+
+.double-slider-container form {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+}
+
+@media (max-width: 767px) {
+    .double-slider-container {
+        width: 100% !important;
+        max-width: 440px !important;
+        min-height: 550px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+    }
+    .overlay-container {
+        display: none !important;
+    }
+    .form-container {
+        position: relative !important;
+        width: 100% !important;
+        height: auto !important;
+        transform: none !important;
+        opacity: 1 !important;
+        display: none !important;
+        padding: 2.5rem 2rem !important;
+    }
+    .double-slider-container:not(.right-panel-active) .sign-in-container {
+        display: flex !important;
+    }
+    .double-slider-container.right-panel-active .sign-up-container {
+        display: flex !important;
+    }
+}

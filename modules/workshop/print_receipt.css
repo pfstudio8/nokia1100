@@ -1,0 +1,118 @@
+/* assets/css/pages/print_receipt.css */
+body {
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #333;
+    margin: 0;
+    padding: 20px;
+    font-size: 14px;
+}
+
+.receipt-container {
+    max-width: 800px;
+    margin: 0 auto;
+    border: 1px solid #ddd;
+    padding: 40px;
+    box-sizing: border-box;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #222;
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    margin: 0;
+    letter-spacing: -1px;
+}
+
+.logo span {
+    color: #888;
+}
+
+.info-header {
+    text-align: right;
+}
+
+.info-header h2 {
+    margin: 0 0 5px 0;
+    font-size: 20px;
+    color: #555;
+}
+
+.row {
+    display: flex;
+    margin-bottom: 20px;
+}
+
+.col {
+    flex: 1;
+}
+
+h3 {
+    font-size: 14px;
+    text-transform: uppercase;
+    color: #777;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+}
+
+p {
+    margin: 0 0 5px 0;
+    line-height: 1.5;
+}
+
+.box {
+    background: #fafafa;
+    border: 1px solid #eee;
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.signature-section {
+    margin-top: 60px;
+    display: flex;
+    justify-content: space-between;
+}
+
+.signature-box {
+    text-align: center;
+    width: 45%;
+}
+
+.signature-line {
+    border-top: 1px solid #333;
+    margin-top: 50px;
+    padding-top: 10px;
+    font-size: 12px;
+    color: #555;
+}
+
+.terms {
+    font-size: 10px;
+    color: #888;
+    margin-top: 40px;
+    text-align: justify;
+    line-height: 1.4;
+    border-top: 1px solid #eee;
+    padding-top: 10px;
+}
+
+@media print {
+    body {
+        padding: 0;
+    }
+    .receipt-container {
+        border: none;
+        padding: 0;
+    }
+    .no-print {
+        display: none;
+    }
+}

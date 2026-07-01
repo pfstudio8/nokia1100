@@ -92,9 +92,4 @@ function get_query_url($new_params = []) {
     <?php endif; ?>
 </form>
 
-<script>
-    // Auto-submit checkbox filters only (Price needs button)
-    document.querySelectorAll('input[name="marca[]"]').forEach(el => {
-        el.addEventListener('change', () => document.getElementById('filterForm').submit());
-    });
-</script>
+<script src="<?php echo BASE_URL; ?>/assets/js/filtros.js?v=<?php echo time(); ?>"></script>

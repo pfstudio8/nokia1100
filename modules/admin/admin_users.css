@@ -1,0 +1,27 @@
+/* assets/css/pages/admin_users.css */
+.role-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.role-admin {
+    background: rgba(224, 79, 238, .1);
+    color: var(--secondary-color);
+    border: 1px solid rgba(224, 79, 238, .2);
+}
+
+.role-employee {
+    background: rgba(79, 224, 229, .1);
+    color: var(--primary-color);
+    border: 1px solid rgba(79, 224, 229, .2);
+}
+
+.badge-inactive {
+    background: rgba(239, 68, 68, .1);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, .2);
+}

@@ -1,8 +1,8 @@
-﻿<?php
-session_start();
-require_once __DIR__ . '/../../config/db.php';
-session_unset();
-session_destroy();
-header("Location: " . BASE_URL . "/index.php");
-exit();
+<?php
+// modules/auth/logout.php
+
+require_once __DIR__ . '/Controllers/AuthController.php';
+
+$controller = new AuthController();
+$controller->logout();
 ?>

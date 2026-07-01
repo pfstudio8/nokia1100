@@ -1,75 +1,67 @@
-# Guía de instalación — Nokia 1100 System
-## Cambios generados (checklist pendiente)
+# Guía de Instalación — Nokia 1100 System
+
+Este documento describe los pasos necesarios para desplegar y configurar el sistema de gestión Nokia 1100 en un entorno local utilizando XAMPP.
 
 ---
 
-## 1. Ejecutar la migración SQL (PRIMERO)
+## Requisitos Previos
 
-Importá `migration_seguridad.sql` en tu base de datos MySQL/MariaDB:
-
-```bash
-mysql -u root -p nokia1100 < migration_seguridad.sql
-```
-
-Esto agrega:
-- Columnas `is_active`, `fecha_baja`, `motivo_baja` en la tabla `usuario`
-- Tabla `audit_log` para registrar acciones sensibles
+1. Servidor local con **PHP 8.x** y **MySQL / MariaDB** (se recomienda usar **XAMPP**).
+2. Servidor web configurado para interpretar PHP.
+3. Cuenta de correo con soporte SMTP (opcional, requerida para el envío de correos de verificación y recuperación de contraseña).
 
 ---
 
-## 2. Copiar el helper de auditoría
+## Pasos para la Instalación
 
-```
-audit.php  →  config/audit.php
-```
+### 1. Ubicar el proyecto
+Copia o clona la carpeta del proyecto dentro del directorio raíz de tu servidor web.
+* En XAMPP (Windows): `C:\xampp\htdocs\nokia1100`
 
----
+### 2. Configurar la Base de Datos
+1. Inicia los servicios de Apache y MySQL en el Panel de Control de XAMPP.
+2. Abre **phpMyAdmin** (`http://localhost/phpmyadmin`) y crea una base de datos llamada `nokia1100`.
+3. Importa el archivo SQL completo con la estructura y los datos de prueba iniciales:
+   * Archivo a importar: [database/bd_nokia1100.sql](file:///c:/xampp/htdocs/nokia1100/database/bd_nokia1100.sql)
+   * Si prefieres importar solo la estructura limpia sin datos de ejemplo, utiliza: [database/nokia1100_estructura.sql](file:///c:/xampp/htdocs/nokia1100/database/nokia1100_estructura.sql)
 
-## 3. Reemplazar archivos PHP
+*Nota: La base de datos ya incluye la estructura de tablas de negocio, seguridad y auditoría requeridas para el funcionamiento del sistema.*
 
-| Archivo generado          | Destino en el proyecto                        |
-|---------------------------|-----------------------------------------------|
-| `auth_login.php`          | `modules/auth/auth.php`                       |
-| `delete_user.php`         | `modules/admin/delete_user.php`               |
-| `users.php`               | `modules/admin/users.php`                     |
-| `audit_log.php`           | `modules/admin/audit_log.php` *(nuevo)*       |
-| `new_sale.php`            | `modules/sales/new_sale.php`                  |
-| `process_registration.php`| `modules/auth/process_registration.php`       |
-
----
-
-## 4. Agregar enlace "Auditoría" al sidebar admin
-
-En `classes/Layout.php`, dentro del array `$links` de `renderAdminSidebar()`, agregá:
+### 3. Configurar la Conexión en PHP
+Abre el archivo de configuración de la base de datos en [config/db.php](file:///c:/xampp/htdocs/nokia1100/config/db.php) y verifica que los datos de conexión correspondan a tu entorno local:
 
 ```php
-['id' => 'auditoria', 'url' => BASE_URL . '/modules/admin/audit_log.php',
- 'icon' => 'security', 'label' => 'Auditoría'],
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');
+define('DB_PASS', ''); // Contraseña de tu MySQL
+define('DB_NAME', 'nokia1100');
+define('BASE_URL', '/nokia1100'); // Ruta relativa en el servidor web
+```
+
+### 4. Configurar el Envío de Correos (SMTP)
+El sistema envía correos de verificación al registrar cuentas y de recuperación de contraseñas. Para configurar las credenciales:
+1. Abre [config/config_mail.php](file:///c:/xampp/htdocs/nokia1100/config/config_mail.php).
+2. Configura los parámetros SMTP de tu de correo (ej. Gmail, Outlook) o crea un archivo personalizado `config/mail.local.php` para sobrescribir las constantes de forma local:
+
+```php
+<?php
+// Ejemplo para config/mail.local.php
+define('SMTP_USER', 'tu_correo@gmail.com');
+define('SMTP_PASS', 'tu_contraseña_de_aplicacion');
 ```
 
 ---
 
-## 5. Usuarios existentes sin verificar
+## Acceso al Sistema
 
-Los usuarios existentes en la BD tienen `verificado = 0`.
-Para habilitarlos sin que tengan que verificar email, ejecutá:
+Una vez configurado, abre tu navegador e ingresa a: `http://localhost/nokia1100`
 
-```sql
-UPDATE usuario SET verificado = 1 WHERE verificado = 0;
-```
+### Credenciales de Prueba por Defecto
+El archivo de volcado de base de datos (`bd_nokia1100.sql`) incluye usuarios iniciales con diferentes roles. Puedes ingresar con:
 
-O dejalo así si querés forzar la verificación (recomendado para producción).
-
----
-
-## Checklist cubierto por estos archivos
-
-| Ítem                                       | Estado  |
-|--------------------------------------------|---------|
-| Sin alerts nativos del navegador            | Reemplazados por showToast/showConfirmModal |
-| ABM de usuarios con baja lógica            |  Soft delete + restaurar en users.php       |
-| Validación de email por envío de correo    |  Login bloquea si `verificado = 0`          |
-| Seguridad y Auditoría                      |  Tabla audit_log + logging en login/ventas  |
-| Validación de unicidad (DNI)               |  Agregado en process_registration.php       |
-| Validación de formato email                |  filter_var en process_registration.php     |
-| Exclusión del propio usuario al editar     |  delete_user bloquea self-disable           |
+* **Administrador:**
+  * Usuario: `admin`
+  * Contraseña: `admin123`
+* **Empleado:**
+  * Usuario: `empleado`
+  * Contraseña: `empleado123`
