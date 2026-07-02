@@ -43,9 +43,9 @@ if ($_SESSION['role'] === 'admin') {
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
-            <!-- COLS LEFT (INFO) -->
+            <?php // Columnas izquierdas (Información) ?>
             <div class="lg:col-span-2 space-y-6">
-                <!-- CLIENT & DEVICE INFO -->
+                <?php // Información de cliente y dispositivo ?>
                 <div class="glass-card rounded-2xl p-6">
                     <h3 class="text-lg font-display font-medium text-primary mb-4 border-b border-border/50 pb-2">Información General</h3>
                     
@@ -130,10 +130,10 @@ if ($_SESSION['role'] === 'admin') {
                 </div>
             </div>
 
-            <!-- COLS RIGHT (STATUS & TIMELINE) -->
+            <?php // Columnas derechas (Estado y Línea de tiempo) ?>
             <div class="space-y-6">
                 
-                <!-- CHANGE STATUS & BUDGET -->
+                <?php // Cambio de estado y presupuesto ?>
                 <form method="POST" action="" class="glass-card rounded-2xl p-6 border-l-4 border-l-primary">
                     <input type="hidden" name="action" value="update_status">
                     <h3 class="text-lg font-display font-medium text-text-main mb-4 border-b border-border/50 pb-2 flex items-center gap-2">
@@ -168,7 +168,7 @@ if ($_SESSION['role'] === 'admin') {
                     </div>
                 </form>
                 
-                <!-- TRACKING / TIMELINE -->
+                <?php // Seguimiento / Línea de tiempo ?>
                 <div class="glass-card rounded-2xl p-6">
                     <h3 class="text-lg font-display font-medium text-text-main mb-4 border-b border-border/50 pb-2 flex items-center gap-2">
                         <span class="material-symbols-outlined text-xl">history_toggle_off</span> Historial
@@ -179,10 +179,10 @@ if ($_SESSION['role'] === 'admin') {
                             $isFirst = ($idx === 0);
                         ?>
                         <div class="relative group">
-                            <!-- Icon -->
+                            <?php // Icono ?>
                             <div class="absolute -left-[31px] top-1.5 w-3.5 h-3.5 rounded-full border-2 transition-colors duration-300 <?php echo $isFirst ? 'border-primary bg-background shadow-[0_0_10px_rgba(33,184,189,0.5)]' : 'border-text-muted/50 bg-background group-hover:border-primary/50'; ?>"></div>
                             
-                            <!-- Content -->
+                            <?php // Contenido ?>
                             <div class="bg-surface/40 border border-border/60 p-3.5 rounded-xl hover:bg-surface transition-colors duration-300 hover:border-border">
                                 <div class="flex justify-between items-start mb-2 gap-2">
                                     <span class="text-[11px] font-bold <?php echo $isFirst ? 'text-primary' : 'text-text-main'; ?> uppercase tracking-widest leading-none mt-1">

@@ -41,7 +41,7 @@ class BaseController
             session_start();
         }
         require_once __DIR__ . '/Layout.php';
-        // Extract variables to be accessible directly in the view
+        //Extraer las variables para que sean accesibles directamente en la vista
         extract($data);
         require $view_path;
     }

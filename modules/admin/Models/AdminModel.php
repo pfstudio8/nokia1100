@@ -5,7 +5,7 @@ require_once __DIR__ . '/../../../classes/BaseModel.php';
 
 class AdminModel extends BaseModel
 {
-    // --- Dashboard Metrics ---
+    // --- Métricas del Panel de Control ---
 
     public function get_total_sales()
     {
@@ -44,7 +44,7 @@ class AdminModel extends BaseModel
         return $sales;
     }
 
-    // --- User Management ---
+    // --- Gestión de Usuarios ---
 
     public function get_all_users($filter = 'activos')
     {
@@ -263,7 +263,7 @@ class AdminModel extends BaseModel
         return $success;
     }
 
-    // --- Profile Management ---
+    // --- Gestión de Perfil ---
 
     public function get_user_profile($id_usuario)
     {

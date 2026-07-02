@@ -2,13 +2,13 @@
 define('BASE_URL', '/nokia1100');
 require_once __DIR__ . '/../classes/Database.php';
 
-// Instantiate the new OOP Database class
+// Instancia la clase Database (POO)
 $db = new Database();
 
-// Expose legacy $conn variable to prevent breaking existing scripts
+// Expone la variable $conn heredada para compatibilidad
 $conn = $db->getConnection();
 
-// Auto-migration: Check and add modulos_permitidos column if it does not exist
+// Automigración: crea modulos_permitidos si no existe
 $res_permiso = $conn->query("SHOW COLUMNS FROM usuario LIKE 'modulos_permitidos'");
 if ($res_permiso && $res_permiso->num_rows === 0) {
     $conn->query("ALTER TABLE usuario ADD COLUMN modulos_permitidos TEXT DEFAULT NULL AFTER rol");

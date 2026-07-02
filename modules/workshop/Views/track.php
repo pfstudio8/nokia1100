@@ -46,7 +46,7 @@
         <?php if($order_found): 
             $estados = ['Recibido', 'En diagnóstico', 'En reparación', 'Listo', 'Entregado'];
             $current_idx = array_search($repair['estado'], $estados);
-            if ($current_idx === false) $current_idx = 0; // fallback para 'Cancelado' u otros
+            if ($current_idx === false) $current_idx = 0; // Por defecto a 0 si el estado no coincide
             
             $is_cancelado = ($repair['estado'] === 'Cancelado');
         ?>
@@ -68,10 +68,10 @@
                         <p class="text-text-muted">Por favor, comuníquese con el taller para más información.</p>
                     </div>
                 <?php else: ?>
-                    <!-- STEPPER TIMELINE -->
+                    <?php // Línea de tiempo / Pasos del estado ?>
                     <div class="relative max-w-lg mx-auto py-8">
                         <div class="hidden sm:block absolute top-[52px] left-[10%] right-[10%] h-[3px] bg-surface border-y border-border/50">
-                            <!-- Progress highlight -->
+                            <?php // Resaltado de progreso ?>
                             <?php 
                             $progress = ($current_idx / (count($estados) - 1)) * 100;
                             ?>
@@ -84,7 +84,7 @@
                                 if ($idx < $current_idx) $status = 'completed';
                                 if ($idx === $current_idx) $status = 'current';
 
-                                // Define colors based on status
+                                // Define colores según el estado
                                 $dotClass = "w-5 h-5 rounded-full border-2 bg-surface border-border transition-all duration-500";
                                 $textClass = "text-text-muted text-xs font-medium sm:mt-4 transition-all duration-500 group-hover:text-text-main";
                                 
@@ -95,7 +95,7 @@
                                     $textClass = "text-primary text-xs font-bold sm:mt-4";
                                 }
 
-                                // Mobile specific layout adjustments
+                                // Ajustes de diseño específicos para móviles
                                 $flexDir = "flex-row sm:flex-col";
                                 $alignItems = "items-center sm:items-center";
                                 $textSpacing = "ml-4 sm:ml-0 text-left sm:text-center";
@@ -111,7 +111,7 @@
                                 </div>
                                 <span class="<?php echo $textSpacing; ?> <?php echo $textClass; ?> w-full">
                                     <?php 
-                                    // Breaks lines nicely on desktop
+                                    // Divide las líneas para visualización en escritorio
                                     $words = explode(" ", $est);
                                     if(count($words)>1) {
                                         echo "<span class='hidden sm:inline'>" . $words[0] . "<br>" . $words[1] . "</span>";

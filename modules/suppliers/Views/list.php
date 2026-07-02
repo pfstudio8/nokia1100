@@ -26,7 +26,7 @@ Layout::renderAdminSidebar('proveedores');
             <div class="alert alert-error">No se puede eliminar este proveedor porque tiene compras registradas.</div>
         <?php endif; ?>
 
-        <!-- Add Supplier Form -->
+        <?php // Formulario para agregar proveedor ?>
         <form method="POST" action="" style="background: var(--surface-hover); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid var(--border);">
             <h3 style="margin-bottom: 1rem; font-size: 1.1rem; font-family: 'Outfit', sans-serif;">Agregar Proveedor</h3>
             <input type="hidden" name="action" value="add">

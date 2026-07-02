@@ -16,7 +16,8 @@ class EmployeeController extends BaseController
 
     public function dashboard()
     {
-        // Require role 'empleado', 'admin' or 'guest' since admin/guest can also access employee area
+        // Requiere rol 'empleado', 'admin' o 'guest'
+        // Verifica la autenticación
         $this->check_auth();
         if ($_SESSION['role'] !== 'empleado' && $_SESSION['role'] !== 'admin' && $_SESSION['role'] !== 'guest') {
             $this->redirect(BASE_URL . "/index.php");

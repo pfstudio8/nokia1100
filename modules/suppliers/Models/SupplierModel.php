@@ -123,7 +123,7 @@ class SupplierModel extends BaseModel
 
         $this->conn->begin_transaction();
         try {
-            // Calculate Total
+            // Calcula el costo total de la compra
             foreach ($items as $item) {
                 $total_compra += $item['costo'] * $item['cantidad'];
             }
@@ -137,7 +137,7 @@ class SupplierModel extends BaseModel
             foreach ($items as $item) {
                 $id_producto = null;
 
-                // Check if product already exists by name, marca, modelo
+                // Verifica si el producto ya existe por nombre, marca y modelo
                 $stmt_check = $this->conn->prepare("SELECT p.id_producto FROM producto p 
                                        JOIN producto_detalle d ON p.id_producto = d.id_producto 
                                        WHERE p.nombre = ? AND d.marca = ? AND d.modelo = ?");
