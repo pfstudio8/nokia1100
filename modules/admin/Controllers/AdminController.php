@@ -41,7 +41,7 @@ class AdminController extends BaseController
         $users = $this->admin_model->get_all_users($filtro);
 
         $this->render_view(__DIR__ . '/../Views/users.php', [
-            'clientes' => $users, // We can name it clients or users but let's keep consistency or match view needs
+            'clientes' => $users, // Se usa 'clientes' por coherencia con la vista
             'filtro' => $filtro
         ]);
     }
@@ -217,7 +217,7 @@ class AdminController extends BaseController
             $this->redirect("users.php");
         }
 
-        // Prevent self-deactivation
+        // Evita la autodesactivación
         if ($id_usuario === (int)$_SESSION['user_id']) {
             $this->redirect("users.php?error=" . urlencode("No puedes desactivarte a ti mismo"));
         }
@@ -319,7 +319,7 @@ class AdminController extends BaseController
                 $error_msg = "Complete todos los campos obligatorios.";
             } else {
                 try {
-                    // Get current persona id
+                    // Obtiene el ID de la persona actual
                     $current = $this->admin_model->get_user_profile($id_user);
                     $id_persona = $current['id_persona'];
 
@@ -332,14 +332,14 @@ class AdminController extends BaseController
                         'direccion' => $current['direccion']
                     ];
 
-                    // Check username availability
+                    // Verifica disponibilidad del nombre de usuario
                     if ($this->admin_model->check_username_exists($username, $id_user)) {
                         throw new Exception("El nombre de usuario ya está en uso.");
                     }
 
                     $this->admin_model->update_profile_transaction($id_user, $id_persona, $persona_data, null);
                     
-                    // Update user name in DB
+                    // Actualiza el nombre de usuario en la base de datos
                     $updateUser = $this->conn->prepare("UPDATE usuario SET nombre_usuario = ? WHERE id_usuario = ?");
                     $updateUser->bind_param("si", $username, $id_user);
                     $updateUser->execute();
@@ -354,7 +354,7 @@ class AdminController extends BaseController
         }
 
         $current_data = $this->admin_model->get_user_profile($id_user);
-        // Map to match view key names (or pass them down)
+        // Mapea las claves para coincidir con la vista
         $current_data['nombre_usuario'] = $current_data['nombre_usuario'];
         $current_data['email'] = $current_data['persona_email'];
 

@@ -6,65 +6,78 @@ Layout::renderEmployeeSidebar('dashboard');
 ?>
 
 <main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen">
-    
+
     <header class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
         <div>
-            <h1 class="text-3xl font-display font-medium text-text-main tracking-tight">Centro de <span class="text-primary">Operaciones</span></h1>
+            <h1 class="text-3xl font-display font-medium text-text-main tracking-tight">Centro de <span
+                    class="text-primary">Operaciones</span></h1>
             <p class="text-text-muted text-xs uppercase tracking-widest mt-1 font-semibold">Terminal de Empleado</p>
         </div>
         <?php if ($_SESSION['role'] !== 'guest'): ?>
-        <a href="<?php echo BASE_URL; ?>/modules/sales/new_sale.php" class="bg-primary hover:bg-primary/90 text-background font-bold px-6 py-2.5 rounded-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5">
-            <span class="material-symbols-outlined">point_of_sale</span>
-            Nueva Venta
-        </a>
+            <a href="<?php echo BASE_URL; ?>/modules/sales/new_sale.php"
+                class="bg-primary hover:bg-primary/90 text-background font-bold px-6 py-2.5 rounded-lg flex items-center gap-2 transition-all shadow-lg hover:shadow-primary/20 hover:-translate-y-0.5">
+                <span class="material-symbols-outlined">point_of_sale</span>
+                Nueva Venta
+            </a>
         <?php endif; ?>
     </header>
 
-    <!-- Visual Banner -->
-    <section class="mb-10 w-full overflow-hidden rounded-2xl glass-card relative h-40 sm:h-48 flex items-center shadow-lg border-border">
+    <?php // Banner visual ?>
+    <section
+        class="mb-10 w-full overflow-hidden rounded-2xl glass-card relative h-40 sm:h-48 flex items-center shadow-lg border-border">
         <div class="absolute inset-0 z-0 bg-surface">
-            <!-- Background Image -->
-            <img src="<?php echo BASE_URL; ?>/assets/img/nokia_store_banner.png" alt="Nokia Premium Store" class="w-full h-full object-cover opacity-25 mix-blend-lighten filter sepia-0 hover:opacity-35 transition-opacity duration-700">
-            <!-- Gradient Overlay -->
+            <?php // Imagen de fondo ?>
+            <img src="<?php echo BASE_URL; ?>/assets/img/nokia_store_banner.png" alt="Nokia Premium Store"
+                class="w-full h-full object-cover opacity-25 mix-blend-lighten filter sepia-0 hover:opacity-35 transition-opacity duration-700">
+            <?php // Degradado ?>
             <div class="absolute inset-0 bg-gradient-to-r from-background via-background/70 to-transparent"></div>
         </div>
-        
+
         <div class="relative z-10 w-full p-8 flex flex-col justify-center h-full max-w-2xl">
-            <span class="text-[10px] font-bold text-secondary tracking-widest uppercase mb-1">Punto de Venta Activo</span>
-            <h2 class="text-2xl sm:text-3xl font-display font-bold text-text-main mb-2">Gestiona ventas con agilidad</h2>
-            <p class="text-sm text-text-muted font-medium max-w-sm">Accede rápido al catálogo y registra las transacciones del día.</p>
+            <span class="text-[10px] font-bold text-secondary tracking-widest uppercase mb-1">Punto de Venta
+                Activo</span>
+            <h2 class="text-2xl sm:text-3xl font-display font-bold text-text-main mb-2">Gestiona ventas con agilidad
+            </h2>
+            <p class="text-sm text-text-muted font-medium max-w-sm">Accede rápido al catálogo y registra las
+                transacciones del día.</p>
         </div>
     </section>
 
-    <!-- Daily Performance -->
+    <?php // Rendimiento diario ?>
     <?php if ($_SESSION['role'] !== 'guest'): ?>
-    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-        <div class="glass-card p-6 rounded-2xl flex flex-col justify-between group hover:border-border/80 transition-all">
-            <div class="flex justify-between items-start mb-4">
-                <span class="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Ingresos del Día</span>
-                <span class="material-symbols-outlined text-primary text-xl">trending_up</span>
+        <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+            <div
+                class="glass-card p-6 rounded-2xl flex flex-col justify-between group hover:border-border/80 transition-all">
+                <div class="flex justify-between items-start mb-4">
+                    <span class="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Ingresos del
+                        Día</span>
+                    <span class="material-symbols-outlined text-primary text-xl">trending_up</span>
+                </div>
+                <div class="text-3xl font-display font-medium text-text-main">$<?php echo number_format($total_hoy, 2); ?>
+                </div>
             </div>
-            <div class="text-3xl font-display font-medium text-text-main">$<?php echo number_format($total_hoy, 2); ?></div>
-        </div>
-        <div class="glass-card p-6 rounded-2xl flex flex-col justify-between group hover:border-border/80 transition-all">
-            <div class="flex justify-between items-start mb-4">
-                <span class="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Ventas de Hoy</span>
-                <span class="material-symbols-outlined text-secondary text-xl">receipt_long</span>
+            <div
+                class="glass-card p-6 rounded-2xl flex flex-col justify-between group hover:border-border/80 transition-all">
+                <div class="flex justify-between items-start mb-4">
+                    <span class="text-[10px] font-semibold uppercase tracking-widest text-text-muted">Ventas de Hoy</span>
+                    <span class="material-symbols-outlined text-secondary text-xl">receipt_long</span>
+                </div>
+                <div class="text-3xl font-display font-medium text-text-main"><?php echo number_format($trans_hoy); ?></div>
             </div>
-            <div class="text-3xl font-display font-medium text-text-main"><?php echo number_format($trans_hoy); ?></div>
-        </div>
-    </section>
+        </section>
     <?php endif; ?>
 
     <div class="grid grid-cols-1 gap-8">
-        <!-- Contenido Principal: Catálogo y Transacciones -->
+        <?php // Contenido principal: catálogo y transacciones ?>
         <div class="space-y-8">
-            
-            <!-- Productos -->
+
+            <?php // Catálogo de productos ?>
             <div class="space-y-6">
                 <div class="flex items-center justify-between">
                     <h3 class="font-display font-medium text-lg text-text-main">Catálogo Destacado</h3>
-                    <a href="<?php echo BASE_URL; ?>/modules/inventory/inventory.php" class="text-[10px] font-semibold uppercase tracking-widest text-primary hover:underline">Ver todo</a>
+                    <a href="<?php echo BASE_URL; ?>/modules/inventory/inventory.php"
+                        class="text-[10px] font-semibold uppercase tracking-widest text-primary hover:underline">Ver
+                        todo</a>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                     <?php
@@ -78,41 +91,39 @@ Layout::renderEmployeeSidebar('dashboard');
                                                 <div class='text-primary font-medium text-sm mt-1'>$" . number_format($p['precio'], 2) . "</div>
                                             </div>";
                         }
-                    }
-                    else {
+                    } else {
                         echo "<p class='text-sm text-text-muted'>No hay productos registrados</p>";
                     }
                     ?>
                 </div>
             </div>
 
-            <!-- Últimas Transacciones -->
+            <?php // Últimas transacciones ?>
             <?php if ($_SESSION['role'] !== 'guest'): ?>
-            <div class="space-y-6">
-                <h3 class="font-display font-medium text-lg text-text-main">Últimas Transacciones</h3>
-                <div class="glass-card rounded-2xl overflow-hidden p-0">
-                    <div class="divide-y divide-border/50">
-                        <?php
-                        if (count($ventas_recientes) > 0) {
-                            foreach ($ventas_recientes as $v) {
-                                $monto = number_format($v['total'], 2);
-                                $metodo = $v['metodo_de_pago'] ? $v['metodo_de_pago'] : 'N/A';
-                                echo "<div class='p-4 hover:bg-surface/30 transition-colors flex justify-between items-center'>
+                <div class="space-y-6">
+                    <h3 class="font-display font-medium text-lg text-text-main">Últimas Transacciones</h3>
+                    <div class="glass-card rounded-2xl overflow-hidden p-0">
+                        <div class="divide-y divide-border/50">
+                            <?php
+                            if (count($ventas_recientes) > 0) {
+                                foreach ($ventas_recientes as $v) {
+                                    $monto = number_format($v['total'], 2);
+                                    $metodo = $v['metodo_de_pago'] ? $v['metodo_de_pago'] : 'N/A';
+                                    echo "<div class='p-4 hover:bg-surface/30 transition-colors flex justify-between items-center'>
                                                         <div>
                                                             <div class='text-sm font-medium text-primary'>#TX-{$v['id_venta']}</div>
                                                             <div class='text-[10px] font-semibold uppercase tracking-wider text-text-muted mt-1'>{$metodo}</div>
                                                         </div>
                                                         <div class='text-sm font-medium text-text-main text-right'>$$monto</div>
                                                     </div>";
+                                }
+                            } else {
+                                echo "<div class='p-4 text-sm text-text-muted'>No hay transacciones</div>";
                             }
-                        }
-                        else {
-                            echo "<div class='p-4 text-sm text-text-muted'>No hay transacciones</div>";
-                        }
-                        ?>
+                            ?>
+                        </div>
                     </div>
                 </div>
-            </div>
             <?php endif; ?>
 
         </div>

@@ -18,12 +18,12 @@ Layout::renderAdminSidebar('dashboard');
         </div>
     </header>
 
-    <!-- Visual Banner -->
+    <?php // Banner visual ?>
     <section class="mb-10 w-full overflow-hidden rounded-2xl glass-card relative h-48 sm:h-56 flex items-center shadow-lg border-border">
         <div class="absolute inset-0 z-0 bg-surface">
-            <!-- Background Image with Blend -->
+            <?php // Imagen de fondo con mezcla ?>
             <img src="<?php echo BASE_URL; ?>/assets/img/nokia_store_banner.png" alt="Nokia Premium Store" class="w-full h-full object-cover opacity-30 mix-blend-lighten filter brightness-110 saturate-150 transition-all duration-700 hover:scale-105 hover:opacity-40">
-            <!-- Gradient Overlay for Contrast -->
+            <?php // Capa de gradiente para contraste ?>
             <div class="absolute inset-0 bg-gradient-to-r from-background via-background/60 to-transparent"></div>
         </div>
         
@@ -82,7 +82,7 @@ Layout::renderAdminSidebar('dashboard');
         
     </section>
     
-    <!-- Tables -->
+    <?php // Tablas de datos ?>
     <section class="grid grid-cols-1 gap-6">
         
         <!-- Ventas Recientes -->

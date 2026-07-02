@@ -1,19 +1,19 @@
 // assets/js/pages/sales_charts.js
 
-(function() {
+(function () {
     const computedStyle = getComputedStyle(document.body);
     const textMain = computedStyle.getPropertyValue('--tw-text-opacity') ? `rgba(250, 250, 250, 1)` : '#FAFAFA';
     const primary = '#4FE0E5';
     const border = 'rgba(255, 255, 255, 0.1)';
     const textMuted = '#A1A1AA';
 
-    // Retrieve data passed from the view
+    // Obtiene los datos pasados desde la vista
     const dates = window.salesData?.dates || [];
     const totals = window.salesData?.totals || [];
     const methods = window.salesData?.methods || [];
     const methodAmounts = window.salesData?.methodAmounts || [];
 
-    // Line Chart: Sales over time
+    // Gráfico de líneas: ventas a lo largo del tiempo
     const salesChartElement = document.getElementById('salesChart');
     if (salesChartElement) {
         const ctx = salesChartElement.getContext('2d');
@@ -51,7 +51,7 @@
                         padding: 12,
                         displayColors: false,
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 return 'Total: $' + context.raw.toFixed(2);
                             }
                         }
@@ -72,7 +72,7 @@
         });
     }
 
-    // Doughnut Chart: Payment Methods
+    // Gráfico de dona: métodos de pago
     const methodsChartElement = document.getElementById('methodsChart');
     if (methodsChartElement) {
         const ctxMethods = methodsChartElement.getContext('2d');
@@ -101,8 +101,8 @@
                 plugins: {
                     legend: {
                         position: 'bottom',
-                        labels: { 
-                            color: textMuted, 
+                        labels: {
+                            color: textMuted,
                             font: { family: 'Inter', size: 12 },
                             padding: 20
                         }
@@ -115,7 +115,7 @@
                         borderWidth: 1,
                         padding: 12,
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 return ' $' + context.raw.toFixed(2);
                             }
                         }

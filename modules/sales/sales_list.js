@@ -3,12 +3,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const button = document.getElementById('exportBtn');
     if (!button) return;
 
-    // Track active tweens for cancellation
+    // Rastrea los tweens activos para su cancelación
     let activeTweens = [];
     let isAnimating = false;
 
     function resetButton() {
-        // Kill all active GSAP tweens
+        // Detiene todos los tweens de GSAP activos
         activeTweens.forEach(tw => tw.kill());
         activeTweens = [];
         isAnimating = false;

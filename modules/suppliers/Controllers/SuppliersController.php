@@ -36,7 +36,7 @@ class SuppliersController extends BaseController
             }
         }
 
-        // Handle Delete Supplier
+        // Gestiona la eliminación del proveedor
         if (isset($_GET['delete'])) {
             $id = intval($_GET['delete']);
             $count = $this->supplier_model->count_supplier_purchases($id);
@@ -50,7 +50,7 @@ class SuppliersController extends BaseController
 
         $suppliers = $this->supplier_model->get_suppliers();
 
-        // Prepare purchases for each supplier in the view
+        // Prepara las compras de cada proveedor para la vista
         $supplier_list = [];
         foreach ($suppliers as $s) {
             $id_prov = $s['id_proveedor'];
@@ -166,7 +166,7 @@ class SuppliersController extends BaseController
 
         $purchases = $this->supplier_model->get_purchases();
 
-        // For details retrieval inside the view loop or pre-fetched
+        // Obtiene los detalles de la compra para la vista
         $purchase_list = [];
         foreach ($purchases as $p) {
             $p['details'] = $this->supplier_model->get_purchase_details($p['id_compra']);

@@ -10,8 +10,8 @@ class WorkshopController extends BaseController
 
     public function __construct()
     {
-        // Don't require login inside construct, because track() is a public action!
-        // We will call parent::__construct() though, which starts session.
+        // No requiere login en construct por ser track() una acción pública
+        // Se llama a parent::__construct() para iniciar la sesión
         parent::__construct();
         $this->workshop_model = new WorkshopModel();
     }
@@ -149,7 +149,7 @@ class WorkshopController extends BaseController
 
     public function track()
     {
-        // Publicly accessible tracking page
+        // Página de seguimiento de acceso público
         $codigo = isset($_GET['code']) ? trim($_GET['code']) : '';
         $order_found = false;
         $repair = null;

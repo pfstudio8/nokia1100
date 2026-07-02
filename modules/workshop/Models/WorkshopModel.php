@@ -187,7 +187,7 @@ class WorkshopModel extends BaseModel
         $id_producto = intval($id_producto);
         $quantity = intval($quantity);
 
-        // Check stock
+        // Verifica el stock disponible
         $res_inv = $this->conn->query("SELECT cantidad FROM inventario WHERE id_producto = $id_producto");
         $row_inv = $res_inv ? $res_inv->fetch_assoc() : null;
 
@@ -197,14 +197,14 @@ class WorkshopModel extends BaseModel
 
             $this->conn->begin_transaction();
             try {
-                // Add to reparacion_repuesto
+                // Agrega el repuesto a la tabla de reparaciones
                 $this->conn->query("INSERT INTO reparacion_repuesto (id_reparacion, id_producto, cantidad, precio_unitario) 
                                     VALUES ($id_reparacion, $id_producto, $quantity, $precio)");
 
-                // Deduct from inventario
+                // Resta la cantidad del inventario
                 $this->conn->query("UPDATE inventario SET cantidad = cantidad - $quantity WHERE id_producto = $id_producto");
 
-                // Update reparacion costo_total
+                // Actualiza el costo total de la reparación
                 $this->conn->query("UPDATE reparacion SET costo_total = costo_total + ($precio * $quantity) WHERE id_reparacion = $id_reparacion");
 
                 $this->conn->commit();

@@ -1,12 +1,11 @@
 <?php
 // includes/filtros.php
-// Expected variables:
-// $brands (result set), $categories (result set), $min_price, $max_price, $cat (selected category), $marca (selected brands array), $search
+// Variables esperadas: $brands, $categories, $min_price, $max_price, $cat, $marca, $search
 
-// Helper to keep query params
+// Ayuda a mantener los parámetros de búsqueda en la URL
 function get_query_url($new_params = []) {
     $params = $_GET;
-    // Merge new params
+    // Combina los nuevos parámetros
     foreach ($new_params as $key => $value) {
         if ($value === null) {
             unset($params[$key]);
@@ -19,10 +18,10 @@ function get_query_url($new_params = []) {
 ?>
 
 <form action="" method="GET" id="filterForm">
-    <!-- Keep Search -->
+    <?php // Mantiene la búsqueda actual ?>
     <?php if(!empty($search)): ?><input type="hidden" name="q" value="<?php echo htmlspecialchars($search); ?>"><?php endif; ?>
     
-    <!-- Category Filter -->
+    <?php // Filtro por categoría ?>
     <div class="filter-group">
         <div class="filter-title">Categorías</div>
         <div style="display: flex; flex-direction: column; gap: 0.5rem;">
@@ -32,7 +31,7 @@ function get_query_url($new_params = []) {
             </a>
             <?php 
             if(isset($categories) && $categories->num_rows > 0) {
-                $categories->data_seek(0); // Reset pointer
+                $categories->data_seek(0); // Reinicia el puntero
                 while($c = $categories->fetch_assoc()): 
                     $is_active = ($cat == $c['categoria']);
             ?>
@@ -47,7 +46,7 @@ function get_query_url($new_params = []) {
         </div>
     </div>
 
-    <!-- Brand Filter -->
+    <?php // Filtro por marca ?>
     <div class="filter-group">
         <div class="filter-title">Marcas</div>
         <div style="display: flex; flex-direction: column; gap: 0.75rem;">
@@ -70,7 +69,7 @@ function get_query_url($new_params = []) {
         </div>
     </div>
 
-    <!-- Price Filter -->
+    <?php // Filtro por precio ?>
     <div class="filter-group">
         <div class="filter-title">Precio</div>
         <div style="display: flex; flex-direction: column; gap: 1rem;">
