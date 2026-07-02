@@ -61,7 +61,7 @@ if (isset($_SESSION['user_id'])) {
                     </div>
                 <?php endif; ?>
 
-                <form action="<?php echo BASE_URL; ?>/modules/auth/process_registration.php" method="POST">
+                <form action="<?php echo BASE_URL; ?>/modules/auth/process_registration.php" method="POST" novalidate>
                     <div class="grid grid-cols-2 gap-x-4">
                         <div class="input-box">
                             <input type="text" name="nombre" placeholder=" " required>
@@ -96,12 +96,12 @@ if (isset($_SESSION['user_id'])) {
 
                     <div class="grid grid-cols-2 gap-x-4">
                         <div class="input-box">
-                            <input type="password" name="password" placeholder=" " required minlength="6">
+                            <input type="password" name="password" placeholder=" " required minlength="8">
                             <label>Contraseña</label>
                             <i class='bx bxs-lock-alt'></i>
                         </div>
                         <div class="input-box">
-                            <input type="password" name="password_confirm" placeholder=" " required minlength="6">
+                            <input type="password" name="password_confirm" placeholder=" " required minlength="8">
                             <label>Confirmar Clave</label>
                             <i class='bx bxs-lock-alt'></i>
                         </div>
@@ -135,7 +135,7 @@ if (isset($_SESSION['user_id'])) {
                 <h2>Invitado</h2>
                 <p class="text-text-muted text-xs mb-6 leading-relaxed">Ingresá tu nombre para acceder de forma limitada y consultar el stock del sistema.</p>
                 
-                <form action="<?php echo BASE_URL; ?>/modules/auth/guest_login.php" method="POST">
+                <form action="<?php echo BASE_URL; ?>/modules/auth/guest_login.php" method="POST" novalidate>
                     <div class="input-box">
                         <input type="text" name="guest_name" placeholder=" " required minlength="2" maxlength="30">
                         <label>Nombre de Invitado</label>
@@ -177,7 +177,7 @@ if (isset($_SESSION['user_id'])) {
                     </div>
                 <?php endif; ?>
 
-                <form action="<?php echo BASE_URL; ?>/modules/auth/auth.php" method="POST">
+                <form action="<?php echo BASE_URL; ?>/modules/auth/auth.php" method="POST" novalidate>
                     <div class="input-box">
                         <input type="text" name="username" placeholder=" " required>
                         <label>Usuario</label>

@@ -52,7 +52,7 @@ require_once __DIR__ . '/config/db.php';
 
         <?php endif; ?>
 
-        <form action="<?php echo BASE_URL; ?>/modules/auth/process_forgot.php" method="POST" class="space-y-5">
+        <form action="<?php echo BASE_URL; ?>/modules/auth/process_forgot.php" method="POST" class="space-y-5" novalidate>
             <div>
                 <label for="email" class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wider">Correo
                     Electrónico</label>

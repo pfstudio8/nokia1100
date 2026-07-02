@@ -218,7 +218,7 @@ Layout::renderAdminSidebar('usuarios');
             <p class="text-text-muted text-xs mt-1">Registrar una nueva persona y su cuenta de acceso de forma directa</p>
         </div>
 
-        <form id="add-user-form" action="add_user.php" method="POST" class="space-y-4" style="display: flex; flex-direction: column; gap: 1rem;">
+        <form id="add-user-form" action="add_user.php" method="POST" class="space-y-4" style="display: flex; flex-direction: column; gap: 1rem;" novalidate>
             <!-- Datos Personales -->
             <div style="border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
                 <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-3" style="color:var(--primary-color);">Datos Personales</h4>
@@ -305,14 +305,14 @@ Layout::renderAdminSidebar('usuarios');
                         <label for="modal-password">Contraseña <span class="text-red-400" style="color:#f87171;">*</span></label>
                         <div class="relative">
                             <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted text-[18px] pointer-events-none">lock</span>
-                            <input type="password" id="modal-password" name="password" required placeholder="Mínimo 6 caracteres" minlength="6">
+                            <input type="password" id="modal-password" name="password" required placeholder="Mínimo 8 caracteres" minlength="8">
                         </div>
                     </div>
                     <div class="premium-input-container">
                         <label for="modal-password-confirm">Confirmar Contraseña <span class="text-red-400" style="color:#f87171;">*</span></label>
                         <div class="relative">
                             <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted text-[18px] pointer-events-none">key</span>
-                            <input type="password" id="modal-password-confirm" name="password_confirm" required placeholder="Repetir contraseña" minlength="6">
+                            <input type="password" id="modal-password-confirm" name="password_confirm" required placeholder="Repetir contraseña" minlength="8">
                         </div>
                     </div>
                 </div>
@@ -343,7 +343,7 @@ Layout::renderAdminSidebar('usuarios');
             <p class="text-text-muted text-xs mt-1">Modificar los datos personales y de acceso del usuario</p>
         </div>
 
-        <form id="edit-user-form" action="edit_user.php" method="POST" class="space-y-4" style="display: flex; flex-direction: column; gap: 1rem;">
+        <form id="edit-user-form" action="edit_user.php" method="POST" class="space-y-4" style="display: flex; flex-direction: column; gap: 1rem;" novalidate>
             <input type="hidden" id="edit-modal-id-usuario" name="id_usuario">
             <input type="hidden" id="edit-modal-id-persona" name="id_persona">
 
@@ -432,7 +432,7 @@ Layout::renderAdminSidebar('usuarios');
                     <label for="edit-modal-password">Contraseña (Dejar en blanco para mantener la actual)</label>
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted text-[18px] pointer-events-none">lock</span>
-                        <input type="password" id="edit-modal-password" name="password" placeholder="Min. 6 caracteres si se modifica" minlength="6">
+                        <input type="password" id="edit-modal-password" name="password" placeholder="Min. 8 caracteres si se modifica" minlength="8">
                     </div>
                 </div>
             </div>

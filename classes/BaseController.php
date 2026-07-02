@@ -51,5 +51,19 @@ class BaseController
         header("Location: " . $url);
         exit();
     }
+
+    protected function validate_password($password)
+    {
+        if (strlen($password) < 8) {
+            return "La contraseña debe tener al menos 8 caracteres.";
+        }
+        if (!preg_match('/[A-Z]/', $password)) {
+            return "La contraseña debe contener al menos una letra mayúscula.";
+        }
+        if (!preg_match('/[^a-zA-Z0-9]/', $password)) {
+            return "La contraseña debe contener al menos un carácter especial (ej. @, $, !, %, *, ?, &).";
+        }
+        return true;
+    }
 }
 ?>
