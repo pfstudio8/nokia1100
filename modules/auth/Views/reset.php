@@ -38,7 +38,7 @@
                 </div>
             <?php endif; ?>
 
-            <form action="<?php echo BASE_URL; ?>/modules/auth/process_reset.php" method="POST" class="space-y-5">
+            <form action="<?php echo BASE_URL; ?>/modules/auth/process_reset.php" method="POST" class="space-y-5" novalidate>
                 <input type="hidden" name="token" value="<?php echo htmlspecialchars($token); ?>">
                 
                 <div>

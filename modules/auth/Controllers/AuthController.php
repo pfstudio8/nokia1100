@@ -41,19 +41,19 @@ class AuthController extends BaseController
             $this->redirect(BASE_URL . "/index.php?error=Usuario o contraseña incorrectos");
         }
 
-        if ((int)$user['is_active'] === 0) {
+        if ((int) $user['is_active'] === 0) {
             audit_log($this->conn, 'LOGIN_FAIL', $user['id_usuario'], 'usuario', $user['id_usuario'], "Intento de login en cuenta desactivada: $username", $username);
             $this->redirect(BASE_URL . "/index.php?error=Esta cuenta fue desactivada. Contacte al administrador.");
         }
 
-        if ((int)$user['verificado'] === 0) {
+        if ((int) $user['verificado'] === 0) {
             audit_log($this->conn, 'LOGIN_FAIL', $user['id_usuario'], 'usuario', $user['id_usuario'], "Login bloqueado: email sin verificar para $username", $username);
             $this->redirect(BASE_URL . "/index.php?error=Tu cuenta aún no fue verificada. Revisá tu email.");
         }
 
-        $_SESSION['user_id']  = $user['id_usuario'];
+        $_SESSION['user_id'] = $user['id_usuario'];
         $_SESSION['username'] = $user['nombre_usuario'];
-        $_SESSION['role']     = $user['rol'];
+        $_SESSION['role'] = $user['rol'];
 
         audit_log($this->conn, 'LOGIN_OK', $user['id_usuario'], 'usuario', $user['id_usuario'], "Sesión iniciada correctamente");
 
@@ -81,14 +81,14 @@ class AuthController extends BaseController
             $this->redirect(BASE_URL . "/index.php?action=register");
         }
 
-        $nombre    = trim($_POST['nombre']    ?? '');
-        $apellido  = trim($_POST['apellido']  ?? '');
-        $dni       = trim($_POST['dni']       ?? '');
-        $email     = trim($_POST['email']     ?? '');
-        $telefono  = trim($_POST['telefono']  ?? '');
+        $nombre = trim($_POST['nombre'] ?? '');
+        $apellido = trim($_POST['apellido'] ?? '');
+        $dni = trim($_POST['dni'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $telefono = trim($_POST['telefono'] ?? '');
         $direccion = trim($_POST['direccion'] ?? '');
-        $username  = trim($_POST['username']  ?? '');
-        $password  = $_POST['password']       ?? '';
+        $username = trim($_POST['username'] ?? '');
+        $password = $_POST['password'] ?? '';
         $password_confirm = $_POST['password_confirm'] ?? '';
 
         if (empty($nombre) || empty($apellido) || empty($dni) || empty($username) || empty($password) || empty($password_confirm)) {
@@ -103,8 +103,9 @@ class AuthController extends BaseController
             $this->redirect(BASE_URL . "/index.php?action=register&error=El formato del email no es válido");
         }
 
-        if (strlen($password) < 6) {
-            $this->redirect(BASE_URL . "/index.php?action=register&error=La contraseña debe tener al menos 6 caracteres");
+        $pass_check = $this->validate_password($password);
+        if ($pass_check !== true) {
+            $this->redirect(BASE_URL . "/index.php?action=register&error=" . urlencode($pass_check));
         }
 
         if ($this->auth_model->username_exists($username)) {
@@ -121,7 +122,7 @@ class AuthController extends BaseController
 
         try {
             $hashed = password_hash($password, PASSWORD_DEFAULT);
-            
+
             // Generar token de verificación de correo
             $token = bin2hex(random_bytes(32));
             $expira = date('Y-m-d H:i:s', strtotime('+24 hours'));
@@ -149,7 +150,7 @@ class AuthController extends BaseController
             audit_log($this->conn, 'USER_CREATE', $id_ejecutor, 'usuario', $res['id_usuario'], "Nuevo usuario creado: " . $res['username'] . " (" . $res['nombre'] . " " . $res['apellido'] . ")");
 
             $mailSent = false;
-            
+
             // Solo se envía correo de verificación si NO es el primer usuario (que se asigna como admin verificado por defecto)
             if ($res['rol'] !== 'admin') {
                 $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || ((int) ($_SERVER['SERVER_PORT'] ?? 80) === 443);
@@ -184,7 +185,7 @@ class AuthController extends BaseController
                         $mail->Subject = 'Verificá tu Cuenta - Nokia 1100';
 
                         $year = date('Y');
-                        
+
                         // Diseño de Plantilla de Email Premium (Alineado con el diseño oscuro / cian de la web)
                         $mail->Body = "
                         <!DOCTYPE html>
@@ -402,8 +403,9 @@ class AuthController extends BaseController
             $this->redirect(BASE_URL . "/modules/auth/reset_password.php?token=" . urlencode($token) . "&error=Las contraseñas no coinciden");
         }
 
-        if (strlen($password) < 6) {
-            $this->redirect(BASE_URL . "/modules/auth/reset_password.php?token=" . urlencode($token) . "&error=La contraseña debe tener al menos 6 caracteres");
+        $pass_check = $this->validate_password($password);
+        if ($pass_check !== true) {
+            $this->redirect(BASE_URL . "/modules/auth/reset_password.php?token=" . urlencode($token) . "&error=" . urlencode($pass_check));
         }
 
         $user = $this->auth_model->find_by_valid_token($token);
@@ -450,9 +452,9 @@ class AuthController extends BaseController
             session_start();
         }
 
-        $_SESSION['user_id']  = 'guest';
+        $_SESSION['user_id'] = 'guest';
         $_SESSION['username'] = $guest_name;
-        $_SESSION['role']     = 'guest';
+        $_SESSION['role'] = 'guest';
 
         $welcome_msg = urlencode("Bienvenido al sistema, " . $guest_name);
         $this->redirect(BASE_URL . "/modules/employee/dashboard.php?success=" . $welcome_msg);

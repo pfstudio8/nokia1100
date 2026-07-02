@@ -73,8 +73,9 @@ class AdminController extends BaseController
             $this->redirect("users.php?error=" . urlencode("Las contraseñas no coinciden"));
         }
 
-        if (strlen($password) < 6) {
-            $this->redirect("users.php?error=" . urlencode("La contraseña debe tener al menos 6 caracteres"));
+        $pass_check = $this->validate_password($password);
+        if ($pass_check !== true) {
+            $this->redirect("users.php?error=" . urlencode($pass_check));
         }
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -176,8 +177,9 @@ class AdminController extends BaseController
         try {
             $hashed_password = '';
             if (!empty($password)) {
-                if (strlen($password) < 6) {
-                    $this->redirect("users.php?error=" . urlencode("La contraseña debe tener al menos 6 caracteres"));
+                $pass_check = $this->validate_password($password);
+                if ($pass_check !== true) {
+                    $this->redirect("users.php?error=" . urlencode($pass_check));
                 }
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             }
