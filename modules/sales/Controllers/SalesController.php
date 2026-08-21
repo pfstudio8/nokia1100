@@ -130,5 +130,29 @@ class SalesController extends BaseController
         fclose($output);
         exit;
     }
+
+    public function rollback()
+    {
+        $this->check_auth();
+        $this->check_access('ventas'); // Requiere acceso al módulo de ventas
+        
+        if ($_SERVER["REQUEST_METHOD"] == "POST") {
+            $input = json_decode(file_get_contents('php://input'), true);
+            
+            if ($input && isset($input['id_venta'])) {
+                $id_venta = intval($input['id_venta']);
+                
+                try {
+                    $this->sales_model->rollback_sale($id_venta, $_SESSION['user_id']);
+                    echo json_encode(['success' => true, 'message' => 'Venta anulada y stock devuelto exitosamente']);
+                } catch (Exception $e) {
+                    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+                }
+                exit;
+            }
+        }
+        echo json_encode(['success' => false, 'message' => 'Petición inválida']);
+        exit;
+    }
 }
 ?>

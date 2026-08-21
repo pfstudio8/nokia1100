@@ -12,6 +12,7 @@ class SalesModel extends BaseModel
                     v.fecha, 
                     v.total, 
                     v.metodo_de_pago,
+                    v.estado,
                     COALESCE(dv.nombre_producto, p.nombre) AS producto,
                     dv.cantidad
                 FROM venta v
@@ -115,6 +116,7 @@ class SalesModel extends BaseModel
                     v.fecha, 
                     v.total, 
                     v.metodo_de_pago,
+                    v.estado,
                     COALESCE(dv.nombre_producto, p.nombre) AS producto,
                     dv.cantidad
                 FROM venta v
@@ -198,6 +200,58 @@ class SalesModel extends BaseModel
                 "Venta registrada. Total: \$$total_venta. Método: $metodo_pago");
 
             return $id_venta;
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            throw $e;
+        }
+    }
+
+    public function rollback_sale($id_venta, $user_id)
+    {
+        $this->conn->begin_transaction();
+        try {
+            // Verificar estado actual
+            $stmt = $this->conn->prepare("SELECT estado FROM venta WHERE id_venta = ? FOR UPDATE");
+            $stmt->bind_param("i", $id_venta);
+            $stmt->execute();
+            $res = $stmt->get_result();
+            if ($res->num_rows === 0) throw new Exception("Venta no encontrada");
+            $venta = $res->fetch_assoc();
+            $stmt->close();
+
+            if ($venta['estado'] === 'anulada') {
+                throw new Exception("La venta ya se encuentra anulada");
+            }
+
+            // Actualizar estado
+            $stmt = $this->conn->prepare("UPDATE venta SET estado = 'anulada' WHERE id_venta = ?");
+            $stmt->bind_param("i", $id_venta);
+            if (!$stmt->execute()) throw new Exception("Error al actualizar el estado de la venta");
+            $stmt->close();
+
+            // Devolver stock
+            $stmt = $this->conn->prepare("SELECT id_producto, cantidad FROM detalle_venta WHERE id_venta = ?");
+            $stmt->bind_param("i", $id_venta);
+            $stmt->execute();
+            $detalles = $stmt->get_result();
+            $items_revertidos = 0;
+            
+            while ($row = $detalles->fetch_assoc()) {
+                $stmt_upd = $this->conn->prepare("UPDATE inventario SET cantidad = cantidad + ? WHERE id_producto = ?");
+                $stmt_upd->bind_param("ii", $row['cantidad'], $row['id_producto']);
+                if (!$stmt_upd->execute()) throw new Exception("Error al devolver el stock al inventario");
+                $stmt_upd->close();
+                $items_revertidos++;
+            }
+            $stmt->close();
+
+            $this->conn->commit();
+
+            require_once __DIR__ . '/../../../config/audit.php';
+            audit_log($this->conn, 'SALE_ROLLBACK', (int)$user_id, 'venta', $id_venta,
+                "Venta anulada. Stock devuelto para $items_revertidos producto(s).");
+
+            return true;
         } catch (Exception $e) {
             $this->conn->rollback();
             throw $e;
