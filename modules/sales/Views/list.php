@@ -46,6 +46,7 @@ Layout::renderAdminSidebar('ventas');
                         <th>Producto</th>
                         <th>Cantidad</th>
                         <th>Método</th>
+                        <th>Estado</th>
                         <th style="text-align: right;">Total</th>
                         <th style="text-align: right;">Acciones</th>
                     </tr>
@@ -53,21 +54,33 @@ Layout::renderAdminSidebar('ventas');
                 <tbody>
                     <?php if (count($sales) > 0): ?>
                         <?php foreach($sales as $row): ?>
-                            <tr>
+                            <tr class="<?php echo ($row['estado'] === 'anulada') ? 'opacity-60' : ''; ?>">
                                 <td class="text-primary font-medium text-sm">#TX-<?php echo $row['id_venta']; ?></td>
                                 <td class="text-text-muted text-sm"><?php echo date('d/m/Y H:i', strtotime($row['fecha'])); ?></td>
-                                <td class="font-medium font-display"><?php echo htmlspecialchars($row['producto']); ?></td>
+                                <td class="font-medium font-display <?php echo ($row['estado'] === 'anulada') ? 'line-through text-text-muted' : ''; ?>"><?php echo htmlspecialchars($row['producto']); ?></td>
                                 <td><?php echo $row['cantidad']; ?> u.</td>
                                 <td>
                                     <span class="px-2 py-1 rounded border border-border text-[10px] font-medium text-text-muted uppercase tracking-wider">
                                         <?php echo htmlspecialchars($row['metodo_de_pago']); ?>
                                     </span>
                                 </td>
+                                <td>
+                                    <?php if ($row['estado'] === 'anulada'): ?>
+                                        <span class="px-2 py-1 rounded border border-red-500/30 text-[10px] font-medium text-red-400 uppercase tracking-wider bg-red-500/10">Anulada</span>
+                                    <?php else: ?>
+                                        <span class="px-2 py-1 rounded border border-green-500/30 text-[10px] font-medium text-green-400 uppercase tracking-wider bg-green-500/10">Completada</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td style="text-align: right; font-weight: 600;">$<?php echo number_format($row['total'], 2); ?></td>
                                 <td style="text-align: right;">
                                     <a href="invoice.php?id=<?php echo $row['id_venta']; ?>" target="_blank" class="px-3 py-1 bg-surface border border-border rounded text-sm text-text-main hover:bg-border transition inline-flex items-center gap-1">
                                         <span class="material-symbols-outlined text-[1rem]">print</span> Factura
                                     </a>
+                                    <?php if ($row['estado'] !== 'anulada'): ?>
+                                    <button type="button" onclick="confirmRollback(<?php echo $row['id_venta']; ?>)" class="ml-2 px-3 py-1 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-400 hover:bg-red-500 hover:text-white transition inline-flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[1rem]">undo</span> Anular
+                                    </button>
+                                    <?php endif; ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
