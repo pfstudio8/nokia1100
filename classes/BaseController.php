@@ -26,6 +26,26 @@ class BaseController
             header("Location: " . BASE_URL . "/index.php");
             exit();
         }
+
+        // Evitar sesiones múltiples (excepto para la cuenta guest/invitado)
+        if ($_SESSION['user_id'] !== 'guest') {
+            $stmt = $this->conn->prepare("SELECT session_token FROM usuario WHERE id_usuario = ?");
+            $stmt->bind_param("i", $_SESSION['user_id']);
+            $stmt->execute();
+            $res = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            $db_token = $res['session_token'] ?? null;
+            $session_token = $_SESSION['session_token'] ?? null;
+
+            if ($db_token !== $session_token) {
+                // Discrepancia detectada: se inició sesión en otro dispositivo.
+                session_unset();
+                session_destroy();
+                header("Location: " . BASE_URL . "/index.php?error=" . urlencode("Se ha iniciado sesión en otro dispositivo. Tu sesión actual ha sido cerrada."));
+                exit();
+            }
+        }
     }
 
     protected function check_access($module_id)

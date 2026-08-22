@@ -118,6 +118,7 @@ CREATE TABLE `usuario` (
   `token_verificacion` varchar(255) DEFAULT NULL,
   `token_expira` datetime DEFAULT NULL,
   `modulos_permitidos` TEXT DEFAULT NULL,
+  `session_token` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id_usuario`),
   UNIQUE KEY `nombre_usuario` (`nombre_usuario`),
   KEY `id_persona` (`id_persona`),

@@ -175,5 +175,14 @@ class AuthModel extends BaseModel
         }
         return null;
     }
+
+    public function update_session_token($id_usuario, $token)
+    {
+        $stmt = $this->conn->prepare("UPDATE usuario SET session_token = ? WHERE id_usuario = ?");
+        $stmt->bind_param("si", $token, $id_usuario);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
 }
 ?>
