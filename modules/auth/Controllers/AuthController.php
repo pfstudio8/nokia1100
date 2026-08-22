@@ -55,6 +55,10 @@ class AuthController extends BaseController
         $_SESSION['username'] = $user['nombre_usuario'];
         $_SESSION['role'] = $user['rol'];
 
+        $session_token = bin2hex(random_bytes(32));
+        $_SESSION['session_token'] = $session_token;
+        $this->auth_model->update_session_token($user['id_usuario'], $session_token);
+
         audit_log($this->conn, 'LOGIN_OK', $user['id_usuario'], 'usuario', $user['id_usuario'], "Sesión iniciada correctamente");
 
         $welcome_msg = urlencode("Bienvenido, " . $user['nombre_usuario']);

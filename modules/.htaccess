@@ -1,0 +1,10 @@
+RewriteEngine On
+RewriteBase /nokia1100/modules/
+
+# 1. Permitir acceso directo a archivos físicos existentes (ej. javascript, css, imágenes)
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# 2. Redirigir peticiones de archivos PHP inexistentes al index.php de cada módulo como acción
+# Ejemplo: modules/inventory/add_product.php -> modules/inventory/index.php?action=add_product
+RewriteRule ^([^/]+)/([^/]+)\.php$ $1/index.php?action=$2 [QSA,L]
