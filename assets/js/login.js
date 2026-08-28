@@ -54,3 +54,43 @@ function togglePasswordVisibility(inputId, btn) {
         iconSpan.textContent = 'visibility';
     }
 }
+
+// Medidor de fuerza de contraseña
+function checkPasswordStrength(password) {
+    let strength = 0;
+    if (password.length > 7) strength += 25;
+    if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength += 25;
+    if (password.match(/\d/)) strength += 25;
+    if (password.match(/[^a-zA-Z\d]/)) strength += 25;
+    return strength;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const pwdInput = document.getElementById('register-password') || document.getElementById('password');
+    const container = document.getElementById('password-strength-container');
+    const bar = document.getElementById('password-strength-bar');
+
+    if (pwdInput && container && bar) {
+        pwdInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            if (val.length === 0) {
+                container.style.display = 'none';
+                return;
+            }
+            container.style.display = 'block';
+            const strength = checkPasswordStrength(val);
+            
+            bar.style.width = strength + '%';
+            
+            if (strength <= 25) {
+                bar.style.backgroundColor = '#ef4444'; // Rojo
+            } else if (strength <= 50) {
+                bar.style.backgroundColor = '#f59e0b'; // Naranja
+            } else if (strength <= 75) {
+                bar.style.backgroundColor = '#eab308'; // Amarillo
+            } else {
+                bar.style.backgroundColor = '#22c55e'; // Verde
+            }
+        });
+    }
+});

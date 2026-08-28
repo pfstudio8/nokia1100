@@ -17,11 +17,55 @@ function loadScript(url) {
     });
 }
 
-async function exportTableToExcel(tableId, filename) {
+async function exportTableToExcel(tableId, filename, btnElement) {
+    const btn = btnElement || (window.event ? window.event.currentTarget : null);
+    
+    // Si ya está exportando, actuar como botón de cancelar
+    if (btn && btn.dataset.isExporting === 'true') {
+        if (typeof btn.cancelExport === 'function') {
+            btn.cancelExport();
+        }
+        return;
+    }
+
+    let originalHtml = '';
+    
     try {
+        if (btn) {
+            originalHtml = btn.innerHTML;
+            btn.dataset.originalHtml = originalHtml;
+            btn.dataset.isExporting = 'true';
+            btn.innerHTML = '<span class="material-symbols-outlined text-[16px] spin" style="animation: spin 1s linear infinite;">autorenew</span> Procesando...';
+        }
+        
         if (typeof showToast === 'function') {
             showToast('Generando archivo Excel...', 'info');
         }
+        
+        // Simular retraso de 2 segundos de forma cancelable
+        const isCompleted = await new Promise(resolve => {
+            let timeoutId;
+            if (btn) {
+                btn.cancelExport = () => {
+                    clearTimeout(timeoutId);
+                    btn.dataset.isExporting = 'false';
+                    btn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-red-500">cancel</span> Cancelado';
+                    if (typeof showToast === 'function') {
+                        showToast('Exportación cancelada', 'warning');
+                    }
+                    setTimeout(() => {
+                        btn.innerHTML = originalHtml;
+                    }, 1500);
+                    resolve(false);
+                };
+            }
+            timeoutId = setTimeout(() => {
+                if (btn) btn.dataset.isExporting = 'false';
+                resolve(true);
+            }, 2000);
+        });
+
+        if (!isCompleted) return; // Se canceló
         
         // Cargar SheetJS
         await loadScript('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js');
@@ -29,6 +73,7 @@ async function exportTableToExcel(tableId, filename) {
         const table = document.getElementById(tableId);
         if (!table) {
             if (typeof showToast === 'function') showToast('Tabla no encontrada', 'error');
+            if (btn) { btn.innerHTML = originalHtml; btn.style.pointerEvents = 'auto'; }
             return;
         }
         
@@ -63,17 +108,71 @@ async function exportTableToExcel(tableId, filename) {
         if (typeof showToast === 'function') {
             showToast('Excel descargado con éxito', 'success');
         }
+        
+        if (btn) {
+            // Efecto verde de éxito temporal si el usuario lo deseó (como sugerencia del plan)
+            btn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-green-500">check_circle</span> ¡Listo!';
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.style.pointerEvents = 'auto';
+            }, 2000);
+        }
     } catch (e) {
         console.error(e);
         if (typeof showToast === 'function') showToast('Error al exportar a Excel', 'error');
+        if (btn) { btn.innerHTML = originalHtml; btn.style.pointerEvents = 'auto'; }
     }
 }
 
-async function exportTableToPDF(tableId, title, filename) {
+async function exportTableToPDF(tableId, title, filename, btnElement) {
+    const btn = btnElement || (window.event ? window.event.currentTarget : null);
+    
+    // Si ya está exportando, actuar como botón de cancelar
+    if (btn && btn.dataset.isExporting === 'true') {
+        if (typeof btn.cancelExport === 'function') {
+            btn.cancelExport();
+        }
+        return;
+    }
+
+    let originalHtml = '';
+    
     try {
+        if (btn) {
+            originalHtml = btn.innerHTML;
+            btn.dataset.originalHtml = originalHtml;
+            btn.dataset.isExporting = 'true';
+            btn.innerHTML = '<span class="material-symbols-outlined text-[16px] spin" style="animation: spin 1s linear infinite;">autorenew</span> Procesando...';
+        }
+
         if (typeof showToast === 'function') {
             showToast('Generando reporte PDF...', 'info');
         }
+        
+        // Simular retraso de 2 segundos de forma cancelable
+        const isCompleted = await new Promise(resolve => {
+            let timeoutId;
+            if (btn) {
+                btn.cancelExport = () => {
+                    clearTimeout(timeoutId);
+                    btn.dataset.isExporting = 'false';
+                    btn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-red-500">cancel</span> Cancelado';
+                    if (typeof showToast === 'function') {
+                        showToast('Exportación cancelada', 'warning');
+                    }
+                    setTimeout(() => {
+                        btn.innerHTML = originalHtml;
+                    }, 1500);
+                    resolve(false);
+                };
+            }
+            timeoutId = setTimeout(() => {
+                if (btn) btn.dataset.isExporting = 'false';
+                resolve(true);
+            }, 2000);
+        });
+
+        if (!isCompleted) return; // Se canceló
         
         // Cargar jsPDF y su plugin AutoTable
         await loadScript('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js');
@@ -104,6 +203,7 @@ async function exportTableToPDF(tableId, title, filename) {
         const table = document.getElementById(tableId);
         if (!table) {
             if (typeof showToast === 'function') showToast('Tabla no encontrada', 'error');
+            if (btn) { btn.innerHTML = originalHtml; btn.style.pointerEvents = 'auto'; }
             return;
         }
         
@@ -176,8 +276,17 @@ async function exportTableToPDF(tableId, title, filename) {
         if (typeof showToast === 'function') {
             showToast('PDF descargado con éxito', 'success');
         }
+        
+        if (btn) {
+            btn.innerHTML = '<span class="material-symbols-outlined text-[16px] text-green-500">check_circle</span> ¡Listo!';
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.style.pointerEvents = 'auto';
+            }, 2000);
+        }
     } catch (e) {
         console.error(e);
         if (typeof showToast === 'function') showToast('Error al exportar a PDF', 'error');
+        if (btn) { btn.innerHTML = originalHtml; btn.style.pointerEvents = 'auto'; }
     }
 }

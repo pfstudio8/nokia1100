@@ -38,7 +38,7 @@
                 </div>
             <?php endif; ?>
 
-            <form action="<?php echo BASE_URL; ?>/modules/auth/process_reset.php" method="POST" class="space-y-5" novalidate>
+            <form action="<?php echo BASE_URL; ?>/modules/auth/index.php?action=reset_password" method="POST" class="space-y-5" novalidate>
                 <input type="hidden" name="token" value="<?php echo htmlspecialchars($token); ?>">
                 
                 <div>
@@ -55,6 +55,11 @@
                         <input type="password" id="password_confirm" name="password_confirm" required placeholder="••••••••" class="auth-input peer">
                         <span class="material-symbols-outlined input-icon transition-colors peer-focus:text-text-main">lock_clock</span>
                     </div>
+                </div>
+
+                <!-- Password Strength Meter -->
+                <div id="password-strength-container" class="w-full h-1 bg-border/30 rounded-full overflow-hidden" style="display: none; margin-top: 1rem; margin-bottom: 0.5rem;">
+                    <div id="password-strength-bar" class="h-full w-0 transition-all duration-300"></div>
                 </div>
 
                 <button type="submit" class="auth-btn mt-6 tracking-wide">ACTUALIZAR CONTRASEÑA</button>

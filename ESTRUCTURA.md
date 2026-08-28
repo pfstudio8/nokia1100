@@ -156,8 +156,8 @@ Los únicos assets que permanecen en `assets/` son los **globales** (compartidos
 | `auth.php` | Procesa el login |
 | `logout.php` | Cierra la sesión |
 | `process_registration.php` | Procesa el registro |
-| `process_forgot.php` | Envía el email de recuperación |
-| `process_reset.php` | Guarda la nueva contraseña |
+| `index.php?action=forgot_password` | Envía el email de recuperación |
+| `index.php?action=reset_password` | Guarda la nueva contraseña |
 
 #### `modules/clients/`
 | Archivo | Función |

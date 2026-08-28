@@ -18,19 +18,31 @@ class AdminController extends BaseController
     {
         $this->check_access('dashboard');
 
+        // Los datos se cargarán asíncronamente mediante AJAX (ver get_dashboard_data)
+        $this->render_view(__DIR__ . '/../Views/dashboard.php');
+    }
+
+    public function get_dashboard_data()
+    {
+        $this->check_access('dashboard');
+
+        // Simulamos un retraso de 1 segundo en la red para que se pueda ver la animación del Skeleton Loader.
+        sleep(1);
+
         $total_ventas = $this->admin_model->get_total_sales();
         $total_trans = $this->admin_model->get_total_transactions();
         $total_usuarios = $this->admin_model->get_total_users();
         $bajo_stock = $this->admin_model->get_low_stock_count();
         $ventas_recientes = $this->admin_model->get_recent_sales(5);
 
-        $this->render_view(__DIR__ . '/../Views/dashboard.php', [
-            'totalVentas' => $total_ventas,
-            'totalTrans' => $total_trans,
-            'totalUsuarios' => $total_usuarios,
-            'bajoStock' => $bajo_stock,
+        header('Content-Type: application/json');
+        echo json_encode([
+            'totalVentas' => number_format($total_ventas, 2),
+            'totalUsuarios' => number_format($total_usuarios),
+            'bajoStock' => number_format($bajo_stock),
             'ventasRecientes' => $ventas_recientes
         ]);
+        exit;
     }
 
     public function users()
@@ -357,7 +369,6 @@ class AdminController extends BaseController
 
         $current_data = $this->admin_model->get_user_profile($id_user);
         // Mapea las claves para coincidir con la vista
-        $current_data['nombre_usuario'] = $current_data['nombre_usuario'];
         $current_data['email'] = $current_data['persona_email'];
 
         $this->render_view(__DIR__ . '/../Views/profile.php', [

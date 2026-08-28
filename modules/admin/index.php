@@ -27,6 +27,9 @@ switch ($action) {
     case 'profile':
         $controller->profile();
         break;
+    case 'get_dashboard_data':
+        $controller->get_dashboard_data();
+        break;
     case 'dashboard':
     default:
         $controller->dashboard();

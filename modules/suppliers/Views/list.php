@@ -16,8 +16,12 @@ Layout::renderAdminSidebar('proveedores');
             <div style="display: flex; gap: 1rem; align-items: center;">
                 <input type="text" id="search-input" placeholder="Buscar proveedor..." style="width: 250px; padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 0.9rem;">
                 <!-- Botones de Exportación -->
-                <button type="button" onclick="exportTableToExcel('suppliers-table', 'proveedores')" style="width: auto; padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">Excel</button>
-                <button type="button" onclick="exportTableToPDF('suppliers-table', 'Listado de Proveedores', 'proveedores')" style="width: auto; padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">PDF</button>
+                <button type="button" onclick="exportTableToExcel('suppliers-table', 'proveedores', this)" class="px-3 py-1.5 rounded-lg border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">download</span> Excel
+                </button>
+                <button type="button" onclick="exportTableToPDF('suppliers-table', 'Listado de Proveedores', 'proveedores', this)" class="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">download</span> PDF
+                </button>
                 <a href="<?php echo BASE_URL; ?>/modules/admin/dashboard.php" class="btn-back">Volver</a>
             </div>
         </div>

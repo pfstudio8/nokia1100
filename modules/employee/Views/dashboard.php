@@ -103,7 +103,7 @@ Layout::renderEmployeeSidebar('dashboard');
                 <div class="space-y-6">
                     <h3 class="font-display font-medium text-lg text-text-main">Últimas Transacciones</h3>
                     <div class="glass-card rounded-2xl overflow-hidden p-0">
-                        <div class="divide-y divide-border/50">
+                        <div class="divide-y divide-border/30">
                             <?php
                             if (count($ventas_recientes) > 0) {
                                 foreach ($ventas_recientes as $v) {

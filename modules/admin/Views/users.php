@@ -11,7 +11,7 @@ Layout::renderAdminSidebar('usuarios');
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         
         <!-- Columna de la Tabla de Usuarios -->
-        <div class="lg:col-span-3 transition-all duration-500" id="users-table-container">
+        <div class="col-span-1 lg:col-span-3 transition-all duration-500 w-full" id="users-table-container">
             <div class="glass-card mb-8">
                 <div class="dashboard-header" style="flex-wrap:wrap; gap:1rem;">
                     <div>
@@ -42,14 +42,14 @@ Layout::renderAdminSidebar('usuarios');
                         </div>
 
                         <!-- Botones de Exportación -->
-                        <button type="button" onclick="exportTableToExcel('users-table', 'usuarios')" class="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-hover text-xs font-medium text-text-muted hover:text-text-main transition-colors flex items-center gap-1.5">
-                            <span class="material-symbols-outlined text-[16px]">file_download</span> Excel
+                        <button type="button" onclick="exportTableToExcel('users-table', 'usuarios', this)" class="px-3 py-1.5 rounded-lg border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[16px]">download</span> Excel
                         </button>
-                        <button type="button" onclick="exportTableToPDF('users-table', 'Listado de Usuarios', 'usuarios')" class="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-hover text-xs font-medium text-text-muted hover:text-text-main transition-colors flex items-center gap-1.5">
-                            <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span> PDF
+                        <button type="button" onclick="exportTableToPDF('users-table', 'Listado de Usuarios', 'usuarios', this)" class="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5">
+                            <span class="material-symbols-outlined text-[16px]">download</span> PDF
                         </button>
 
-                        <button type="button" onclick="openAddUserModal()" style="width:auto; padding:.45rem .9rem; border-radius:8px; font-size:.8rem; font-weight:600; background:var(--primary-color); color:#0A0A0B; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem; transition: all 0.2s;">
+                        <button type="button" onclick="openAddUserModal()" style="width:max-content; padding:.45rem .9rem; border-radius:8px; font-size:.8rem; font-weight:600; background:var(--primary-color); color:#0A0A0B; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem; transition: all 0.2s; white-space:nowrap; flex-shrink:0;">
                             <span class="material-symbols-outlined" style="font-size:1.1rem; font-weight:600;">person_add</span>
                             Nuevo
                         </button>
@@ -172,10 +172,18 @@ Layout::renderAdminSidebar('usuarios');
             </div>
         </div>
 
-        <!-- Tarjeta de Permisos de Módulos (Lado Derecho, oculto por defecto) -->
-        <div id="permission-card" class="lg:col-span-1 glass-card p-6 hidden transform opacity-0 scale-95 transition-all duration-300 relative" style="border-top: 4px solid var(--secondary-color);">
-            
-            <div class="mb-5">
+    </div>
+</main>
+
+<!-- Modal/Overlay de Permisos de Módulos -->
+<div id="permission-overlay" class="fixed inset-0 bg-background/50 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300" onclick="closeModulePermissions()"></div>
+
+<!-- Tarjeta de Permisos de Módulos (Off-canvas Drawer) -->
+<div id="permission-card" class="fixed top-0 right-0 h-full w-full max-w-md bg-surface border-l border-border z-50 transform translate-x-full transition-transform duration-300 shadow-2xl flex flex-col hidden" style="border-left: 4px solid var(--secondary-color);">
+    
+    <div class="p-6 overflow-y-auto flex-grow">
+        <div class="flex justify-between items-start mb-5">
+            <div>
                 <h3 class="text-xl font-display font-medium text-text-main flex items-center gap-2">
                     <span class="material-symbols-outlined text-secondary" style="color:var(--secondary-color); font-size:1.6rem;">shield_person</span>
                     Accesos de Módulos
@@ -183,30 +191,32 @@ Layout::renderAdminSidebar('usuarios');
                 <p class="text-text-muted text-xs mt-1">Configurar visibilidad para: <span id="perm-user-name" class="text-text-main font-semibold"></span></p>
                 <div class="mt-2 inline-block text-[10px] uppercase font-bold tracking-widest bg-surface border border-border px-2 py-0.5 rounded text-primary" id="perm-user-role"></div>
             </div>
-
-            <form id="permission-form" action="save_user_modules.php" method="POST" class="space-y-4">
-                <input type="hidden" name="id_usuario" id="perm-user-id" value="0">
-                
-                <div id="perm-note"></div>
-
-                <div id="modules-list" class="space-y-2.5 mt-4" style="max-height: 380px; overflow-y: auto; padding-right: 4px;">
-                    <!-- Insertado dinámicamente vía JS -->
-                </div>
-
-                <div class="flex gap-3 pt-4 border-t border-border mt-5">
-                    <button type="button" onclick="closeModulePermissions()" class="btn-back flex-1 text-center py-2" style="margin:0; width:auto;">Cancelar</button>
-                    <button type="submit" class="btn-primary flex-1 text-center py-2" style="margin:0; width:auto; background:var(--primary-color); color:#0A0A0B;">Guardar</button>
-                </div>
-            </form>
+            <button onclick="closeModulePermissions()" style="width: auto; padding: 0.5rem; background: transparent; height: auto; box-shadow: none;" class="text-text-muted hover:text-text-main transition-colors bg-transparent border-none cursor-pointer">
+                <span class="material-symbols-outlined">close</span>
+            </button>
         </div>
 
+        <form id="permission-form" action="save_user_modules.php" method="POST" class="space-y-4">
+            <input type="hidden" name="id_usuario" id="perm-user-id" value="0">
+            
+            <div id="perm-note"></div>
+
+            <div id="modules-list" class="space-y-2.5 mt-4">
+                <!-- Insertado dinámicamente vía JS -->
+            </div>
+
+            <div class="flex gap-3 pt-6 border-t border-border mt-8">
+                <button type="button" onclick="closeModulePermissions()" class="btn-back flex-1 text-center py-2" style="margin:0; width:auto;">Cancelar</button>
+                <button type="submit" class="btn-primary flex-1 text-center py-2" style="margin:0; width:auto; background:var(--primary-color); color:#0A0A0B;">Guardar</button>
+            </div>
+        </form>
     </div>
-</main>
+</div>
 
 <!-- Modal para agregar usuario -->
 <div id="add-user-modal" class="fixed inset-0 bg-background/80 backdrop-blur-[8px] z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
     <div class="glass-card max-w-lg w-full m-4 shadow-2xl relative border border-border/80 transform scale-95 transition-all duration-300 premium-modal-card" style="padding: 2rem; border-top: 4px solid var(--primary-color);">
-        <button onclick="closeAddUserModal()" class="absolute top-4 right-4 text-text-muted hover:text-text-main transition-colors bg-transparent border-none cursor-pointer">
+        <button onclick="closeAddUserModal()" style="width: auto; background: transparent; padding: 0.5rem; height: auto; box-shadow: none;" class="absolute top-4 right-4 text-text-muted hover:text-text-main transition-colors bg-transparent border-none cursor-pointer">
             <span class="material-symbols-outlined">close</span>
         </button>
         
@@ -331,7 +341,7 @@ Layout::renderAdminSidebar('usuarios');
 <!-- Modal para editar usuario -->
 <div id="edit-user-modal" class="fixed inset-0 bg-background/80 backdrop-blur-[8px] z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
     <div class="glass-card max-w-lg w-full m-4 shadow-2xl relative border border-border/80 transform scale-95 transition-all duration-300 premium-modal-card" style="padding: 2rem; border-top: 4px solid var(--secondary-color);">
-        <button onclick="closeEditUserModal()" class="absolute top-4 right-4 text-text-muted hover:text-text-main transition-colors bg-transparent border-none cursor-pointer">
+        <button onclick="closeEditUserModal()" style="width: auto; background: transparent; padding: 0.5rem; height: auto; box-shadow: none;" class="absolute top-4 right-4 text-text-muted hover:text-text-main transition-colors bg-transparent border-none cursor-pointer">
             <span class="material-symbols-outlined">close</span>
         </button>
         
