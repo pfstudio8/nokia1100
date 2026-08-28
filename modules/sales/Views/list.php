@@ -16,24 +16,13 @@ Layout::renderAdminSidebar('ventas');
             <div style="display: flex; gap: 1rem; align-items: center; justify-content: flex-end; flex: 1;">
                 <input type="text" id="search-input" placeholder="Buscar venta..." style="width: 250px; padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 0.9rem;">
                 <!-- Botones de Exportación -->
-                <button type="button" onclick="exportTableToExcel('sales-table', 'ventas')" style="width: auto; padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">Excel</button>
-                <button type="button" onclick="exportTableToPDF('sales-table', 'Historial de Ventas', 'ventas')" style="width: auto; padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.2s;">PDF</button>
-                <a href="<?php echo BASE_URL; ?>/modules/admin/dashboard.php" class="btn-back">Volver</a>
-                <button type="button" id="exportBtn" class="btn-export-premium button relative">
-                    <span class="button-text">
-                        <span class="material-symbols-outlined text-sm">download</span> Exportar
-                    </span>
-                    <span class="progress-percent">0%</span>
-                    <div class="icon-container">
-                        <div class="icon">
-                            <svg viewBox="0 0 24 24">
-                                <circle cx="12" cy="12" r="10" />
-                                <path class="arrow-path" d="M12 4v12 M8 12l4 4 4-4" />
-                                <path class="line-path" d="M2 16 Q12 16 22 16" />
-                            </svg>
-                        </div>
-                    </div>
+                <button type="button" onclick="exportTableToExcel('sales-table', 'ventas', this)" class="px-3 py-1.5 rounded-lg border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">download</span> Excel
                 </button>
+                <button type="button" onclick="exportTableToPDF('sales-table', 'Historial de Ventas', 'ventas', this)" class="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">download</span> PDF
+                </button>
+                <a href="<?php echo BASE_URL; ?>/modules/admin/dashboard.php" class="btn-back">Volver</a>
             </div>
         </div>
 
@@ -73,14 +62,16 @@ Layout::renderAdminSidebar('ventas');
                                 </td>
                                 <td style="text-align: right; font-weight: 600;">$<?php echo number_format($row['total'], 2); ?></td>
                                 <td style="text-align: right;">
-                                    <a href="invoice.php?id=<?php echo $row['id_venta']; ?>" target="_blank" class="px-3 py-1 bg-surface border border-border rounded text-sm text-text-main hover:bg-border transition inline-flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-[1rem]">print</span> Factura
-                                    </a>
-                                    <?php if ($row['estado'] !== 'anulada'): ?>
-                                    <button type="button" onclick="confirmRollback(<?php echo $row['id_venta']; ?>)" class="ml-2 px-3 py-1 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-400 hover:bg-red-500 hover:text-white transition inline-flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-[1rem]">undo</span> Anular
-                                    </button>
-                                    <?php endif; ?>
+                                    <div style="display: flex; gap: 0.75rem; justify-content: flex-end; align-items: center;">
+                                        <a href="invoice.php?id=<?php echo $row['id_venta']; ?>" target="_blank" class="px-3 py-1 bg-surface border border-border rounded text-sm text-text-main hover:bg-border transition inline-flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[1rem]">print</span> Factura
+                                        </a>
+                                        <?php if ($row['estado'] !== 'anulada'): ?>
+                                        <button type="button" onclick="confirmRollback(<?php echo $row['id_venta']; ?>)" class="px-3 py-1 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-400 hover:bg-red-500 hover:text-white transition inline-flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.1)] hover:shadow-[0_0_15px_rgba(239,68,68,0.3)]" style="width: auto; padding: 0.35rem 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75rem;">
+                                            <span class="material-symbols-outlined text-[1rem]">undo</span> Anular
+                                        </button>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

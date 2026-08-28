@@ -21,13 +21,13 @@ if ($_SESSION['role'] === 'admin') {
 
             <div class="flex items-center gap-3 flex-wrap">
                 <!-- Botones de Exportación -->
-                <button type="button" onclick="exportTableToExcel('clients-table', 'clientes')"
-                    class="px-3 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-xs font-medium text-text-muted hover:text-text-main transition-colors flex items-center gap-1.5">
-                    <span class="material-symbols-outlined text-[16px]">file_download</span> Excel
+                <button type="button" onclick="exportTableToExcel('clients-table', 'clientes', this)"
+                    class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">download</span> Excel
                 </button>
-                <button type="button" onclick="exportTableToPDF('clients-table', 'Listado de Clientes', 'clientes')"
-                    class="px-3 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-xs font-medium text-text-muted hover:text-text-main transition-colors flex items-center gap-1.5">
-                    <span class="material-symbols-outlined text-[16px]">picture_as_pdf</span> PDF
+                <button type="button" onclick="exportTableToPDF('clients-table', 'Listado de Clientes', 'clientes', this)"
+                    class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">download</span> PDF
                 </button>
 
                 <button onclick="openAddClientModal()"

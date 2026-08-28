@@ -21,7 +21,7 @@ class SuppliersController extends BaseController
             $this->redirect(BASE_URL . "/index.php");
         }
 
-        // Handle Add Supplier
+        // Gestionar añadir proveedor
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add') {
             $nombre = $_POST['nombre'] ?? '';
             $domicilio = $_POST['domicilio'] ?? '';
@@ -151,7 +151,7 @@ class SuppliersController extends BaseController
         }
 
         $suppliers = $this->supplier_model->get_suppliers();
-        
+
         $this->render_view(__DIR__ . '/../Views/new_purchase.php', [
             'suppliers' => $suppliers
         ]);

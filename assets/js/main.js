@@ -1,6 +1,4 @@
-/**
- * Nokia 1100 - Main JavaScript file
- */
+// Nokia 1100 - Main JavaScript file
 
 document.addEventListener('DOMContentLoaded', () => {
     // Arranco el buscador en tiempo real para filtrar las filas de las tablas mientras escribo
@@ -15,9 +13,30 @@ document.addEventListener('DOMContentLoaded', () => {
     initPageTransitions();
 });
 
-/**
- * Función para filtrar filas de una tabla en tiempo real
- */
+// Calcula la distancia de Levenshtein entre dos cadenas
+function levenshteinDistance(a, b) {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1, 
+                    matrix[i][j - 1] + 1,     
+                    matrix[i - 1][j] + 1      
+                );
+            }
+        }
+    }
+    return matrix[b.length][a.length];
+}
+
+// Función para filtrar filas de una tabla en tiempo real con Fuzzy Search
 function initTableSearch() {
     const searchInput = document.getElementById('search-input');
     const tableBody = document.querySelector('.table-container tbody');
@@ -25,26 +44,39 @@ function initTableSearch() {
     if (!searchInput || !tableBody) return;
 
     searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase();
+        const query = e.target.value.toLowerCase().trim();
         const rows = tableBody.querySelectorAll('tr');
 
         let hasVisibleRows = false;
+        const queryWords = query.split(/\s+/).filter(w => w.length > 0);
 
-        // Eliminar fila de "sin resultados" dinámica si existe
         const noResultsRow = tableBody.querySelector('.js-no-results');
         if (noResultsRow) {
             noResultsRow.remove();
         }
 
         rows.forEach(row => {
-            // Ignorar la fila nativa de tabla vacía si existe
             if (row.cells.length === 1 && row.textContent.trim().includes('No hay productos')) {
                 row.style.display = 'none';
                 return;
             }
 
             const text = row.textContent.toLowerCase();
-            if (text.includes(query)) {
+            const textWords = text.split(/[\s\-_]+/);
+            
+            let isMatch = true;
+            if (queryWords.length > 0) {
+                isMatch = queryWords.every(qw => {
+                    return textWords.some(tw => {
+                        if (tw.includes(qw)) return true;
+                        const maxDistance = qw.length > 4 ? 2 : (qw.length > 2 ? 1 : 0);
+                        return levenshteinDistance(qw, tw) <= maxDistance || 
+                               (tw.length >= qw.length && levenshteinDistance(qw, tw.substring(0, qw.length)) <= maxDistance);
+                    });
+                });
+            }
+
+            if (isMatch) {
                 row.style.display = '';
                 hasVisibleRows = true;
             } else {
@@ -52,7 +84,6 @@ function initTableSearch() {
             }
         });
 
-        // Mostrar fila de "sin coincidencias" si corresponde
         if (!hasVisibleRows && rows.length > 0) {
             const emptyRow = document.createElement('tr');
             emptyRow.className = 'js-no-results';
@@ -62,13 +93,11 @@ function initTableSearch() {
     });
 }
 
-// showToast is now defined globally by the Sileo React bundle (sileo-toaster.bundle.js)
-// showConfirmModal is now defined globally by the Sileo React bundle
+// showToast se define globalmente mediante el componente Sileo React (sileo-toaster.bundle.js)
+// showConfirmModal se define globalmente mediante el componente Sileo React
 
-/**
- * Intercepta los clicks en enlaces o botones con atributo data-confirm
- * Ejemplo: <a href="delete.php" data-confirm="¿Eliminar usuario?">Borrar</a>
- */
+// Intercepta los clicks en enlaces o botones con atributo data-confirm
+// Ejemplo: <a href="delete.php" data-confirm="¿Eliminar usuario?">Borrar</a>
 function initConfirmModals() {
     document.body.addEventListener('click', async (e) => {
         // Buscar el elemento más cercano con data-confirm
@@ -95,9 +124,7 @@ function initConfirmModals() {
     });
 }
 
-/**
- * Revisa la URL por parámetros "success" o "error" y lanza un Toast automáticamente.
- */
+// Revisa la URL por parámetros "success" o "error" y lanza un Toast automáticamente.
 function handleUrlToasts() {
     const urlParams = new URLSearchParams(window.location.search);
 
@@ -125,9 +152,7 @@ function handleUrlToasts() {
     }
 }
 
-/**
- * Efecto de Hover interactivo 3D para tarjetas
- */
+// Efecto de Hover interactivo 3D para tarjetas
 function initHover3D() {
     document.querySelectorAll('.hover-3d-target').forEach(card => {
         card.addEventListener('mousemove', e => {
@@ -150,9 +175,7 @@ function initHover3D() {
     });
 }
 
-/**
- * Envuelve los enlaces en animaciones de opacidad y deslizamiento al navegar
- */
+// Envuelve los enlaces en animaciones de opacidad y deslizamiento al navegar
 function initPageTransitions() {
     document.body.addEventListener('click', e => {
         const link = e.target.closest('a');

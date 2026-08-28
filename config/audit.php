@@ -3,17 +3,15 @@
 // Helper para registrar acciones en el log de auditoría.
 // Requiere que $conn esté disponible (ya incluido por db.php).
 
-/**
- * Registra una acción en la tabla audit_log.
- *
- * @param mysqli $conn          Conexión activa a la base de datos
- * @param string $accion        Código de acción: LOGIN_OK, LOGIN_FAIL, LOGOUT, etc.
- * @param int|null $id_usuario  ID del usuario que ejecuta la acción (null si no aplica)
- * @param string|null $tabla    Tabla afectada (ej: 'usuario', 'producto')
- * @param int|null $id_registro ID del registro afectado
- * @param string|null $desc     Descripción libre adicional
- * @param string|null $username_intent  Usuario que intentó login (útil en LOGIN_FAIL)
- */
+// Registra una acción en la tabla audit_log.
+//
+// @param mysqli $conn          Conexión activa a la base de datos
+// @param string $accion        Código de acción: LOGIN_OK, LOGIN_FAIL, LOGOUT, etc.
+// @param int|null $id_usuario  ID del usuario que ejecuta la acción (null si no aplica)
+// @param string|null $tabla    Tabla afectada (ej: 'usuario', 'producto')
+// @param int|null $id_registro ID del registro afectado
+// @param string|null $desc     Descripción libre adicional
+// @param string|null $username_intent  Usuario que intentó login (útil en LOGIN_FAIL)
 function audit_log(
     mysqli $conn,
     string $accion,

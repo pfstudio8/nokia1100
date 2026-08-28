@@ -94,17 +94,21 @@ if (isset($_SESSION['user_id'])) {
                         <i class='bx bxs-user-circle'></i>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-x-4">
-                        <div class="input-box">
-                            <input type="password" name="password" placeholder=" " required minlength="8">
+                    <div class="grid grid-cols-2 gap-x-4" style="margin-bottom: 0.25rem;">
+                        <div class="input-box" style="margin-bottom: 0;">
+                            <input type="password" id="register-password" name="password" placeholder=" " required minlength="8">
                             <label>Contraseña</label>
                             <i class='bx bxs-lock-alt'></i>
                         </div>
-                        <div class="input-box">
+                        <div class="input-box" style="margin-bottom: 0;">
                             <input type="password" name="password_confirm" placeholder=" " required minlength="8">
                             <label>Confirmar Clave</label>
                             <i class='bx bxs-lock-alt'></i>
                         </div>
+                    </div>
+                    <!-- Password Strength Meter -->
+                    <div id="password-strength-container" class="w-full h-1 bg-border/30 mb-5 rounded-full overflow-hidden" style="display: none;">
+                        <div id="password-strength-bar" class="h-full w-0 transition-all duration-300"></div>
                     </div>
 
                     <button type="submit" class="auth-btn-pill">
@@ -135,7 +139,7 @@ if (isset($_SESSION['user_id'])) {
                 <h2>Invitado</h2>
                 <p class="text-text-muted text-xs mb-6 leading-relaxed">Ingresá tu nombre para acceder de forma limitada y consultar el stock del sistema.</p>
                 
-                <form action="<?php echo BASE_URL; ?>/modules/auth/guest_login.php" method="POST" novalidate>
+                <form action="<?php echo BASE_URL; ?>/modules/auth/index.php?action=guestLogin" method="POST" novalidate>
                     <div class="input-box">
                         <input type="text" name="guest_name" placeholder=" " required minlength="2" maxlength="30">
                         <label>Nombre de Invitado</label>

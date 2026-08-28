@@ -21,6 +21,15 @@
     --error-bg: rgba(239, 68, 68, 0.1);
     --success: #22C55E;
     --success-bg: rgba(34, 197, 94, 0.1);
+    
+    /* Valores por defecto para animación de resorte del Toast */
+    --sileo-duration: 0.7s;
+    --sileo-spring-easing: linear(
+    0, 0.009, 0.035 2.1%, 0.141, 0.281 6.7%, 0.723 12.9%, 0.938 16.7%, 1.017,
+    1.077, 1.121, 1.149 24.3%, 1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%,
+    1.051 39.6%, 1.017 43.1%, 0.991, 0.977 51%, 0.974 53.8%, 0.975 57.1%,
+    0.997 69.8%, 1.003 76.9%, 1.004 83.8%, 1
+  );
 }
 
 * {
@@ -114,44 +123,82 @@ input:focus, select:focus {
     background: var(--surface);
 }
 
-/* Buttons */
-button:not([data-sileo-toast]):not([data-sileo-button]):not([data-sileo-viewport] *), .btn-primary, .btn-add {
+/* Premium Icons */
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s ease;
+}
+
+/* Premium Buttons */
+.btn-primary, .btn-add, .btn-submit {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    padding: 0.75rem 1.5rem;
-    background: var(--primary-color);
+    gap: 0.5rem;
+    width: auto;
+    white-space: nowrap;
+    padding: 0.8rem 1.75rem;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-hover) 100%);
     color: var(--text-inverse);
-    border: none;
-    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
     font-size: 0.9rem;
-    font-weight: 600;
+    font-weight: 700;
+    letter-spacing: 0.02em;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     font-family: 'Inter', sans-serif;
     text-decoration: none;
+    box-shadow: 0 4px 14px 0 rgba(33, 184, 189, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: hidden;
 }
 
-button:not([data-sileo-toast]):not([data-sileo-button]):not([data-sileo-viewport] *):hover, .btn-primary:hover, .btn-add:hover {
-    background: var(--primary-hover);
-    transform: translateY(-1px);
+/* Subtle glow effect on hover */
+.btn-primary:hover, .btn-add:hover, .btn-submit:hover {
+    background: linear-gradient(135deg, var(--primary-hover) 0%, var(--primary-color) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px 0 rgba(33, 184, 189, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+/* Icon animation on hover */
+.btn-primary:hover .material-symbols-outlined, 
+.btn-add:hover .material-symbols-outlined,
+.btn-submit:hover .material-symbols-outlined {
+    transform: scale(1.1);
+}
+
+.btn-primary:active, .btn-add:active, .btn-submit:active {
+    transform: translateY(1px) scale(0.98);
+    box-shadow: 0 2px 8px 0 rgba(33, 184, 189, 0.3), inset 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn-back, .logout-btn {
-    background: transparent;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--border);
     color: var(--text-main) !important;
-    border-radius: 8px;
-    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    padding: 0.6rem 1.2rem;
     text-decoration: none;
-    font-weight: 500;
+    font-weight: 600;
     font-size: 0.85rem;
-    transition: all 0.2s;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .btn-back:hover, .logout-btn:hover {
-    background: var(--surface-hover);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.btn-back:active, .logout-btn:active {
+    transform: translateY(1px) scale(0.98);
 }
 
 /* Tables (Inventory / Sales) */
@@ -397,6 +444,15 @@ html.is-animating body {
 }
 
 /* Animations (Generic) */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
 .pulse-badge {
     animation: pulseBadge 2s infinite;
 }
@@ -405,6 +461,24 @@ html.is-animating body {
     0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); }
     70% { box-shadow: 0 0 0 6px rgba(239, 68, 68, 0); }
     100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+/* Animación de carga esqueleto */
+.skeleton {
+    background: linear-gradient(90deg, var(--surface) 25%, var(--border) 50%, var(--surface) 75%);
+    background-size: 400% 100%;
+    animation: skeleton-loading 1.5s infinite ease-in-out;
+    border-radius: 4px;
+    color: transparent !important;
+    pointer-events: none;
+    border-color: transparent !important;
+}
+.skeleton * {
+    visibility: hidden;
+}
+@keyframes skeleton-loading {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0 50%; }
 }
 
 /* Flying to Cart Animation */

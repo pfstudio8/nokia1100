@@ -113,27 +113,29 @@ function openModulePermissions(id, fullName, role, modulosStr) {
         `;
     }
     
-    // Modificar grid de la tabla a 2 columnas para dar espacio a la card
-    tableContainer.classList.replace('lg:col-span-3', 'lg:col-span-2');
+    // Mostrar Overlay y Panel
+    const permOverlay = document.getElementById('permission-overlay');
+    
+    permOverlay.classList.remove('hidden');
     permCard.classList.remove('hidden');
     
     // Trigger de animación CSS
     requestAnimationFrame(() => {
-        permCard.classList.remove('opacity-0', 'scale-95');
-        permCard.classList.add('opacity-100', 'scale-100');
+        permOverlay.classList.remove('opacity-0');
+        permCard.classList.remove('translate-x-full');
     });
 }
 
 function closeModulePermissions() {
-    const tableContainer = document.getElementById('users-table-container');
     const permCard = document.getElementById('permission-card');
+    const permOverlay = document.getElementById('permission-overlay');
     
-    permCard.classList.remove('opacity-100', 'scale-100');
-    permCard.classList.add('opacity-0', 'scale-95');
+    permCard.classList.add('translate-x-full');
+    permOverlay.classList.add('opacity-0');
     
     setTimeout(() => {
         permCard.classList.add('hidden');
-        tableContainer.classList.replace('lg:col-span-2', 'lg:col-span-3');
+        permOverlay.classList.add('hidden');
     }, 300);
 }
 

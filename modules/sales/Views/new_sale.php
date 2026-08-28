@@ -6,8 +6,8 @@ if ($_SESSION['role'] === 'admin') Layout::renderAdminSidebar('ventas');
 else Layout::renderEmployeeSidebar('ventas');
 ?>
 <main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen">
-    <div class="glass-card mb-8 border border-border/50">
-        <div class="flex justify-between items-center mb-8 pb-4 border-b border-border/50">
+    <div class="glass-card mb-8 border border-border/30">
+        <div class="flex justify-between items-center mb-8 pb-4 border-b border-border/30">
             <div>
                 <h2 class="text-2xl font-display font-medium text-text-main">Nueva Venta</h2>
                 <p class="text-text-muted text-sm mt-1">Terminal de Punto de Venta (POS)</p>
@@ -50,10 +50,10 @@ else Layout::renderEmployeeSidebar('ventas');
         </div>
 
         <h3 class="text-xs uppercase font-semibold tracking-widest text-text-muted mb-4 px-2">Carrito</h3>
-        <div class="overflow-x-auto bg-surface/20 rounded-2xl border border-border/50 mb-8">
+        <div class="overflow-x-auto bg-surface/20 rounded-2xl border border-border/30 mb-8">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="bg-surface/50 border-b border-border/50 text-xs uppercase tracking-wider text-text-muted">
+                    <tr class="bg-surface/50 border-b border-border/30 text-xs uppercase tracking-wider text-text-muted">
                         <th class="p-4">Producto</th>
                         <th class="p-4 text-right">Precio Unit.</th>
                         <th class="p-4 text-center">Cant.</th>
@@ -65,7 +65,7 @@ else Layout::renderEmployeeSidebar('ventas');
                     <tr><td colspan="5" class="p-8 text-center text-text-muted text-sm border-none">El carrito está vacío</td></tr>
                 </tbody>
                 <tfoot>
-                    <tr class="border-t border-border/50 bg-surface/30">
+                    <tr class="border-t border-border/30 bg-surface/30">
                         <td colspan="3" class="p-4 text-right font-medium text-text-muted">TOTAL A COBRAR:</td>
                         <td id="cart-total" class="p-4 text-right font-display text-xl font-semibold text-primary">$0.00</td>
                         <td></td>
