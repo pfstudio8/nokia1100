@@ -16,12 +16,7 @@ Layout::renderAdminSidebar('inventario');
             </a>
         </div>
 
-        <?php if ($message): ?>
-            <div class="p-4 rounded-xl mb-6 text-sm font-medium flex gap-3 items-center <?php echo $messageType === 'success' ? 'bg-primary/10 border border-primary/20 text-primary' : 'bg-red-500/10 border border-red-500/20 text-red-500'; ?>">
-                <span class="material-symbols-outlined"><?php echo $messageType === 'success' ? 'check_circle' : 'error'; ?></span>
-                <?php echo $message; ?>
-            </div>
-        <?php endif; ?>
+
 
         <form method="POST" action="" class="space-y-6">
             <div>

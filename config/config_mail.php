@@ -2,6 +2,8 @@
 // config_mail.php
 // Configuración centralizada de correo.
 // Prioriza variables de entorno para no exponer credenciales en código.
+require_once __DIR__ . '/../classes/EnvLoader.php';
+EnvLoader::load(__DIR__ . '/../.env');
 $local_mail_config = __DIR__ . '/mail.local.php';
 if (file_exists($local_mail_config)) {
     require_once $local_mail_config;

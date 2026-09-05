@@ -30,9 +30,9 @@ class SuppliersController extends BaseController
             $email = $_POST['email'] ?? '';
 
             if ($this->supplier_model->create_supplier($nombre, $domicilio, $telefono, $atencion, $email)) {
-                $this->redirect(BASE_URL . "/modules/suppliers/suppliers.php?msg=added");
+                $this->redirect(BASE_URL . "/modules/suppliers/index.php?success=created");
             } else {
-                $this->redirect(BASE_URL . "/modules/suppliers/suppliers.php?error=failed");
+                $this->redirect(BASE_URL . "/modules/suppliers/index.php?error=" . urlencode("Error al crear el proveedor."));
             }
         }
 
@@ -41,10 +41,10 @@ class SuppliersController extends BaseController
             $id = intval($_GET['delete']);
             $count = $this->supplier_model->count_supplier_purchases($id);
             if ($count > 0) {
-                $this->redirect(BASE_URL . "/modules/suppliers/suppliers.php?error=has_purchases");
+                $this->redirect(BASE_URL . "/modules/suppliers/index.php?error=has_purchases");
             } else {
                 $this->supplier_model->delete_supplier($id);
-                $this->redirect(BASE_URL . "/modules/suppliers/suppliers.php?msg=deleted");
+                $this->redirect(BASE_URL . "/modules/suppliers/index.php?success=deleted");
             }
         }
 
@@ -89,14 +89,14 @@ class SuppliersController extends BaseController
             $email = trim($_POST['email'] ?? '');
 
             if (empty($nombre)) {
-                $error = "El nombre de la empresa es obligatorio.";
+                $this->redirect("index.php?action=edit_supplier&id=$id_proveedor&error=" . urlencode("El nombre de la empresa es obligatorio."));
             } else {
                 if ($this->supplier_model->update_supplier($id_proveedor, $nombre, $domicilio, $telefono, $atencion, $email)) {
                     require_once __DIR__ . '/../../../config/audit.php';
                     audit_log($this->conn, 'SUPPLIER_UPDATE', $_SESSION['user_id'], 'proveedor', $id_proveedor, "Actualizados datos de proveedor: $nombre");
-                    $success = "Proveedor actualizado correctamente.";
+                    $this->redirect("index.php?action=edit_supplier&id=$id_proveedor&success=" . urlencode("Proveedor actualizado correctamente."));
                 } else {
-                    $error = "Error al actualizar el proveedor.";
+                    $this->redirect("index.php?action=edit_supplier&id=$id_proveedor&error=" . urlencode("Error al actualizar el proveedor."));
                 }
             }
         }

@@ -53,9 +53,9 @@ class WorkshopController extends BaseController
                     $_POST['presupuesto'] ?? '',
                     $_SESSION['user_id']
                 );
-                $this->redirect("view.php?id=$id_reparacion&success=created");
+                $this->redirect("index.php?action=view&id=$id_reparacion&success=created");
             } catch (Exception $e) {
-                $error = $e->getMessage();
+                $this->redirect("index.php?action=add&error=" . urlencode($e->getMessage()));
             }
         }
 
@@ -77,10 +77,6 @@ class WorkshopController extends BaseController
         $error = '';
         $success = '';
 
-        if (isset($_GET['success']) && $_GET['success'] === 'created') {
-            $success = 'Orden de reparación creada con éxito.';
-        }
-
         // Action: update_status
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
             try {
@@ -91,9 +87,9 @@ class WorkshopController extends BaseController
                     $_POST['nota_historial'] ?? '',
                     $_SESSION['user_id']
                 );
-                $success = 'Orden actualizada correctamente.';
+                $this->redirect("index.php?action=view&id=$id_reparacion&success=" . urlencode("Orden actualizada correctamente."));
             } catch (Exception $e) {
-                $error = $e->getMessage();
+                $this->redirect("index.php?action=view&id=$id_reparacion&error=" . urlencode($e->getMessage()));
             }
         }
 
@@ -102,9 +98,9 @@ class WorkshopController extends BaseController
             try {
                 $id_producto = (int)($_POST['id_producto'] ?? 0);
                 $this->workshop_model->add_repuesto_to_repair($id_reparacion, $id_producto, 1);
-                $success = 'Repuesto asignado y descontado del inventario.';
+                $this->redirect("index.php?action=view&id=$id_reparacion&success=" . urlencode("Repuesto asignado y descontado del inventario."));
             } catch (Exception $e) {
-                $error = $e->getMessage();
+                $this->redirect("index.php?action=view&id=$id_reparacion&error=" . urlencode($e->getMessage()));
             }
         }
 

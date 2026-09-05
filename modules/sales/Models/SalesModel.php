@@ -109,6 +109,29 @@ class SalesModel extends BaseModel
         return ['methods' => $methods, 'amounts' => $amounts];
     }
 
+    public function get_top_products($limit = 5)
+    {
+        $limit = (int) $limit;
+        $sql = "SELECT p.nombre, SUM(dv.cantidad) as total_vendido 
+                FROM detalle_venta dv
+                JOIN venta v ON dv.id_venta = v.id_venta
+                JOIN producto p ON dv.id_producto = p.id_producto
+                WHERE v.estado = 'completada'
+                GROUP BY dv.id_producto
+                ORDER BY total_vendido DESC
+                LIMIT $limit";
+        $result = $this->conn->query($sql);
+        $names = [];
+        $quantities = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $names[] = $row['nombre'];
+                $quantities[] = $row['total_vendido'];
+            }
+        }
+        return ['names' => $names, 'quantities' => $quantities];
+    }
+
     public function get_sales_export_data()
     {
         $sql = "SELECT 

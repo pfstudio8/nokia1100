@@ -251,5 +251,26 @@ class InventoryModel extends BaseModel
 
         return true;
     }
+
+    public function get_inventory_logs($limit = 100)
+    {
+        $limit = intval($limit);
+        $sql = "SELECT a.*, u.nombre_usuario 
+                FROM audit_log a 
+                LEFT JOIN usuario u ON a.id_usuario = u.id_usuario 
+                WHERE a.accion LIKE 'INVENTORY_%' 
+                ORDER BY a.fecha DESC LIMIT ?";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $limit);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $logs = [];
+        while ($row = $result->fetch_assoc()) {
+            $logs[] = $row;
+        }
+        $stmt->close();
+        return $logs;
+    }
 }
 ?>

@@ -37,25 +37,13 @@ if ($_SESSION['role'] === 'admin') {
             </div>
         </div>
 
-        <?php if ($error): ?>
-            <div
-                class="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl mb-6 text-sm flex gap-3 items-center">
-                <span class="material-symbols-outlined">error</span> <?php echo htmlspecialchars($error); ?>
-            </div>
-        <?php endif; ?>
 
-        <?php if ($success): ?>
-            <div
-                class="bg-primary/10 border border-primary/20 text-primary p-4 rounded-xl mb-6 text-sm flex gap-3 items-center">
-                <span class="material-symbols-outlined">check_circle</span> <?php echo htmlspecialchars($success); ?>
-            </div>
-        <?php endif; ?>
 
         <form method="GET" action="" class="flex gap-3 mb-6 items-center">
             <div class="relative flex-1 max-w-md">
                 <span
                     class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px]">search</span>
-                <input type="text" name="search" placeholder="Buscar por nombre, teléfono, email..."
+                <input type="text" name="search" id="search-input" placeholder="Buscar por nombre, teléfono, email..."
                     value="<?php echo htmlspecialchars($search); ?>"
                     class="w-full bg-surface border border-border pl-10 py-2.5 pr-4 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
             </div>
@@ -102,7 +90,7 @@ if ($_SESSION['role'] === 'admin') {
                                     <?php echo date('d/m/Y', strtotime($c['created_at'])); ?></td>
                                 <td class="p-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
-                                        <a href="edit_client.php?id=<?php echo $c['id_cliente']; ?>"
+                                        <a href="index.php?action=edit&id=<?php echo $c['id_cliente']; ?>"
                                             class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface border border-border text-text-main hover:bg-primary hover:text-background transition-colors"
                                             title="Editar Cliente">
                                             <span class="material-symbols-outlined text-[16px]">edit</span>

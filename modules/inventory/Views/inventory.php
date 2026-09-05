@@ -27,6 +27,8 @@ if ($_SESSION['role'] === 'admin') {
                 </button>
 
 
+
+
                 <?php if ($_SESSION['role'] === 'admin'): ?>
                     <a href="add_product.php" class="bg-primary text-background hover:bg-primary-hover px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2">
                         <span class="material-symbols-outlined text-[18px]">add</span> Añadir
