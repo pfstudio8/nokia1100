@@ -190,7 +190,7 @@ class AuthController extends BaseController
 
                         $year = date('Y');
 
-                        // Diseño de Plantilla de Email Premium (Alineado con el diseño oscuro / cian de la web)
+                        // Diseño de Plantilla de Email
                         $mail->Body = "
                         <!DOCTYPE html>
                         <html>

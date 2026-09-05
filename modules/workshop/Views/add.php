@@ -22,11 +22,7 @@ if ($_SESSION['role'] === 'admin') {
             </div>
         </div>
 
-        <?php if($error): ?>
-            <div class="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl mb-6 text-sm flex gap-3 items-center">
-                <span class="material-symbols-outlined">error</span> <?php echo $error; ?>
-            </div>
-        <?php endif; ?>
+
 
         <form method="POST" action="" class="glass-card rounded-2xl p-6 md:p-8">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">

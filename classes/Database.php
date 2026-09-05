@@ -1,12 +1,17 @@
 <?php
 class Database {
-    private $host = "localhost";
-    private $user = "root";
-    private $password = "";
-    private $db_name = "nokia1100";
+    private $host;
+    private $user;
+    private $password;
+    private $db_name;
     public $conn;
 
     public function __construct() {
+        $this->host = getenv('DB_HOST') ?: "localhost";
+        $this->user = getenv('DB_USER') ?: "root";
+        $this->password = getenv('DB_PASS') !== false ? getenv('DB_PASS') : "";
+        $this->db_name = getenv('DB_NAME') ?: "nokia1100";
+        
         $this->conn = new mysqli($this->host, $this->user, $this->password, $this->db_name);
         
         if ($this->conn->connect_error) {

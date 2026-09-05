@@ -93,12 +93,15 @@ class SalesController extends BaseController
 
         $daily = $this->sales_model->get_sales_daily_totals();
         $methods = $this->sales_model->get_sales_by_payment_methods();
+        $top_products = $this->sales_model->get_top_products();
 
         $this->render_view(__DIR__ . '/../Views/sales_charts.php', [
             'dates' => $daily['dates'],
             'totals' => $daily['totals'],
             'methods' => $methods['methods'],
-            'method_amounts' => $methods['amounts']
+            'method_amounts' => $methods['amounts'],
+            'top_names' => $top_products['names'],
+            'top_quantities' => $top_products['quantities']
         ]);
     }
 

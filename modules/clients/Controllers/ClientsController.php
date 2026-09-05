@@ -28,18 +28,18 @@ class ClientsController extends BaseController
             $email = trim($_POST['email'] ?? '');
 
             if (empty($nombre)) {
-                $error = "El nombre del cliente es obligatorio.";
+                $this->redirect('index.php?error=' . urlencode("El nombre del cliente es obligatorio."));
             } else {
                 if ($this->client_model->exists($nombre, $telefono)) {
-                    $error = "Ya existe un cliente registrado con ese nombre y teléfono.";
+                    $this->redirect('index.php?error=' . urlencode("Ya existe un cliente registrado con ese nombre y teléfono."));
                 } else {
                     $id_nuevo = $this->client_model->create($nombre, $telefono, $email);
                     if ($id_nuevo) {
                         require_once __DIR__ . '/../../../config/audit.php';
                         audit_log($this->conn, 'CLIENT_CREATE', $_SESSION['user_id'], 'cliente', $id_nuevo, "Registrado nuevo cliente: $nombre (Tel: $telefono)");
-                        $success = "Cliente '$nombre' registrado correctamente.";
+                        $this->redirect('index.php?success=' . urlencode("Cliente '$nombre' registrado correctamente."));
                     } else {
-                        $error = "Error al guardar el cliente en la base de datos.";
+                        $this->redirect('index.php?error=' . urlencode("Error al guardar el cliente en la base de datos."));
                     }
                 }
             }
@@ -51,7 +51,7 @@ class ClientsController extends BaseController
             $count = $this->client_model->count_reparaciones($id_cliente);
 
             if ($count > 0) {
-                $error = "No se puede eliminar el cliente porque posee {$count} orden(es) de reparación registradas en el taller.";
+                $this->redirect('index.php?error=has_orders');
             } else {
                 $client = $this->client_model->find($id_cliente);
                 $c_name = $client ? $client['nombre'] : '';
@@ -59,9 +59,9 @@ class ClientsController extends BaseController
                 if ($this->client_model->delete($id_cliente)) {
                     require_once __DIR__ . '/../../../config/audit.php';
                     audit_log($this->conn, 'CLIENT_DELETE', $_SESSION['user_id'], 'cliente', $id_cliente, "Eliminado cliente: $c_name");
-                    $success = "Cliente eliminado con éxito.";
+                    $this->redirect('index.php?success=deleted');
                 } else {
-                    $error = "Error al eliminar el cliente.";
+                    $this->redirect('index.php?error=delete_failed');
                 }
             }
         }
@@ -104,17 +104,14 @@ class ClientsController extends BaseController
             $email = trim($_POST['email'] ?? '');
 
             if (empty($nombre)) {
-                $message = "El nombre del cliente es obligatorio.";
-                $message_type = "error";
+                $this->redirect("index.php?action=edit&id=$id_cliente&error=" . urlencode("El nombre del cliente es obligatorio."));
             } else {
                 if ($this->client_model->update($id_cliente, $nombre, $telefono, $email)) {
                     require_once __DIR__ . '/../../../config/audit.php';
                     audit_log($this->conn, 'CLIENT_UPDATE', $_SESSION['user_id'], 'cliente', $id_cliente, "Actualizados datos de cliente: $nombre (Tel: $telefono)");
-                    $message = "Cliente actualizado exitosamente.";
-                    $message_type = "success";
+                    $this->redirect("index.php?action=edit&id=$id_cliente&success=" . urlencode("Cliente actualizado exitosamente."));
                 } else {
-                    $message = "Error al actualizar los datos en la base de datos.";
-                    $message_type = "error";
+                    $this->redirect("index.php?action=edit&id=$id_cliente&error=" . urlencode("Error al actualizar los datos en la base de datos."));
                 }
             }
         }

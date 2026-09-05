@@ -30,16 +30,7 @@ if ($_SESSION['role'] === 'admin') {
             </div>
         </div>
 
-        <?php if($success): ?>
-            <div class="bg-green-500/10 border border-green-500/20 text-green-500 p-4 rounded-xl mb-6 text-sm flex gap-3 items-center">
-                <span class="material-symbols-outlined">check_circle</span> <?php echo $success; ?>
-            </div>
-        <?php endif; ?>
-        <?php if($error): ?>
-            <div class="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl mb-6 text-sm flex gap-3 items-center">
-                <span class="material-symbols-outlined">error</span> <?php echo $error; ?>
-            </div>
-        <?php endif; ?>
+
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             

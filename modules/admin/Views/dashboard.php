@@ -28,11 +28,7 @@ Layout::renderAdminSidebar('dashboard');
             </div>
             
             <div class="relative z-10 w-full p-8 md:p-12 flex flex-col justify-center h-full max-w-3xl">
-                <div class="inline-flex items-center gap-2 mb-4 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 backdrop-blur-md self-start">
-                    <span class="material-symbols-outlined text-[14px] text-primary">monitoring</span>
-                    <span class="text-[10px] font-bold text-primary tracking-[0.2em] uppercase">Panel Global de Tienda</span>
-                </div>
-                <h2 class="text-4xl md:text-5xl font-display font-bold text-text-main mb-4 drop-shadow-md tracking-tight">Bienvenido a la Central Nokia</h2>
+                <h2 class="text-4xl md:text-5xl font-display font-bold text-text-main mb-4 drop-shadow-md tracking-tight">Bienvenido a Nokia1100</h2>
                 <p class="text-sm md:text-base text-text-muted font-medium max-w-lg leading-relaxed">Supervisa todas las operaciones, controla el inventario en tiempo real y analiza el rendimiento corporativo con precisión.</p>
             </div>
         </section>

@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initTableSearch();
     // Activo los modales bonitos de confirmación cuando toco botones de borrar o confirmar algo
     initConfirmModals();
+    // Reemplaza los popups nativos del navegador por notificaciones Toast personalizadas en los formularios
+    initCustomFormValidation();
     // Si la URL viene con algún parámetro de éxito o error, lanzo la notificación toast emergente
     handleUrlToasts();
     // Le meto el efecto de inclinación 3D interactivo a las tarjetas del panel cuando les paso el cursor
@@ -12,6 +14,52 @@ document.addEventListener('DOMContentLoaded', () => {
     // Hago que las páginas carguen con un efecto de transición suave y opacidad al navegar por los enlaces
     initPageTransitions();
 });
+
+// Reemplaza la validación nativa del navegador por notificaciones tipo Toast
+function initCustomFormValidation() {
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        // Agregamos novalidate para suprimir los tooltips nativos del navegador
+        form.setAttribute('novalidate', 'true');
+
+        form.addEventListener('submit', function (e) {
+            if (!this.checkValidity()) {
+                e.preventDefault(); // Detener el envío porque hay campos inválidos
+
+                const firstInvalid = this.querySelector(':invalid');
+                if (firstInvalid) {
+                    firstInvalid.focus();
+
+                    let fieldName = 'este campo';
+
+                    // Intentamos obtener un nombre descriptivo (desde el placeholder, ID asociado al label, o name)
+                    const labelDiv = firstInvalid.closest('div')?.querySelector('label');
+                    if (firstInvalid.id) {
+                        const label = document.querySelector(`label[for="${firstInvalid.id}"]`);
+                        if (label) fieldName = label.textContent.trim().replace('*', '');
+                    }
+                    if (fieldName === 'este campo' && labelDiv) {
+                        fieldName = labelDiv.textContent.trim().replace('*', '');
+                    }
+                    if (fieldName === 'este campo' && firstInvalid.placeholder) {
+                        fieldName = firstInvalid.placeholder;
+                    }
+                    if (fieldName === 'este campo' && firstInvalid.name) {
+                        fieldName = firstInvalid.name;
+                    }
+
+                    if (typeof showToast === 'function') {
+                        // Formateamos el nombre a Capital Case para que se vea mejor y acortamos el mensaje
+                        fieldName = fieldName.toLowerCase().replace(/(?:^|\s)\S/g, a => a.toUpperCase());
+                        showToast(`Por favor completa el campo ${fieldName}`, 'error');
+                    } else {
+                        alert(`Error:\nPor favor, completa correctamente el campo: ${fieldName}`);
+                    }
+                }
+            }
+        });
+    });
+}
 
 // Calcula la distancia de Levenshtein entre dos cadenas
 function levenshteinDistance(a, b) {
@@ -26,9 +74,9 @@ function levenshteinDistance(a, b) {
                 matrix[i][j] = matrix[i - 1][j - 1];
             } else {
                 matrix[i][j] = Math.min(
-                    matrix[i - 1][j - 1] + 1, 
-                    matrix[i][j - 1] + 1,     
-                    matrix[i - 1][j] + 1      
+                    matrix[i - 1][j - 1] + 1,
+                    matrix[i][j - 1] + 1,
+                    matrix[i - 1][j] + 1
                 );
             }
         }
@@ -63,15 +111,15 @@ function initTableSearch() {
 
             const text = row.textContent.toLowerCase();
             const textWords = text.split(/[\s\-_]+/);
-            
+
             let isMatch = true;
             if (queryWords.length > 0) {
                 isMatch = queryWords.every(qw => {
                     return textWords.some(tw => {
                         if (tw.includes(qw)) return true;
                         const maxDistance = qw.length > 4 ? 2 : (qw.length > 2 ? 1 : 0);
-                        return levenshteinDistance(qw, tw) <= maxDistance || 
-                               (tw.length >= qw.length && levenshteinDistance(qw, tw.substring(0, qw.length)) <= maxDistance);
+                        return levenshteinDistance(qw, tw) <= maxDistance ||
+                            (tw.length >= qw.length && levenshteinDistance(qw, tw.substring(0, qw.length)) <= maxDistance);
                     });
                 });
             }
@@ -133,8 +181,10 @@ function handleUrlToasts() {
         'deleted': 'Registro eliminado correctamente',
         'saved': 'Cambios guardados exitosamente',
         'created': 'Nuevo registro creado con éxito',
-        'has_sales': 'No se puede eliminar porque tiene ventas asociadas',
-        'in_use': 'El elemento está en uso y no puede modificarse',
+        'has_sales': 'No se puede borrar porque posee ventas',
+        'has_orders': 'No se puede borrar porque posee órdenes',
+        'has_purchases': 'No se puede borrar porque posee compras',
+        'in_use': 'Elemento en uso, imposible modificar',
         'updated': 'Datos actualizados correctamente'
     };
 
@@ -197,7 +247,7 @@ function initPageTransitions() {
             document.documentElement.classList.add('is-animating');
             setTimeout(() => {
                 window.location.href = link.href;
-            }, 250); // Mismo que la transición CSS
+            }, 150); // Timeout más rápido para que la navegación sea casi inmediata
         }
     });
 }

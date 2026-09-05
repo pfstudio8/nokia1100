@@ -330,7 +330,8 @@ class AdminController extends BaseController
             $username = trim($_POST['username'] ?? '');
 
             if (empty($nombre) || empty($apellido) || empty($username)) {
-                $error_msg = "Complete todos los campos obligatorios.";
+                header("Location: index.php?action=profile&error=" . urlencode("Complete todos los campos obligatorios."));
+                exit;
             } else {
                 try {
                     // Obtiene el ID de la persona actual
@@ -360,9 +361,11 @@ class AdminController extends BaseController
                     $updateUser->close();
 
                     $_SESSION['username'] = $username;
-                    $success_msg = "Perfil actualizado correctamente.";
+                    header("Location: index.php?action=profile&success=" . urlencode("Perfil actualizado correctamente."));
+                    exit;
                 } catch (Exception $e) {
-                    $error_msg = $e->getMessage();
+                    header("Location: index.php?action=profile&error=" . urlencode($e->getMessage()));
+                    exit;
                 }
             }
         }
@@ -375,6 +378,22 @@ class AdminController extends BaseController
             'current_data' => $current_data,
             'success_msg' => $success_msg,
             'error_msg' => $error_msg
+        ]);
+    }
+
+    public function audit()
+    {
+        $this->check_access('dashboard'); // El acceso está controlado por los permisos del módulo, ya no se restringe por rol.
+
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
+        $modulo = 'Inventario';
+        
+        $logs = $this->admin_model->get_audit_logs($limit, $modulo);
+
+        $this->render_view(__DIR__ . '/../Views/audit.php', [
+            'logs' => $logs,
+            'limit' => $limit,
+            'modulo' => $modulo
         ]);
     }
 }

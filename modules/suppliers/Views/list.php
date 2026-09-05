@@ -26,9 +26,7 @@ Layout::renderAdminSidebar('proveedores');
             </div>
         </div>
 
-        <?php if (isset($_GET['error']) && $_GET['error'] === 'has_purchases'): ?>
-            <div class="alert alert-error">No se puede eliminar este proveedor porque tiene compras registradas.</div>
-        <?php endif; ?>
+
 
         <?php // Formulario para agregar proveedor ?>
         <form method="POST" action="" style="background: var(--surface-hover); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid var(--border);">
@@ -85,7 +83,7 @@ Layout::renderAdminSidebar('proveedores');
                                     </span>
                                 </td>
                                 <td>
-                                    <a href="edit_supplier.php?id=<?php echo $row['id_proveedor']; ?>" style="color: var(--primary-color); font-weight: 600; font-size: 0.85rem; margin-right: 1rem;">Editar</a>
+                                    <a href="index.php?action=edit_supplier&id=<?php echo $row['id_proveedor']; ?>" style="color: var(--primary-color); font-weight: 600; font-size: 0.85rem; margin-right: 1rem;">Editar</a>
                                     <a href="suppliers.php?delete=<?php echo $row['id_proveedor']; ?>" class="btn-delete" data-confirm="¿Seguro que deseas eliminar este proveedor?" data-confirm-title="Eliminar Proveedor">Eliminar</a>
                                 </td>
                             </tr>

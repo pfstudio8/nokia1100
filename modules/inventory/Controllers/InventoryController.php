@@ -60,7 +60,7 @@ class InventoryController extends BaseController
             $stock_minimo = $_POST['stock_minimo'] ?? 0;
 
             if (empty($nombre) || empty($marca) || empty($modelo) || empty($precio) || $cantidad === '' || empty($categoria)) {
-                $this->redirect("add_product.php?error=" . urlencode("Los campos principales son obligatorios"));
+                $this->redirect("index.php?action=add_product&error=" . urlencode("Los campos principales son obligatorios"));
             }
 
             $precio = floatval($precio);
@@ -81,11 +81,14 @@ class InventoryController extends BaseController
                     'stock_minimo' => $stock_minimo
                 ];
 
-                $this->inventory_model->create_product_transaction($product_data, $detail_data, $cantidad);
+                $id_nuevo = $this->inventory_model->create_product_transaction($product_data, $detail_data, $cantidad);
+                
+                require_once __DIR__ . '/../../../config/audit.php';
+                audit_log($this->conn, 'INVENTORY_CREATE', $_SESSION['user_id'], 'Inventario', $id_nuevo, "Registrado nuevo producto en inventario: $nombre (Stock inicial: $cantidad)");
 
-                $this->redirect("inventory.php?success=created");
+                $this->redirect("index.php?success=created");
             } catch (Exception $e) {
-                $this->redirect("add_product.php?error=" . urlencode($e->getMessage()));
+                $this->redirect("index.php?action=add_product&error=" . urlencode($e->getMessage()));
             }
         } else {
             $this->redirect("inventory.php");
@@ -108,8 +111,7 @@ class InventoryController extends BaseController
             $cantidad = $_POST['cantidad'] ?? '';
 
             if (empty($nombre) || empty($marca) || empty($modelo) || empty($precio) || empty($cantidad)) {
-                $message = "Todos los campos son obligatorios";
-                $messageType = "error";
+                $this->redirect("index.php?action=add_stock&error=" . urlencode("Todos los campos son obligatorios"));
             } else {
                 try {
                     $product_data = [
@@ -125,14 +127,14 @@ class InventoryController extends BaseController
                         'stock_minimo' => 2
                     ];
 
-                    $this->inventory_model->create_product_transaction($product_data, $detail_data, intval($cantidad));
+                    $id_nuevo = $this->inventory_model->create_product_transaction($product_data, $detail_data, intval($cantidad));
                     
-                    $message = "Producto agregado exitosamente";
-                    $messageType = "success";
-                    $nombre = $marca = $modelo = $precio = $cantidad = '';
+                    require_once __DIR__ . '/../../../config/audit.php';
+                    audit_log($this->conn, 'INVENTORY_CREATE', $_SESSION['user_id'], 'Inventario', $id_nuevo, "Agregado nuevo producto: $nombre (Stock inicial: $cantidad)");
+                    
+                    $this->redirect("index.php?action=add_stock&success=" . urlencode("Producto agregado exitosamente"));
                 } catch (Exception $e) {
-                    $message = "Error: " . $e->getMessage();
-                    $messageType = "error";
+                    $this->redirect("index.php?action=add_stock&error=" . urlencode("Error: " . $e->getMessage()));
                 }
             }
         }
@@ -171,19 +173,19 @@ class InventoryController extends BaseController
             $cantidad = $_POST['cantidad'] ?? '';
 
             if (empty($nombre) || empty($marca) || empty($modelo) || empty($precio) || empty($cantidad)) {
-                $message = "Todos los campos son obligatorios";
-                $messageType = "error";
+                $this->redirect("index.php?action=edit_stock&id=$id_producto&error=" . urlencode("Todos los campos son obligatorios"));
             } else {
                 try {
                     $product_data = ['nombre' => $nombre, 'precio' => floatval($precio)];
                     $detail_data = ['marca' => $marca, 'modelo' => $modelo];
                     $this->inventory_model->update_product_transaction($id_producto, $product_data, $detail_data, intval($cantidad));
+                    
+                    require_once __DIR__ . '/../../../config/audit.php';
+                    audit_log($this->conn, 'INVENTORY_UPDATE', $_SESSION['user_id'], 'Inventario', $id_producto, "Actualizado stock/detalles de producto ID $id_producto: $nombre");
 
-                    $message = "Producto actualizado exitosamente";
-                    $messageType = "success";
+                    $this->redirect("index.php?action=edit_stock&id=$id_producto&success=" . urlencode("Producto actualizado exitosamente"));
                 } catch (Exception $e) {
-                    $message = "Error: " . $e->getMessage();
-                    $messageType = "error";
+                    $this->redirect("index.php?action=edit_stock&id=$id_producto&error=" . urlencode("Error: " . $e->getMessage()));
                 }
             }
         }
@@ -246,9 +248,14 @@ class InventoryController extends BaseController
         try {
             if ($total_sales_purchases > 0) {
                 $this->inventory_model->deactivate_product_and_delete_stock($id_producto);
+                $tipo_borrado = 'desactivado lógicamente';
             } else {
                 $this->inventory_model->delete_product_completely($id_producto);
+                $tipo_borrado = 'eliminado físicamente';
             }
+            
+            require_once __DIR__ . '/../../../config/audit.php';
+            audit_log($this->conn, 'INVENTORY_DELETE', $_SESSION['user_id'], 'Inventario', $id_producto, "Producto ID $id_producto $tipo_borrado");
             $this->redirect(BASE_URL . "/modules/inventory/inventory.php?success=deleted");
         } catch (Exception $e) {
             $this->redirect(BASE_URL . "/modules/inventory/inventory.php?error=" . urlencode($e->getMessage()));
@@ -356,6 +363,20 @@ class InventoryController extends BaseController
             echo "Error: " . $e->getMessage();
         }
         exit;
+    }
+    public function logs()
+    {
+        $this->check_access('inventario');
+        
+        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
+        if (!in_array($limit, [100, 500])) $limit = 100;
+        
+        $logs = $this->inventory_model->get_inventory_logs($limit);
+        
+        $this->render_view(__DIR__ . '/../Views/logs.php', [
+            'logs' => $logs,
+            'limit' => $limit
+        ]);
     }
 }
 ?>

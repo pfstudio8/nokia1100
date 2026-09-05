@@ -18,12 +18,12 @@ Layout::renderAdminSidebar('usuarios');
                         <h2>Administrar Usuarios</h2>
                         <p>Gestión de personal y accesos</p>
                     </div>
-                    <div style="display:flex; gap:1rem; align-items:center; justify-content:flex-end; flex:1;">
+                    <div style="display:flex; gap:1rem; align-items:center; justify-content:flex-end; flex:1; flex-wrap:wrap;">
                         <input type="text" id="search-input" placeholder="Buscar usuario..."
                             style="width:200px; padding:.5rem 1rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text-main); font-size:.9rem;">
 
                         <!-- Filtro activos / inactivos -->
-                        <div style="display:flex; gap:.5rem;">
+                        <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
                             <a href="?filtro=activos"
                                style="padding:.4rem .8rem; border-radius:8px; font-size:.8rem; font-weight:600;
                                       border:1px solid var(--border);
@@ -90,10 +90,10 @@ Layout::renderAdminSidebar('usuarios');
                                         </td>
                                         <td>
                                             <?php if ($row['is_active']): ?>
-                                                <div style="display:inline-flex; align-items:center; gap:.5rem; flex-wrap:wrap;">
+                                                <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; justify-content: flex-end;">
                                                     <!-- Cambio de rol -->
                                                     <form action="<?php echo BASE_URL; ?>/modules/admin/update_user_role.php"
-                                                          method="POST" style="display:inline-flex; gap:.5rem; align-items:center; margin-right:.5rem; margin-bottom:0;">
+                                                          method="POST" style="display:inline-flex; gap:.5rem; align-items:center; margin-bottom:0;">
                                                         <input type="hidden" name="id_usuario" value="<?php echo (int)$row['id_usuario']; ?>">
                                                         <div class="relative inline-block">
                                                             <select name="rol" style="padding:.35rem 1.8rem .35rem .6rem; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text-main); font-size:.8rem; appearance: none; cursor: pointer; transition: border-color 0.2s;" onchange="this.form.submit()">

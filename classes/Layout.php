@@ -3,19 +3,26 @@ class Layout
 {
     public static function renderHead($title = "NOKIA1100")
     {
+        $currentUser = $_SESSION['username'] ?? '';
         echo '<!DOCTYPE html>
 <html class="dark" lang="es">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <meta name="current-user" content="' . htmlspecialchars($currentUser) . '"/>
     <title>' . htmlspecialchars($title) . '</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="' . BASE_URL . '/assets/css/style.css?v=' . time() . '">
     <script src="' . BASE_URL . '/assets/js/tailwind_config.js"></script>
+    <script src="' . BASE_URL . '/assets/js/session-cache.js?v=' . time() . '"></script>
 </head>
-<body class="font-sans antialiased text-text-main selection:bg-primary/20 selection:text-primary">';
+<body class="font-sans antialiased text-text-main selection:bg-primary/20 selection:text-primary">
+    <div id="top-right-user" class="fixed top-4 right-6 z-50 hidden md:flex items-center gap-3 bg-surface/80 backdrop-blur-md border border-border px-4 py-2 rounded-full shadow-lg opacity-0 transition-opacity duration-300">
+        <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-sm" id="tr-initial"></div>
+        <span id="tr-username" class="text-sm font-medium text-text-main"></span>
+    </div>';
     }
 
     public static function getAllowedModules($userId)
@@ -105,17 +112,22 @@ class Layout
             ['id' => 'ventas', 'url' => BASE_URL . '/modules/sales/sales.php', 'icon' => 'payments', 'label' => 'Ventas'],
             ['id' => 'graficos', 'url' => BASE_URL . '/modules/sales/sales_charts.php', 'icon' => 'bar_chart', 'label' => 'Estadísticas'],
             ['id' => 'proveedores', 'url' => BASE_URL . '/modules/suppliers/suppliers.php', 'icon' => 'local_shipping', 'label' => 'Proveedores'],
+            ['id' => 'auditoria', 'url' => BASE_URL . '/modules/admin/audit.php', 'icon' => 'security', 'label' => 'Auditoría'],
             ['id' => 'perfil', 'url' => BASE_URL . '/modules/admin/profile.php', 'icon' => 'person', 'label' => 'Mi Perfil'],
         ];
 
         echo '
-<aside class="fixed left-0 top-0 h-screen w-64 border-r border-border bg-background flex flex-col z-40 hidden md:flex">
+<button id="sidebarToggle" class="fixed top-7 z-50 flex items-center justify-center w-10 h-10 rounded-lg bg-surface/90 backdrop-blur-md border border-border shadow-lg text-text-main hover:text-primary transition-colors hidden md:flex hover:scale-105 active:scale-95">
+    <span class="material-symbols-outlined">menu</span>
+</button>
+
+<aside id="mainSidebar" class="fixed left-0 top-0 h-screen w-64 border-r border-border bg-background flex flex-col z-40 hidden md:flex transition-transform duration-300 z-40">
     <div class="p-8">
         <h1 class="text-2xl font-bold font-display tracking-tight text-text-main">NOKIA<span class="text-primary">1100</span></h1>
-        <p class="text-[10px] text-text-muted mt-1 uppercase tracking-widest font-medium">Administration</p>
+        <p class="text-[10px] text-text-muted mt-1 uppercase tracking-widest font-medium">Administracion</p>
     </div>
     
-    <nav class="flex-1 px-4 space-y-1 mt-4">';
+    <nav class="flex-1 px-4 space-y-1 mt-4 overflow-y-auto custom-scrollbar">';
 
         foreach ($links as $l) {
             if ($allowed !== null && !in_array($l['id'], $allowed)) {
@@ -149,7 +161,7 @@ class Layout
             </div>
             <div>
                 <p class="text-sm font-medium text-text-main">' . $username . '</p>
-                <p class="text-[10px] text-text-muted uppercase tracking-widest font-medium">Admin Level</p>
+                <p class="text-[10px] text-text-muted uppercase tracking-widest font-medium">Administrador</p>
             </div>
         </div>
     </div>
@@ -184,7 +196,12 @@ class Layout
     <div class="font-display font-bold text-xl tracking-tight">NOKIA<span class="text-primary">1100</span></div>
     <a href="' . BASE_URL . '/modules/auth/logout.php" class="text-text-muted hover:text-red-500"><span class="material-symbols-outlined">logout</span></a>
 </header>
-<nav class="fixed left-0 top-0 h-screen w-64 border-r border-border bg-background flex-col z-40 hidden md:flex">
+
+<button id="sidebarToggle" class="fixed top-7 z-50 flex items-center justify-center w-10 h-10 rounded-lg bg-surface/90 backdrop-blur-md border border-border shadow-lg text-text-main hover:text-primary transition-colors hidden md:flex hover:scale-105 active:scale-95">
+    <span class="material-symbols-outlined">menu</span>
+</button>
+
+<nav id="mainSidebar" class="fixed left-0 top-0 h-screen w-64 border-r border-border bg-background flex-col z-40 hidden md:flex transition-transform duration-300">
     <div class="p-8 pb-4">
         <h1 class="text-2xl font-bold font-display tracking-tight text-text-main">NOKIA<span class="text-primary">1100</span></h1>
     </div>
@@ -201,7 +218,7 @@ class Layout
         </div>
     </div>
     
-    <div class="flex-1 px-4 space-y-1">';
+    <div class="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">';
 
         foreach ($links as $l) {
             if ($allowed !== null && !in_array($l['id'], $allowed)) {
@@ -238,6 +255,21 @@ class Layout
 <script src="' . BASE_URL . '/assets/js/sileo-toaster.bundle.js?v=' . time() . '"></script>
 <script src="' . BASE_URL . '/assets/js/export-helper.js?v=' . time() . '"></script>
 <script src="' . BASE_URL . '/assets/js/main.js?v=' . time() . '"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const toggleBtn = document.getElementById("sidebarToggle");
+        if (toggleBtn) {
+            // Restore state
+            if (localStorage.getItem("sidebarCollapsed") === "true") {
+                document.body.classList.add("sidebar-collapsed");
+            }
+            toggleBtn.addEventListener("click", function() {
+                document.body.classList.toggle("sidebar-collapsed");
+                localStorage.setItem("sidebarCollapsed", document.body.classList.contains("sidebar-collapsed"));
+            });
+        }
+    });
+</script>
 </body></html>';
     }
 }

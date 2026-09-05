@@ -1,5 +1,8 @@
 <?php
-define('BASE_URL', '/nokia1100');
+require_once __DIR__ . '/../classes/EnvLoader.php';
+EnvLoader::load(__DIR__ . '/../.env');
+
+define('BASE_URL', getenv('BASE_URL') ?: '/nokia1100');
 require_once __DIR__ . '/../classes/Database.php';
 
 // Instancia la clase Database (POO)

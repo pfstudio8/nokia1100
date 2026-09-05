@@ -321,5 +321,39 @@ class AdminModel extends BaseModel
             throw $e;
         }
     }
+
+    // --- Auditoría ---
+    public function get_audit_logs($limit = 100, $modulo = '')
+    {
+        $limit = (int) $limit;
+        $sql = "SELECT a.*, u.nombre_usuario 
+                FROM audit_log a 
+                LEFT JOIN usuario u ON a.id_usuario = u.id_usuario ";
+                
+        if (!empty($modulo)) {
+            $sql .= "WHERE a.tabla_afectada = ? ";
+        }
+        
+        $sql .= "ORDER BY a.fecha DESC LIMIT ?";
+        
+        $stmt = $this->conn->prepare($sql);
+        if (!empty($modulo)) {
+            $stmt->bind_param("si", $modulo, $limit);
+        } else {
+            $stmt->bind_param("i", $limit);
+        }
+        
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $logs = [];
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $logs[] = $row;
+            }
+        }
+        $stmt->close();
+        return $logs;
+    }
 }
 ?>

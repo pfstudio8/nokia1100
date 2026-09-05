@@ -35,7 +35,7 @@ if ($_SESSION['role'] === 'admin') {
         <form method="GET" action="" class="flex gap-3 mb-6 items-center flex-wrap">
             <div class="relative flex-1 max-w-md">
                 <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px]">search</span>
-                <input type="text" name="search" placeholder="Buscar por código, cliente, modelo..." value="<?php echo htmlspecialchars($search); ?>" class="w-full bg-surface border border-border pl-10 pt-2.5 pb-2.5 pr-4 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
+                <input type="text" id="search-input" name="search" placeholder="Buscar por código, cliente, modelo..." value="<?php echo htmlspecialchars($search); ?>" class="w-full bg-surface border border-border pl-10 pt-2.5 pb-2.5 pr-4 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
             </div>
             <select name="estado" class="bg-surface border border-border px-4 py-2.5 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
                 <option value="">Todos los estados</option>

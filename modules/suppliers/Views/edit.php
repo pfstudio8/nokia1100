@@ -18,19 +18,6 @@ Layout::renderAdminSidebar('proveedores');
             </a>
         </div>
 
-        <?php if ($error): ?>
-            <div
-                class="bg-red-500/10 border border-red-500/20 text-red-500 p-4 rounded-xl mb-6 text-sm flex gap-3 items-center">
-                <span class="material-symbols-outlined">error</span> <?php echo $error; ?>
-            </div>
-        <?php endif; ?>
-
-        <?php if ($success): ?>
-            <div
-                class="bg-primary/10 border border-primary/20 text-primary p-4 rounded-xl mb-6 text-sm flex gap-3 items-center">
-                <span class="material-symbols-outlined">check_circle</span> <?php echo $success; ?>
-            </div>
-        <?php endif; ?>
 
         <form method="POST" action="" class="space-y-6">
             <div>
