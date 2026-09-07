@@ -788,11 +788,12 @@ html.is-animating body {
     width: max-content !important;
     min-width: 200px !important;
     max-width: 450px !important;
-    height: 56px !important;
+    min-height: 56px !important;
+    height: auto !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 0 1.5rem !important;
+    padding: 1rem 1.5rem !important;
     position: relative !important;
     
     /* Fondo oscuro sólido y premium (no cristalizado) */
@@ -835,14 +836,17 @@ html.is-animating body {
     justify-content: center !important;
     gap: 0.75rem !important;
     width: auto !important;
+    white-space: normal !important;
 }
 
 /* Título del toast: legible y con colores neon vistosos según el estado */
 [data-sileo-title] {
-    font-size: 1rem !important;
+    font-size: 0.95rem !important;
+    line-height: 1.4 !important;
     font-weight: 600 !important;
     letter-spacing: -0.01em;
     text-transform: none !important;
+    text-align: left !important;
 }
 
 [data-sileo-title][data-state="success"] {

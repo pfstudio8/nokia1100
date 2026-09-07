@@ -13,6 +13,17 @@ Layout::renderAdminSidebar('proveedores');
                 <h2>Proveedores</h2>
                 <p>Gestión del directorio y compras</p>
             </div>
+            <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <a href="index.php?action=new_purchase" class="px-4 py-2 rounded-xl bg-primary text-background font-medium hover:bg-primary/90 transition-colors flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">add_shopping_cart</span> Registrar Pedido
+                </a>
+                <a href="index.php?action=purchase_history" class="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-sm font-medium transition-colors flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">history</span> Historial de Pedidos
+                </a>
+            </div>
+        </div>
+        
+        <div class="dashboard-header flex justify-between items-center mb-8" style="flex-wrap: wrap; gap: 1rem;">
             <div style="display: flex; gap: 1rem; align-items: center;">
                 <input type="text" id="search-input" placeholder="Buscar proveedor..." style="width: 250px; padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 0.9rem;">
                 <!-- Botones de Exportación -->

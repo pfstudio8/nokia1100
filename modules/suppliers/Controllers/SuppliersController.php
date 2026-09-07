@@ -3,6 +3,7 @@
 
 require_once __DIR__ . '/../../../classes/BaseController.php';
 require_once __DIR__ . '/../Models/SupplierModel.php';
+require_once __DIR__ . '/../../inventory/Models/InventoryModel.php';
 
 class SuppliersController extends BaseController
 {
@@ -151,9 +152,13 @@ class SuppliersController extends BaseController
         }
 
         $suppliers = $this->supplier_model->get_suppliers();
+        
+        $inventory_model = new InventoryModel();
+        $inventory = $inventory_model->get_inventory();
 
         $this->render_view(__DIR__ . '/../Views/new_purchase.php', [
-            'suppliers' => $suppliers
+            'suppliers' => $suppliers,
+            'inventory' => $inventory
         ]);
     }
 
@@ -176,6 +181,63 @@ class SuppliersController extends BaseController
         $this->render_view(__DIR__ . '/../Views/purchase_history.php', [
             'purchases' => $purchase_list
         ]);
+    }
+
+    public function receive_purchase()
+    {
+        $this->check_auth();
+        if ($_SESSION['role'] !== 'admin') {
+            echo json_encode(['success' => false, 'message' => 'No autorizado']);
+            exit;
+        }
+
+        if ($_SERVER["REQUEST_METHOD"] == "POST") {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id_compra = $input['id_compra'] ?? 0;
+
+            if (!$id_compra) {
+                echo json_encode(['success' => false, 'message' => 'ID de compra inválido']);
+                exit;
+            }
+
+            try {
+                $this->supplier_model->receive_purchase($id_compra);
+                echo json_encode(['success' => true, 'message' => 'Pedido recibido y stock actualizado con éxito']);
+            } catch (Exception $e) {
+                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            }
+            exit;
+        }
+    }
+
+    public function cancel_purchase()
+    {
+        $this->check_auth();
+        if ($_SESSION['role'] !== 'admin') {
+            echo json_encode(['success' => false, 'message' => 'No autorizado']);
+            exit;
+        }
+
+        if ($_SERVER["REQUEST_METHOD"] == "POST") {
+            $input = json_decode(file_get_contents('php://input'), true);
+            $id_compra = $input['id_compra'] ?? 0;
+
+            if (!$id_compra) {
+                echo json_encode(['success' => false, 'message' => 'ID de compra inválido']);
+                exit;
+            }
+
+            try {
+                if ($this->supplier_model->cancel_purchase($id_compra)) {
+                    echo json_encode(['success' => true, 'message' => 'Pedido cancelado con éxito']);
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'No se pudo cancelar el pedido. Verifique su estado.']);
+                }
+            } catch (Exception $e) {
+                echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            }
+            exit;
+        }
     }
 }
 ?>

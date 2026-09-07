@@ -1,14 +1,14 @@
 <?php
 // modules/suppliers/Views/new_purchase.php
 
-Layout::renderHead('Registrar Compra - NOKIA1100');
+Layout::renderHead('Registrar Pedido - NOKIA1100');
 Layout::renderAdminSidebar('proveedores');
 ?>
 <main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen">
     <div class="glass-card mb-8 border border-border/50">
         <div class="flex justify-between items-center mb-8 pb-4 border-b border-border/50">
             <div>
-                <h2 class="text-2xl font-display font-medium text-text-main">Registrar Compra</h2>
+                <h2 class="text-2xl font-display font-medium text-text-main">Registrar Pedido</h2>
                 <p class="text-text-muted text-sm mt-1">Gestión de abastecimiento e ingreso de mercadería</p>
             </div>
             <a href="<?php echo BASE_URL; ?>/modules/admin/dashboard.php" class="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-sm font-medium transition-colors flex items-center gap-2">
@@ -45,31 +45,48 @@ Layout::renderAdminSidebar('proveedores');
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-end mb-8 bg-surface/30 p-6 rounded-2xl border border-border/30">
-            <div class="md:col-span-3">
-                <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Producto / Nro Parte</label>
-                <input type="text" id="product_nombre" placeholder="Nombre" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
+        <div class="bg-surface/30 p-6 rounded-2xl border border-border/30 mb-8">
+            <div class="mb-4">
+                <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Seleccionar Producto Existente</label>
+                <select id="producto_select" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main appearance-none" onchange="handleProductSelection()">
+                    <option value="">-- Ingresar Nuevo Producto --</option>
+                    <?php foreach($inventory as $prod): ?>
+                        <option value="<?php echo $prod['id_producto']; ?>" 
+                                data-nombre="<?php echo htmlspecialchars($prod['nombre']); ?>" 
+                                data-marca="<?php echo htmlspecialchars($prod['marca']); ?>" 
+                                data-modelo="<?php echo htmlspecialchars($prod['modelo']); ?>" 
+                                data-costo="<?php echo htmlspecialchars($prod['precio']); ?>">
+                            <?php echo htmlspecialchars($prod['nombre'] . ' - ' . $prod['marca'] . ' ' . $prod['modelo']); ?> (Stock: <?php echo $prod['cantidad']; ?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </div>
-            <div class="md:col-span-2">
-                <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Marca</label>
-                <input type="text" id="product_marca" placeholder="Opcional" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
-            </div>
-            <div class="md:col-span-2">
-                <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Modelo</label>
-                <input type="text" id="product_modelo" placeholder="Opcional" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
-            </div>
-            <div class="md:col-span-2">
-                <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Costo Unit.</label>
-                <input type="number" id="costo" min="0" step="0.01" value="0" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
-            </div>
-            <div class="md:col-span-1">
-                <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Cant.</label>
-                <input type="number" id="cantidad" min="1" value="1" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
-            </div>
-            <div class="md:col-span-2 flex">
-                <button type="button" class="w-full bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-background font-medium py-3 rounded-xl transition-all flex justify-center items-center gap-2" onclick="addToCart()">
-                    <span class="material-symbols-outlined text-[18px]">add_box</span> Añadir
-                </button>
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
+                <div class="md:col-span-3">
+                    <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Producto / Nro Parte</label>
+                    <input type="text" id="product_nombre" placeholder="Nombre" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Marca</label>
+                    <input type="text" id="product_marca" placeholder="Opcional" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Modelo</label>
+                    <input type="text" id="product_modelo" placeholder="Opcional" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Costo Unit.</label>
+                    <input type="number" id="costo" min="0" step="0.01" value="0" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
+                </div>
+                <div class="md:col-span-1">
+                    <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Cant.</label>
+                    <input type="number" id="cantidad" min="1" value="1" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
+                </div>
+                <div class="md:col-span-2 flex">
+                    <button type="button" class="w-full bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-background font-medium py-3 rounded-xl transition-all flex justify-center items-center gap-2" onclick="addToCart()">
+                        <span class="material-symbols-outlined text-[18px]">add_box</span> Añadir
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -99,7 +116,7 @@ Layout::renderAdminSidebar('proveedores');
         </div>
 
         <button type="button" onclick="submitPurchase()" class="w-full bg-text-main text-background hover:bg-text-muted font-medium py-4 px-6 rounded-xl transition-all flex justify-center items-center gap-2">
-            <span class="material-symbols-outlined text-[20px]">save</span> Efectuar e Ingresar al Inventario
+            <span class="material-symbols-outlined text-[20px]">save</span> Registrar Pedido
         </button>
     </div>
 </main>
