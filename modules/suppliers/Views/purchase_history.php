@@ -8,8 +8,8 @@ Layout::renderAdminSidebar('proveedores');
     <div class="glass-card mb-8 border border-border/50">
         <div class="flex justify-between items-center mb-8 pb-4 border-b border-border/50">
             <div>
-                <h2 class="text-2xl font-display font-medium text-text-main">Historial de Compras</h2>
-                <p class="text-text-muted text-sm mt-1">Órdenes emitidas y procesadas por los proveedores</p>
+                <h2 class="text-2xl font-display font-medium text-text-main">Historial de Pedidos</h2>
+                <p class="text-text-muted text-sm mt-1">Órdenes de compra emitidas a proveedores</p>
             </div>
             <a href="<?php echo BASE_URL; ?>/modules/admin/dashboard.php" class="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-sm font-medium transition-colors flex items-center gap-2">
                 <span class="material-symbols-outlined text-[18px]">arrow_back</span> Volver
@@ -25,8 +25,8 @@ Layout::renderAdminSidebar('proveedores');
                         <th class="p-4 font-semibold">Descripción</th>
                         <th class="p-4 font-semibold text-center">Items</th>
                         <th class="p-4 font-semibold text-right">Total</th>
-                        <th class="p-4 font-semibold text-right">IVA</th>
-                        <th class="p-4 font-semibold text-center">Detalles</th>
+                        <th class="p-4 font-semibold text-right">Estado</th>
+                        <th class="p-4 font-semibold text-center">Acciones</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border/30">
@@ -38,11 +38,29 @@ Layout::renderAdminSidebar('proveedores');
                                 <td class="p-4 text-sm text-text-muted"><?php echo htmlspecialchars($row['descripcion']); ?></td>
                                 <td class="p-4 text-sm text-center"><span class="bg-surface border border-border px-3 py-1 rounded-full text-text-muted"><?php echo $row['items']; ?></span></td>
                                 <td class="p-4 text-sm text-right font-medium text-text-main font-display">$<?php echo number_format($row['total'], 2); ?></td>
-                                <td class="p-4 text-sm text-right text-text-muted"><?php echo $row['iva']; ?>%</td>
+                                <td class="p-4 text-sm text-right">
+                                    <?php if ($row['estado'] === 'Pendiente'): ?>
+                                        <span class="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">Pendiente</span>
+                                    <?php elseif ($row['estado'] === 'Recibido'): ?>
+                                        <span class="bg-green-500/10 text-green-500 border border-green-500/20 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">Recibido</span>
+                                    <?php elseif ($row['estado'] === 'Cancelado'): ?>
+                                        <span class="bg-red-500/10 text-red-500 border border-red-500/20 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider">Cancelado</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="p-4 text-center">
-                                    <button class="text-text-main hover:text-primary transition-colors inline-flex items-center gap-1 text-sm font-medium" onclick="toggleDetails(<?php echo $row['id_compra']; ?>)">
-                                        <span class="material-symbols-outlined text-[18px]">visibility</span> Ver
-                                    </button>
+                                    <div class="flex items-center justify-center gap-2">
+                                        <button class="text-text-main hover:text-primary transition-colors inline-flex items-center gap-1 text-sm font-medium" onclick="toggleDetails(<?php echo $row['id_compra']; ?>)">
+                                            <span class="material-symbols-outlined text-[18px]">visibility</span>
+                                        </button>
+                                        <?php if ($row['estado'] === 'Pendiente'): ?>
+                                            <button class="text-green-500 hover:text-green-400 transition-colors inline-flex items-center gap-1 text-sm font-medium" title="Recibir Mercadería" onclick="receivePurchase(<?php echo $row['id_compra']; ?>)">
+                                                <span class="material-symbols-outlined text-[18px]">inventory_2</span>
+                                            </button>
+                                            <button class="text-red-500 hover:text-red-400 transition-colors inline-flex items-center gap-1 text-sm font-medium" title="Cancelar Pedido" onclick="cancelPurchase(<?php echo $row['id_compra']; ?>)">
+                                                <span class="material-symbols-outlined text-[18px]">cancel</span>
+                                            </button>
+                                        <?php endif; ?>
+                                    </div>
                                 </td>
                             </tr>
                             <tr id="detail-<?php echo $row['id_compra']; ?>" class="hidden bg-surface/10 border-t border-border/30">

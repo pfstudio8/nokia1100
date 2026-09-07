@@ -1,5 +1,34 @@
-// assets/js/pages/new_purchase.js
 let cart = [];
+
+function handleProductSelection() {
+    const select = document.getElementById('producto_select');
+    const option = select.options[select.selectedIndex];
+    
+    const nombreInput = document.getElementById('product_nombre');
+    const marcaInput = document.getElementById('product_marca');
+    const modeloInput = document.getElementById('product_modelo');
+    const costoInput = document.getElementById('costo');
+
+    if (select.value) {
+        nombreInput.value = option.getAttribute('data-nombre');
+        marcaInput.value = option.getAttribute('data-marca');
+        modeloInput.value = option.getAttribute('data-modelo');
+        costoInput.value = option.getAttribute('data-costo');
+        
+        nombreInput.readOnly = true;
+        marcaInput.readOnly = true;
+        modeloInput.readOnly = true;
+    } else {
+        nombreInput.value = '';
+        marcaInput.value = '';
+        modeloInput.value = '';
+        costoInput.value = '0';
+        
+        nombreInput.readOnly = false;
+        marcaInput.readOnly = false;
+        modeloInput.readOnly = false;
+    }
+}
 
 function addToCart() {
     const nombreInput = document.getElementById('product_nombre');
@@ -18,16 +47,22 @@ function addToCart() {
     const modelo = modeloInput.value.trim();
     const costo = parseFloat(costoInput.value);
     const cantidad = parseInt(cantidadInput.value);
+    
+    const select = document.getElementById('producto_select');
+    const id_producto = select ? select.value : null;
 
     const displayName = `${nombre}${marca ? ' - ' + marca : ''}${modelo ? ' ' + modelo : ''}`;
 
-    cart.push({ nombre, marca, modelo, displayName, costo, cantidad });
+    cart.push({ id_producto, nombre, marca, modelo, displayName, costo, cantidad });
     updateCartTable();
     
-    nombreInput.value = '';
-    marcaInput.value = '';
-    modeloInput.value = '';
-    costoInput.value = '0';
+    // Reset fields only if we are in "Nuevo" mode
+    if (!id_producto) {
+        nombreInput.value = '';
+        marcaInput.value = '';
+        modeloInput.value = '';
+        costoInput.value = '0';
+    }
     cantidadInput.value = 1;
 }
 
@@ -94,13 +129,13 @@ function submitPurchase() {
     .then(res => res.json())
     .then(data => {
         if (data.success) {
-            showPurchaseFeedback('Compra registrada y stock actualizado con éxito', 'success');
+            showPurchaseFeedback('Pedido registrado con éxito. Estado: Pendiente', 'success');
             setTimeout(() => {
                 const baseUrl = window.BASE_URL || '';
-                window.location.href = baseUrl + '/modules/suppliers/suppliers.php';
-            }, 800);
+                window.location.href = baseUrl + '/modules/suppliers/index.php?action=purchase_history';
+            }, 1000);
         } else {
-            showPurchaseFeedback('Error al registrar compra: ' + data.message, 'error');
+            showPurchaseFeedback('Error al registrar pedido: ' + data.message, 'error');
         }
     });
 }

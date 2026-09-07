@@ -95,34 +95,179 @@ function updateCartTable() {
     localStorage.setItem('nokia_sales_cart', JSON.stringify(cart));
 }
 
-async function submitSale() {
+let currentTotal = 0;
+
+function openPaymentModal() {
     if (cart.length === 0) { showToast('El carrito está vacío', 'warning'); return; }
+    
+    // Update modal UI with cart details
+    const totalEl = document.getElementById('cart-total');
+    currentTotal = cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    
+    document.getElementById('modal-items-count').textContent = cart.length === 1 ? '1 artículo' : `${cart.length} artículos`;
+    document.getElementById('modal-total-amount').textContent = `$${currentTotal.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    
+    const firstItem = cart[0];
+    document.getElementById('modal-first-item-name').textContent = firstItem.nombre;
+    const additionalText = cart.length > 1 ? ` (+${cart.length - 1} más)` : '';
+    document.getElementById('modal-first-item-desc').textContent = `${firstItem.cantidad} x $${firstItem.precio.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}${additionalText}`;
+    document.getElementById('modal-first-item-price').textContent = `$${(firstItem.precio * firstItem.cantidad).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    
+    // Reset state
+    selectPaymentMethod('Efectivo');
+    document.getElementById('monto_recibido').value = '';
+    calculateChange();
+    generateQuickSuggestions(currentTotal);
+    
+    const modal = document.getElementById('payment-modal');
+    modal.classList.remove('hidden');
+}
 
-    const confirmed = await showConfirmModal(
-        'Confirmar Venta',
-        `¿Registrar la venta por <strong>${document.getElementById('cart-total').textContent}</strong>?`,
-        'Sí, registrar', 'Cancelar', false
-    );
-    if (!confirmed) return;
+function closePaymentModal() {
+    const modal = document.getElementById('payment-modal');
+    modal.classList.add('hidden');
+}
 
-    const metodoPago = document.getElementById('metodo_pago').value;
+function selectPaymentMethod(method) {
+    document.getElementById('modal_metodo_pago').value = method;
+    
+    // Reset visual state of all buttons
+    const buttons = document.querySelectorAll('.payment-method-btn');
+    buttons.forEach(btn => {
+        btn.classList.remove('border-primary', 'bg-primary/10', 'text-primary');
+        btn.classList.add('border-border/50', 'bg-background', 'text-text-muted');
+    });
+    
+    // Set active state for selected button
+    const activeBtn = document.getElementById(`btn-pay-${method.toLowerCase().replace(/ /g, '')}`);
+    if (activeBtn) {
+        activeBtn.classList.remove('border-border/50', 'bg-background', 'text-text-muted');
+        activeBtn.classList.add('border-primary', 'bg-primary/10', 'text-primary');
+    }
+    
+    // Show/hide cash liquidation block
+    const cashBlock = document.getElementById('cash-liquidation-block');
+    const confirmBtn = document.getElementById('btn-confirm-sale');
+    
+    if (method === 'Efectivo') {
+        cashBlock.style.display = 'block';
+        calculateChange(); // Will disable/enable confirm btn based on amount
+    } else {
+        cashBlock.style.display = 'none';
+        confirmBtn.disabled = false; // Always enable for non-cash
+    }
+}
 
-    fetch('new_sale.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items: cart, metodo_pago: metodoPago })
-    })
-    .then(r => r.json())
-    .then(data => {
+function generateQuickSuggestions(total) {
+    const container = document.getElementById('quick-suggestions');
+    container.innerHTML = '';
+    
+    const suggestions = [total];
+    
+    // Add next round numbers (e.g. if 15500 -> 16000, 20000)
+    let magnitude = Math.pow(10, Math.floor(Math.log10(total)));
+    if (magnitude < 1000) magnitude = 1000;
+    
+    let nextRound = Math.ceil(total / (magnitude/10)) * (magnitude/10);
+    if (nextRound === total) nextRound += (magnitude/10);
+    suggestions.push(nextRound);
+    
+    let nextBigRound = Math.ceil(total / magnitude) * magnitude;
+    if (nextBigRound === total || nextBigRound <= nextRound) nextBigRound += magnitude;
+    suggestions.push(nextBigRound);
+    
+    // Ensure unique values
+    const uniqueSuggestions = [...new Set(suggestions)];
+    
+    uniqueSuggestions.forEach((amount, index) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.onclick = () => setReceivedAmount(amount);
+        btn.className = 'px-3 py-1.5 rounded-lg border border-border/50 bg-background hover:bg-surface-hover text-[11px] font-semibold text-text-muted hover:text-text-main transition-colors flex items-center gap-1';
+        
+        const label = index === 0 ? '(Exacto)' : '';
+        btn.innerHTML = `$${amount.toLocaleString('es-AR')} <span class="opacity-50 text-[9px] font-normal">${label}</span>`;
+        container.appendChild(btn);
+    });
+}
+
+function setReceivedAmount(amount) {
+    document.getElementById('monto_recibido').value = amount;
+    calculateChange();
+}
+
+function calculateChange() {
+    const method = document.getElementById('modal_metodo_pago').value;
+    if (method !== 'Efectivo') return;
+    
+    const received = parseFloat(document.getElementById('monto_recibido').value) || 0;
+    const changeAmountEl = document.getElementById('modal-change-amount');
+    const changeHint = document.getElementById('change-hint');
+    const iconContainer = document.getElementById('change-icon-container');
+    const confirmBtn = document.getElementById('btn-confirm-sale');
+    const statusBadge = document.getElementById('cash-status-badge');
+    
+    if (received < currentTotal) {
+        const remaining = currentTotal - received;
+        changeAmountEl.textContent = `$${remaining.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        changeAmountEl.classList.remove('text-green-400');
+        changeAmountEl.classList.add('text-red-400');
+        
+        changeHint.textContent = `Faltan $${remaining.toLocaleString('es-AR')}`;
+        iconContainer.className = 'w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 transition-colors';
+        iconContainer.innerHTML = '<span class="material-symbols-outlined text-[16px]">warning</span>';
+        
+        statusBadge.textContent = 'Falta monto';
+        statusBadge.className = 'text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider bg-red-500/10 border border-red-500/20 text-red-400';
+        confirmBtn.disabled = true;
+    } else {
+        const change = received - currentTotal;
+        changeAmountEl.textContent = `$${change.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        changeAmountEl.classList.remove('text-red-400');
+        changeAmountEl.classList.add('text-green-400');
+        
+        changeHint.textContent = `¡Entregar cambio de $${change.toLocaleString('es-AR')}!`;
+        iconContainer.className = 'w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center text-green-400 transition-colors';
+        iconContainer.innerHTML = '<span class="material-symbols-outlined text-[16px]">trending_down</span>';
+        
+        statusBadge.textContent = 'Monto cubierto ✓';
+        statusBadge.className = 'text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider bg-green-500/10 border border-green-500/20 text-green-400';
+        confirmBtn.disabled = false;
+    }
+}
+
+async function submitSaleFromModal() {
+    const confirmBtn = document.getElementById('btn-confirm-sale');
+    if (confirmBtn.disabled) return;
+    
+    const metodoPago = document.getElementById('modal_metodo_pago').value;
+
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span> Procesando...';
+
+    try {
+        const response = await fetch('new_sale.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ items: cart, metodo_pago: metodoPago })
+        });
+        
+        const data = await response.json();
+        
         if (data.success) {
             cart = [];
-            // Limpiar caché
             localStorage.removeItem('nokia_sales_cart');
             updateCartTable();
+            closePaymentModal();
             showSuccessModal(data.id_venta);
         } else {
             showToast(data.message, 'error');
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">receipt_long</span> Confirmar Venta';
         }
-    })
-    .catch(() => showToast('Error de conexión al procesar la venta', 'error'));
+    } catch (err) {
+        showToast('Error de conexión al procesar la venta', 'error');
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">receipt_long</span> Confirmar Venta';
+    }
 }

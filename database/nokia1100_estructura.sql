@@ -19,6 +19,7 @@ CREATE TABLE `compra` (
   `tiempo_entrega` varchar(100) DEFAULT NULL,
   `iva` decimal(5,2) DEFAULT 0.00,
   `autorizado_por` varchar(100) DEFAULT NULL,
+  `estado` enum('Pendiente','Recibido','Cancelado') DEFAULT 'Pendiente',
   PRIMARY KEY (`id_compra`),
   KEY `id_proveedor` (`id_proveedor`),
   CONSTRAINT `compra_ibfk_1` FOREIGN KEY (`id_proveedor`) REFERENCES `proveedor` (`id_proveedor`)

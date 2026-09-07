@@ -15,6 +15,12 @@ switch ($action) {
     case 'purchase_history':
         $controller->purchase_history();
         break;
+    case 'receive_purchase':
+        $controller->receive_purchase();
+        break;
+    case 'cancel_purchase':
+        $controller->cancel_purchase();
+        break;
     case 'suppliers':
     default:
         $controller->suppliers();

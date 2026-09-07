@@ -146,7 +146,9 @@ class SupplierModel extends BaseModel
                 $res_check = $stmt_check->get_result()->fetch_assoc();
                 $stmt_check->close();
 
-                if ($res_check) {
+                if (!empty($item['id_producto'])) {
+                    $id_producto = $item['id_producto'];
+                } else if ($res_check) {
                     $id_producto = $res_check['id_producto'];
                 } else {
                     $stmt_prod = $this->conn->prepare("INSERT INTO producto (nombre, precio, is_active) VALUES (?, ?, 1)");
@@ -161,11 +163,8 @@ class SupplierModel extends BaseModel
                     $stmt_det->close();
                 }
 
-                $stmt_inv = $this->conn->prepare("INSERT INTO inventario (id_producto, cantidad) VALUES (?, ?) 
-                                       ON DUPLICATE KEY UPDATE cantidad = cantidad + ?");
-                $stmt_inv->bind_param("iii", $id_producto, $item['cantidad'], $item['cantidad']);
-                if (!$stmt_inv->execute()) throw new Exception("Error al actualizar inventario");
-                $stmt_inv->close();
+                // NO actualizamos el inventario aquí, el pedido queda 'Pendiente'
+                // El inventario se actualizará cuando se llame a receive_purchase()
 
                 $stmt_dc = $this->conn->prepare("INSERT INTO detalle_compra (id_compra, id_producto, cantidad, precio_compra) VALUES (?, ?, ?, ?)");
                 $stmt_dc->bind_param("iiid", $id_compra, $id_producto, $item['cantidad'], $item['costo']);
@@ -185,6 +184,54 @@ class SupplierModel extends BaseModel
             $this->conn->rollback();
             throw $e;
         }
+    }
+
+    public function receive_purchase($id_compra)
+    {
+        $this->conn->begin_transaction();
+        try {
+            // Verificar estado actual
+            $stmt = $this->conn->prepare("SELECT estado FROM compra WHERE id_compra = ? FOR UPDATE");
+            $stmt->bind_param("i", $id_compra);
+            $stmt->execute();
+            $res = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            
+            if (!$res || $res['estado'] !== 'Pendiente') {
+                throw new Exception("El pedido no se encuentra en estado Pendiente.");
+            }
+
+            // Actualizar estado
+            $stmt = $this->conn->prepare("UPDATE compra SET estado = 'Recibido' WHERE id_compra = ?");
+            $stmt->bind_param("i", $id_compra);
+            if (!$stmt->execute()) throw new Exception("Error al actualizar estado de compra");
+            $stmt->close();
+
+            // Actualizar inventario
+            $items = $this->get_purchase_details($id_compra);
+            foreach ($items as $item) {
+                $stmt_inv = $this->conn->prepare("INSERT INTO inventario (id_producto, cantidad) VALUES (?, ?) 
+                                       ON DUPLICATE KEY UPDATE cantidad = cantidad + ?");
+                $stmt_inv->bind_param("iii", $item['id_producto'], $item['cantidad'], $item['cantidad']);
+                if (!$stmt_inv->execute()) throw new Exception("Error al actualizar inventario");
+                $stmt_inv->close();
+            }
+
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            throw $e;
+        }
+    }
+
+    public function cancel_purchase($id_compra)
+    {
+        $stmt = $this->conn->prepare("UPDATE compra SET estado = 'Cancelado' WHERE id_compra = ? AND estado = 'Pendiente'");
+        $stmt->bind_param("i", $id_compra);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
     }
 }
 ?>
