@@ -31,7 +31,11 @@ class SalesController extends BaseController
     public function new_sale()
     {
         $this->check_auth();
-        $this->check_access('venta');
+        if ($_SESSION['role'] === 'admin') {
+            $this->check_access('ventas');
+        } else {
+            $this->check_access('venta');
+        }
 
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $input = json_decode(file_get_contents('php://input'), true);

@@ -22,6 +22,11 @@
     const salesChartElement = document.getElementById('salesChart');
     if (salesChartElement) {
         const ctx = salesChartElement.getContext('2d');
+        
+        const gradientLine = ctx.createLinearGradient(0, 0, 0, 400);
+        gradientLine.addColorStop(0, 'rgba(79, 224, 229, 0.4)');
+        gradientLine.addColorStop(1, 'rgba(79, 224, 229, 0.0)');
+
         salesChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -29,13 +34,16 @@
                 datasets: [{
                     label: 'Ventas Totales ($)',
                     data: totals,
-                    backgroundColor: 'rgba(79, 224, 229, 0.2)',
+                    backgroundColor: gradientLine,
                     borderColor: primary,
-                    borderWidth: 2,
-                    pointBackgroundColor: primary,
-                    pointBorderColor: '#fff',
-                    pointHoverBackgroundColor: '#fff',
-                    pointHoverBorderColor: primary,
+                    borderWidth: 3,
+                    pointBackgroundColor: '#111113',
+                    pointBorderColor: primary,
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: primary,
+                    pointHoverBorderColor: '#fff',
                     fill: true,
                     tension: 0.4
                 }]
@@ -88,15 +96,16 @@
                 datasets: [{
                     data: methodAmounts,
                     backgroundColor: [
-                        '#4FE0E5',
-                        '#F472B6',
-                        '#818CF8',
-                        '#FBBF24',
-                        '#34D399'
+                        'rgba(79, 224, 229, 0.9)',
+                        'rgba(244, 114, 182, 0.9)',
+                        'rgba(129, 140, 248, 0.9)',
+                        'rgba(251, 191, 36, 0.9)',
+                        'rgba(52, 211, 153, 0.9)'
                     ],
-                    borderColor: '#111113',
-                    borderWidth: 4,
-                    hoverOffset: 4
+                    borderColor: '#18181B', // Darker border matching background
+                    borderWidth: 6,
+                    hoverOffset: 8,
+                    borderRadius: 5
                 }]
             },
             options: {
@@ -148,11 +157,11 @@
                     label: 'Unidades',
                     data: topQuantities,
                     backgroundColor: [
-                        'rgba(79, 224, 229, 0.8)',
-                        'rgba(129, 140, 248, 0.8)',
-                        'rgba(244, 114, 182, 0.8)',
-                        'rgba(52, 211, 153, 0.8)',
-                        'rgba(251, 191, 36, 0.8)'
+                        'rgba(79, 224, 229, 0.9)',
+                        'rgba(129, 140, 248, 0.9)',
+                        'rgba(244, 114, 182, 0.9)',
+                        'rgba(52, 211, 153, 0.9)',
+                        'rgba(251, 191, 36, 0.9)'
                     ],
                     hoverBackgroundColor: [
                         'rgba(79, 224, 229, 1)',
@@ -161,10 +170,11 @@
                         'rgba(52, 211, 153, 1)',
                         'rgba(251, 191, 36, 1)'
                     ],
-                    borderWidth: 0,
-                    borderRadius: 12,
+                    borderWidth: 2,
+                    borderColor: 'rgba(255, 255, 255, 0.05)',
+                    borderRadius: 8,
                     borderSkipped: false,
-                    barPercentage: 0.6,
+                    barPercentage: 0.5,
                 }]
             },
             options: {

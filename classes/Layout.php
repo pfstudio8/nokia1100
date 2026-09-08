@@ -19,8 +19,8 @@ class Layout
     <script src="' . BASE_URL . '/assets/js/session-cache.js?v=' . time() . '"></script>
 </head>
 <body class="font-sans antialiased text-text-main selection:bg-primary/20 selection:text-primary">
-    <div id="top-right-user" class="fixed top-4 right-6 z-50 hidden md:flex items-center gap-3 bg-surface/80 backdrop-blur-md border border-border px-4 py-2 rounded-full shadow-lg opacity-0 transition-opacity duration-300">
-        <div class="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold text-sm" id="tr-initial"></div>
+    <div id="top-right-user" class="absolute top-4 right-6 z-50 hidden md:flex items-center gap-3 bg-surface/80 backdrop-blur-md border border-border px-4 py-2 rounded-xl shadow-lg opacity-0 transition-opacity duration-300">
+        <div class="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-bold text-sm" id="tr-initial"></div>
         <span id="tr-username" class="text-sm font-medium text-text-main"></span>
     </div>';
     }

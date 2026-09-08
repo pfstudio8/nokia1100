@@ -383,7 +383,7 @@ class AdminController extends BaseController
 
     public function audit()
     {
-        $this->check_access('dashboard'); // El acceso está controlado por los permisos del módulo, ya no se restringe por rol.
+        $this->check_access('auditoria'); 
 
         $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
         $modulo = 'Inventario';
