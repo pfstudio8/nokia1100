@@ -158,10 +158,27 @@ class SalesModel extends BaseModel
 
     public function create_sale_transaction($items, $metodo_pago, $user_id)
     {
+        require_once __DIR__ . '/../../../config/audit.php';
+        
         $this->conn->begin_transaction();
         try {
             $total_venta = 0;
             $fecha = date('Y-m-d H:i:s');
+
+            // Fetch username for explicitly stating it in the log
+            $username_audit = "Desconocido";
+            if ($user_id !== 'guest' && $user_id > 0) {
+                $stmt = $this->conn->prepare("SELECT nombre_usuario FROM usuario WHERE id_usuario = ?");
+                $stmt->bind_param("i", $user_id);
+                $stmt->execute();
+                $res_u = $stmt->get_result();
+                if ($res_u->num_rows > 0) {
+                    $username_audit = $res_u->fetch_assoc()['nombre_usuario'];
+                }
+                $stmt->close();
+            } elseif ($user_id === 'guest') {
+                $username_audit = "Invitado";
+            }
 
             foreach ($items as $item) {
                 $stmt = $this->conn->prepare(
@@ -188,6 +205,7 @@ class SalesModel extends BaseModel
             $id_venta = $this->conn->insert_id;
             $stmt->close();
 
+            $nombres_vendidos = [];
             foreach ($items as $item) {
                 $stmt = $this->conn->prepare(
                     "SELECT p.precio, p.nombre, d.marca, d.modelo
@@ -202,6 +220,8 @@ class SalesModel extends BaseModel
                 $stmt->close();
 
                 $nombre_producto = $prod['nombre'] . ' ' . $prod['marca'] . ' ' . $prod['modelo'];
+                $nombres_vendidos[] = $item['cantidad'] . "x " . $nombre_producto;
+
                 $stmt = $this->conn->prepare(
                     "INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, nombre_producto, precio_copiado)
                      VALUES (?, ?, ?, ?, ?, ?)"
@@ -214,13 +234,18 @@ class SalesModel extends BaseModel
                 $stmt->bind_param("ii", $item['cantidad'], $item['id']);
                 if (!$stmt->execute()) throw new Exception("Error al actualizar stock");
                 $stmt->close();
+
+                // Registrar en la auditoría el descuento de stock para el módulo de Inventario
+                audit_log($this->conn, 'INVENTORY_UPDATE', (int)$user_id, 'Inventario', $item['id'],
+                    "Stock de '$nombre_producto' reducido en {$item['cantidad']} unidades por venta (Usuario: $username_audit)");
             }
 
             $this->conn->commit();
 
-            require_once __DIR__ . '/../../../config/audit.php';
+            $productos_str = implode(", ", $nombres_vendidos);
+
             audit_log($this->conn, 'SALE_CREATE', (int)$user_id, 'venta', $id_venta,
-                "Venta registrada. Total: \$$total_venta. Método: $metodo_pago");
+                "Usuario $username_audit registró venta. Total: \$$total_venta. Método: $metodo_pago. Productos: $productos_str");
 
             return $id_venta;
         } catch (Exception $e) {
@@ -252,27 +277,48 @@ class SalesModel extends BaseModel
             if (!$stmt->execute()) throw new Exception("Error al actualizar el estado de la venta");
             $stmt->close();
 
+            // Fetch username
+            $username_audit = "Desconocido";
+            if ($user_id !== 'guest' && $user_id > 0) {
+                $stmt = $this->conn->prepare("SELECT nombre_usuario FROM usuario WHERE id_usuario = ?");
+                $stmt->bind_param("i", $user_id);
+                $stmt->execute();
+                $res_u = $stmt->get_result();
+                if ($res_u->num_rows > 0) {
+                    $username_audit = $res_u->fetch_assoc()['nombre_usuario'];
+                }
+                $stmt->close();
+            } elseif ($user_id === 'guest') {
+                $username_audit = "Invitado";
+            }
+
             // Devolver stock
-            $stmt = $this->conn->prepare("SELECT id_producto, cantidad FROM detalle_venta WHERE id_venta = ?");
+            $stmt = $this->conn->prepare("SELECT d.id_producto, d.cantidad, d.nombre_producto FROM detalle_venta d WHERE d.id_venta = ?");
             $stmt->bind_param("i", $id_venta);
             $stmt->execute();
             $detalles = $stmt->get_result();
             $items_revertidos = 0;
+            
+            require_once __DIR__ . '/../../../config/audit.php';
             
             while ($row = $detalles->fetch_assoc()) {
                 $stmt_upd = $this->conn->prepare("UPDATE inventario SET cantidad = cantidad + ? WHERE id_producto = ?");
                 $stmt_upd->bind_param("ii", $row['cantidad'], $row['id_producto']);
                 if (!$stmt_upd->execute()) throw new Exception("Error al devolver el stock al inventario");
                 $stmt_upd->close();
+                
+                // Registrar en auditoría el retorno de stock
+                audit_log($this->conn, 'INVENTORY_UPDATE', (int)$user_id, 'Inventario', $row['id_producto'],
+                    "Stock de '{$row['nombre_producto']}' devuelto ({$row['cantidad']} unidades) por anulación de venta (Usuario: $username_audit)");
+                
                 $items_revertidos++;
             }
             $stmt->close();
 
             $this->conn->commit();
 
-            require_once __DIR__ . '/../../../config/audit.php';
             audit_log($this->conn, 'SALE_ROLLBACK', (int)$user_id, 'venta', $id_venta,
-                "Venta anulada. Stock devuelto para $items_revertidos producto(s).");
+                "Venta anulada por usuario $username_audit. Stock devuelto para $items_revertidos producto(s).");
 
             return true;
         } catch (Exception $e) {

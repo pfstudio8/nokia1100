@@ -101,6 +101,15 @@ async function exportTableToExcel(tableId, filename, btnElement) {
                 cells[actionsColIndex].remove();
             }
         });
+
+        // Prepend a nice title row for Excel
+        const titleRow = document.createElement('tr');
+        const titleTd = document.createElement('th');
+        const colCount = clone.querySelector('thead tr').children.length;
+        titleTd.colSpan = colCount > 0 ? colCount : 5;
+        titleTd.innerText = `SISTEMA NOKIA 1100 - REPORTE DE ${filename.toUpperCase()} - ${new Date().toLocaleDateString()}`;
+        titleRow.appendChild(titleTd);
+        clone.querySelector('thead').prepend(titleRow);
         
         const wb = XLSX.utils.table_to_book(clone, { sheet: "Datos" });
         XLSX.writeFile(wb, filename + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
@@ -181,24 +190,28 @@ async function exportTableToPDF(tableId, title, filename, btnElement) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('p', 'mm', 'a4');
         
-        // Cabecera estilizada estilo Nokia 1100 Premium (Dark mode header)
-        doc.setFillColor(17, 17, 19); // #111113
+        // Cabecera estilizada estilo Light Mode / Clean Premium
+        doc.setFillColor(255, 255, 255); 
         doc.rect(0, 0, 210, 30, 'F');
         
-        doc.setTextColor(33, 184, 189); // #21b8bd (Cian)
-        doc.setFontSize(18);
+        doc.setTextColor(17, 24, 39); // Dark Gray
+        doc.setFontSize(22);
         doc.setFont("helvetica", "bold");
-        doc.text("SISTEMA NOKIA 1100", 15, 14);
+        doc.text("NOKIA 1100", 15, 20);
         
-        doc.setTextColor(250, 250, 250); // #FAFAFA
-        doc.setFontSize(12);
+        doc.setTextColor(107, 114, 128); // Gray
+        doc.setFontSize(10);
         doc.setFont("helvetica", "normal");
-        doc.text(title.toUpperCase(), 15, 22);
+        doc.text("SISTEMA DE GESTIÓN", 15, 26);
+        
+        doc.setTextColor(55, 65, 81);
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text(title.toUpperCase(), 195, 20, { align: 'right' });
         
         doc.setFontSize(8);
-        doc.setTextColor(161, 161, 170); // #A1A1AA (Muted)
-        doc.text("Generado el: " + new Date().toLocaleString(), 145, 14);
-        doc.text("Reporte Operativo Oficial", 145, 22);
+        doc.setTextColor(156, 163, 175);
+        doc.text("Generado: " + new Date().toLocaleString(), 195, 26, { align: 'right' });
         
         const table = document.getElementById(tableId);
         if (!table) {
@@ -254,19 +267,22 @@ async function exportTableToPDF(tableId, title, filename, btnElement) {
             startY: 38,
             theme: 'grid',
             styles: {
-                fillColor: [17, 17, 19], // #111113
-                textColor: [240, 240, 240],
-                lineColor: [39, 39, 42], // #27272A
+                fillColor: [255, 255, 255], 
+                textColor: [55, 65, 81],
+                lineColor: [229, 231, 235], // Light gray borders
                 fontSize: 9,
-                font: "helvetica"
+                font: "helvetica",
+                cellPadding: 4
             },
             headStyles: {
-                fillColor: [33, 184, 189], // #21b8bd (Cian)
-                textColor: [10, 10, 11], // #0A0A0B (Dark)
-                fontStyle: 'bold'
+                fillColor: [243, 244, 246], // Very light gray bg
+                textColor: [17, 24, 39], // Almost black text
+                fontStyle: 'bold',
+                lineColor: [209, 213, 219],
+                lineWidth: 0.1
             },
             alternateRowStyles: {
-                fillColor: [24, 24, 27] // #18181B
+                fillColor: [250, 250, 250] // extremely subtle gray
             },
             margin: { left: 15, right: 15 }
         });
