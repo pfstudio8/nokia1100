@@ -156,7 +156,7 @@ class SalesModel extends BaseModel
         return $data;
     }
 
-    public function create_sale_transaction($items, $metodo_pago, $user_id)
+    public function create_sale_transaction($items, $metodo_pago, $user_id, $descripcion = '')
     {
         require_once __DIR__ . '/../../../config/audit.php';
         
@@ -178,6 +178,7 @@ class SalesModel extends BaseModel
                 $stmt->close();
             } elseif ($user_id === 'guest') {
                 $username_audit = "Invitado";
+                $user_id = NULL; 
             }
 
             foreach ($items as $item) {
@@ -199,8 +200,8 @@ class SalesModel extends BaseModel
                 $total_venta += $prod['precio'] * $item['cantidad'];
             }
 
-            $stmt = $this->conn->prepare("INSERT INTO venta (fecha, total, metodo_de_pago) VALUES (?, ?, ?)");
-            $stmt->bind_param("sds", $fecha, $total_venta, $metodo_pago);
+            $stmt = $this->conn->prepare("INSERT INTO venta (fecha, total, metodo_de_pago, id_usuario, descripcion) VALUES (?, ?, ?, ?, ?)");
+            $stmt->bind_param("sdsis", $fecha, $total_venta, $metodo_pago, $user_id, $descripcion);
             if (!$stmt->execute()) throw new Exception("Error al crear venta");
             $id_venta = $this->conn->insert_id;
             $stmt->close();

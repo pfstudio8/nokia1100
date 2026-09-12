@@ -215,25 +215,25 @@ Layout::renderAdminSidebar('usuarios');
 
 <!-- Modal para agregar usuario -->
 <div id="add-user-modal" class="fixed inset-0 bg-background/80 backdrop-blur-[8px] z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-    <div class="glass-card max-w-lg w-full m-4 shadow-2xl relative border border-border/80 transform scale-95 transition-all duration-300 premium-modal-card" style="padding: 2rem; border-top: 4px solid var(--primary-color);">
+    <div class="glass-card max-w-2xl w-full mx-4 my-2 shadow-2xl relative border border-border/80 transform scale-95 transition-all duration-300 premium-modal-card max-h-[95vh] overflow-y-auto scrollbar-hide" style="padding: 1.5rem; border-top: 4px solid var(--primary-color);">
         <button onclick="closeAddUserModal()" style="width: auto; background: transparent; padding: 0.5rem; height: auto; box-shadow: none;" class="absolute top-4 right-4 text-text-muted hover:text-text-main transition-colors bg-transparent border-none cursor-pointer">
             <span class="material-symbols-outlined">close</span>
         </button>
         
-        <div class="mb-6">
-            <h3 class="text-2xl font-display font-medium text-text-main flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary" style="color:var(--primary-color); font-size: 1.8rem;">person_add</span>
+        <div class="mb-4">
+            <h3 class="text-xl font-display font-medium text-text-main flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary" style="color:var(--primary-color); font-size: 1.5rem;">person_add</span>
                 Agregar Nuevo Usuario
             </h3>
-            <p class="text-text-muted text-xs mt-1">Registrar una nueva persona y su cuenta de acceso de forma directa</p>
+            <p class="text-text-muted text-xs mt-0.5">Registrar una nueva persona y su cuenta de acceso</p>
         </div>
 
-        <form id="add-user-form" action="add_user.php" method="POST" class="space-y-4" style="display: flex; flex-direction: column; gap: 1rem;" novalidate>
+        <form id="add-user-form" action="add_user.php" method="POST" class="space-y-3" style="display: flex; flex-direction: column; gap: 0.5rem;" novalidate>
             <!-- Datos Personales -->
-            <div style="border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
-                <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-3" style="color:var(--primary-color);">Datos Personales</h4>
+            <div style="border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                <h4 class="text-[10px] font-bold text-primary uppercase tracking-wider mb-2" style="color:var(--primary-color);">Datos Personales</h4>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.5rem;">
                     <div class="premium-input-container">
                         <label for="modal-nombre">Nombre <span class="text-red-400" style="color:#f87171;">*</span></label>
                         <div class="relative">
@@ -287,9 +287,9 @@ Layout::renderAdminSidebar('usuarios');
 
             <!-- Datos de la Cuenta -->
             <div>
-                <h4 class="text-xs font-bold text-primary uppercase tracking-wider mb-3" style="color:var(--primary-color);">Datos de la Cuenta</h4>
+                <h4 class="text-[10px] font-bold text-primary uppercase tracking-wider mb-2" style="color:var(--primary-color);">Datos de la Cuenta</h4>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.5rem;">
                     <div class="premium-input-container">
                         <label for="modal-username">Usuario <span class="text-red-400" style="color:#f87171;">*</span></label>
                         <div class="relative">
@@ -340,28 +340,27 @@ Layout::renderAdminSidebar('usuarios');
 
 <!-- Modal para editar usuario -->
 <div id="edit-user-modal" class="fixed inset-0 bg-background/80 backdrop-blur-[8px] z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
-    <div class="glass-card max-w-lg w-full m-4 shadow-2xl relative border border-border/80 transform scale-95 transition-all duration-300 premium-modal-card" style="padding: 2rem; border-top: 4px solid var(--secondary-color);">
+    <div class="glass-card max-w-2xl w-full mx-4 my-2 shadow-2xl relative border border-border/80 transform scale-95 transition-all duration-300 premium-modal-card max-h-[95vh] overflow-y-auto scrollbar-hide" style="padding: 1.5rem; border-top: 4px solid var(--secondary-color);">
         <button onclick="closeEditUserModal()" style="width: auto; background: transparent; padding: 0.5rem; height: auto; box-shadow: none;" class="absolute top-4 right-4 text-text-muted hover:text-text-main transition-colors bg-transparent border-none cursor-pointer">
             <span class="material-symbols-outlined">close</span>
         </button>
         
-        <div class="mb-6">
-            <h3 class="text-2xl font-display font-medium text-text-main flex items-center gap-2">
-                <span class="material-symbols-outlined text-secondary" style="color:var(--secondary-color); font-size: 1.8rem;">edit</span>
+        <div class="mb-4">
+            <h3 class="text-xl font-display font-medium text-text-main flex items-center gap-2">
+                <span class="material-symbols-outlined" style="color:var(--secondary-color); font-size: 1.5rem;">manage_accounts</span>
                 Editar Usuario
             </h3>
-            <p class="text-text-muted text-xs mt-1">Modificar los datos personales y de acceso del usuario</p>
+            <p class="text-text-muted text-xs mt-0.5">Modificar datos personales y de acceso</p>
         </div>
 
-        <form id="edit-user-form" action="edit_user.php" method="POST" class="space-y-4" style="display: flex; flex-direction: column; gap: 1rem;" novalidate>
-            <input type="hidden" id="edit-modal-id-usuario" name="id_usuario">
-            <input type="hidden" id="edit-modal-id-persona" name="id_persona">
-
+        <form id="edit-user-form" action="edit_user.php" method="POST" class="space-y-3" style="display: flex; flex-direction: column; gap: 0.5rem;" novalidate>
+            <input type="hidden" id="edit-user-id" name="id_usuario">
+            
             <!-- Datos Personales -->
-            <div style="border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
-                <h4 class="text-xs font-bold text-secondary uppercase tracking-wider mb-3" style="color:var(--secondary-color);">Datos Personales</h4>
+            <div style="border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                <h4 class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:var(--secondary-color);">Datos Personales</h4>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.5rem;">
                     <div class="premium-input-container">
                         <label for="edit-modal-nombre">Nombre <span class="text-red-400" style="color:#f87171;">*</span></label>
                         <div class="relative">
@@ -415,9 +414,9 @@ Layout::renderAdminSidebar('usuarios');
 
             <!-- Datos de la Cuenta -->
             <div>
-                <h4 class="text-xs font-bold text-secondary uppercase tracking-wider mb-3" style="color:var(--secondary-color);">Datos de la Cuenta</h4>
+                <h4 class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:var(--secondary-color);">Datos de la Cuenta</h4>
                 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.5rem;">
                     <div class="premium-input-container">
                         <label for="edit-modal-username">Usuario <span class="text-red-400" style="color:#f87171;">*</span></label>
                         <div class="relative">

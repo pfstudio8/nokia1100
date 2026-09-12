@@ -85,7 +85,14 @@
                 </div>
             </div>
 
-            <div class="footer">
+            <?php if (!empty($venta['descripcion'])): ?>
+            <div class="description-section" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #6c757d;">
+                <h4 style="margin: 0 0 5px 0; font-size: 12px; color: #6c757d; text-transform: uppercase;">Notas / Descripción</h4>
+                <p style="margin: 0; font-size: 13px; color: #333; white-space: pre-wrap;"><?php echo htmlspecialchars($venta['descripcion']); ?></p>
+            </div>
+            <?php endif; ?>
+
+            <div class="footer" style="margin-top: 30px;">
                 <p><strong>¡Gracias por su compra en NOKIA 1100!</strong></p>
                 <p>Este documento es un comprobante de control interno y no es válido como factura fiscal si no se encuentra homologado.</p>
             </div>

@@ -241,6 +241,7 @@ async function submitSaleFromModal() {
     if (confirmBtn.disabled) return;
     
     const metodoPago = document.getElementById('modal_metodo_pago').value;
+    const descripcion = document.getElementById('venta_descripcion') ? document.getElementById('venta_descripcion').value : '';
 
     confirmBtn.disabled = true;
     confirmBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span> Procesando...';
@@ -249,7 +250,7 @@ async function submitSaleFromModal() {
         const response = await fetch('new_sale.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: cart, metodo_pago: metodoPago })
+            body: JSON.stringify({ items: cart, metodo_pago: metodoPago, descripcion: descripcion })
         });
         
         const data = await response.json();

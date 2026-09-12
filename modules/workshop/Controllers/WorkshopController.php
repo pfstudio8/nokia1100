@@ -42,6 +42,7 @@ class WorkshopController extends BaseController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $id_reparacion = $this->workshop_model->create_repair_order(
+                    $_POST['id_cliente_existente'] ?? 0,
                     $_POST['cliente_nombre'] ?? '',
                     $_POST['cliente_telefono'] ?? '',
                     '', // email
@@ -53,14 +54,44 @@ class WorkshopController extends BaseController
                     $_POST['presupuesto'] ?? '',
                     $_SESSION['user_id']
                 );
+
+                // Handle image uploads
+                if (isset($_FILES['fotos']) && is_array($_FILES['fotos']['tmp_name'])) {
+                    $upload_dir = __DIR__ . '/../../../../assets/img/reparaciones/';
+                    if (!is_dir($upload_dir)) {
+                        mkdir($upload_dir, 0777, true);
+                    }
+                    
+                    for ($i = 0; $i < count($_FILES['fotos']['tmp_name']); $i++) {
+                        if ($_FILES['fotos']['error'][$i] === UPLOAD_ERR_OK) {
+                            $tmp_name = $_FILES['fotos']['tmp_name'][$i];
+                            $name = basename($_FILES['fotos']['name'][$i]);
+                            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+                            
+                            // Simple validation
+                            $allowed_types = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                            if (in_array($ext, $allowed_types)) {
+                                $new_name = 'rep_' . $id_reparacion . '_' . time() . '_' . $i . '.' . $ext;
+                                $dest = $upload_dir . $new_name;
+                                if (move_uploaded_file($tmp_name, $dest)) {
+                                    $this->workshop_model->add_repair_image($id_reparacion, $new_name, 'Ingreso');
+                                }
+                            }
+                        }
+                    }
+                }
+
                 $this->redirect("index.php?action=view&id=$id_reparacion&success=created");
             } catch (Exception $e) {
                 $this->redirect("index.php?action=add&error=" . urlencode($e->getMessage()));
             }
         }
 
+        $clients = $this->workshop_model->get_all_clients();
+
         $this->render_view(__DIR__ . '/../Views/add.php', [
-            'error' => $error
+            'error' => $error,
+            'clients' => $clients
         ]);
     }
 
@@ -104,6 +135,60 @@ class WorkshopController extends BaseController
             }
         }
 
+        // Action: add_image
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_image') {
+            try {
+                if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
+                    $upload_dir = __DIR__ . '/../../../../assets/img/reparaciones/';
+                    if (!is_dir($upload_dir)) {
+                        mkdir($upload_dir, 0777, true);
+                    }
+                    
+                    $tmp_name = $_FILES['foto']['tmp_name'];
+                    $name = basename($_FILES['foto']['name']);
+                    $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+                    $tipo = $_POST['tipo_imagen'] ?? 'Progreso';
+                    
+                    $allowed_types = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                    if (in_array($ext, $allowed_types)) {
+                        $new_name = 'rep_' . $id_reparacion . '_' . time() . '.' . $ext;
+                        $dest = $upload_dir . $new_name;
+                        if (move_uploaded_file($tmp_name, $dest)) {
+                            $this->workshop_model->add_repair_image($id_reparacion, $new_name, $tipo);
+                            $this->redirect("index.php?action=view&id=$id_reparacion&success=" . urlencode("Imagen subida correctamente."));
+                        } else {
+                            throw new Exception("Error al guardar la imagen en el servidor.");
+                        }
+                    } else {
+                        throw new Exception("Formato de imagen no permitido.");
+                    }
+                } else {
+                    throw new Exception("No se seleccionó ninguna imagen o hubo un error en la subida.");
+                }
+            } catch (Exception $e) {
+                $this->redirect("index.php?action=view&id=$id_reparacion&error=" . urlencode($e->getMessage()));
+            }
+        }
+
+        // Action: delete_image
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_image') {
+            try {
+                $id_imagen = (int)($_POST['id_imagen'] ?? 0);
+                $ruta_eliminada = $this->workshop_model->delete_repair_image($id_imagen, $id_reparacion);
+                if ($ruta_eliminada) {
+                    $file_path = __DIR__ . '/../../../../assets/img/reparaciones/' . $ruta_eliminada;
+                    if (file_exists($file_path)) {
+                        unlink($file_path);
+                    }
+                    $this->redirect("index.php?action=view&id=$id_reparacion&success=" . urlencode("Imagen eliminada correctamente."));
+                } else {
+                    throw new Exception("Error al eliminar la imagen.");
+                }
+            } catch (Exception $e) {
+                $this->redirect("index.php?action=view&id=$id_reparacion&error=" . urlencode($e->getMessage()));
+            }
+        }
+
         $repair = $this->workshop_model->find_repair_by_id($id_reparacion);
         if (!$repair) {
             $this->redirect("index.php");
@@ -112,12 +197,14 @@ class WorkshopController extends BaseController
         $repuestos = $this->workshop_model->get_repair_repuestos($id_reparacion);
         $historial = $this->workshop_model->get_repair_historial($id_reparacion);
         $productos_opt = $this->workshop_model->get_active_products_in_stock();
+        $images = $this->workshop_model->get_repair_images($id_reparacion);
 
         $this->render_view(__DIR__ . '/../Views/view.php', [
             'repair' => $repair,
             'repuestos' => $repuestos,
             'historial' => $historial,
             'productos_opt' => $productos_opt,
+            'images' => $images,
             'success' => $success,
             'error' => $error,
             'id_reparacion' => $id_reparacion
