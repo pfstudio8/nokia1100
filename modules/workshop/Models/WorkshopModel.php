@@ -105,8 +105,22 @@ class WorkshopModel extends BaseModel
         return $products;
     }
 
-    public function create_repair_order($client_name, $client_phone, $client_email, $brand, $model, $imei, $failure, $notes, $budget, $user_id)
+    public function get_all_clients()
     {
+        $sql = "SELECT id_cliente, nombre, telefono, email FROM cliente ORDER BY nombre ASC";
+        $result = $this->conn->query($sql);
+        $clients = [];
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $clients[] = $row;
+            }
+        }
+        return $clients;
+    }
+
+    public function create_repair_order($id_cliente_existente, $client_name, $client_phone, $client_email, $brand, $model, $imei, $failure, $notes, $budget, $user_id)
+    {
+        $id_cliente_existente = intval($id_cliente_existente);
         $client_name = $this->conn->real_escape_string($client_name);
         $client_phone = $this->conn->real_escape_string($client_phone);
         $client_email = $this->conn->real_escape_string($client_email);
@@ -120,13 +134,17 @@ class WorkshopModel extends BaseModel
 
         $codigo_orden = date('ym') . mt_rand(1000, 9999);
 
-        // Buscar cliente existente o crear uno nuevo
-        $res_client = $this->conn->query("SELECT id_cliente FROM cliente WHERE nombre = '$client_name' AND telefono = '$client_phone'");
-        if ($res_client && $res_client->num_rows > 0) {
-            $id_cliente = $res_client->fetch_assoc()['id_cliente'];
+        if ($id_cliente_existente > 0) {
+            $id_cliente = $id_cliente_existente;
         } else {
-            $this->conn->query("INSERT INTO cliente (nombre, telefono, email) VALUES ('$client_name', '$client_phone', '$client_email')");
-            $id_cliente = $this->conn->insert_id;
+            // Buscar cliente existente o crear uno nuevo
+            $res_client = $this->conn->query("SELECT id_cliente FROM cliente WHERE nombre = '$client_name' AND telefono = '$client_phone'");
+            if ($res_client && $res_client->num_rows > 0) {
+                $id_cliente = $res_client->fetch_assoc()['id_cliente'];
+            } else {
+                $this->conn->query("INSERT INTO cliente (nombre, telefono, email) VALUES ('$client_name', '$client_phone', '$client_email')");
+                $id_cliente = $this->conn->insert_id;
+            }
         }
 
         $sql = "INSERT INTO reparacion (codigo_orden, id_cliente,
@@ -216,6 +234,49 @@ class WorkshopModel extends BaseModel
         } else {
             throw new Exception("No hay stock suficiente de ese repuesto.");
         }
+    }
+
+    public function add_repair_image($id_reparacion, $ruta_archivo, $tipo = 'Ingreso')
+    {
+        $id_reparacion = intval($id_reparacion);
+        $ruta_archivo = $this->conn->real_escape_string($ruta_archivo);
+        $tipo = $this->conn->real_escape_string($tipo);
+        
+        $sql = "INSERT INTO reparacion_imagen (id_reparacion, ruta_archivo, tipo) VALUES ($id_reparacion, '$ruta_archivo', '$tipo')";
+        return $this->conn->query($sql);
+    }
+
+    public function get_repair_images($id_reparacion)
+    {
+        $id_reparacion = intval($id_reparacion);
+        $sql = "SELECT id_imagen, ruta_archivo, tipo, fecha_subida FROM reparacion_imagen WHERE id_reparacion = $id_reparacion ORDER BY fecha_subida ASC";
+        $result = $this->conn->query($sql);
+        $images = [];
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $images[] = $row;
+            }
+        }
+        return $images;
+    }
+
+    public function delete_repair_image($id_imagen, $id_reparacion)
+    {
+        $id_imagen = intval($id_imagen);
+        $id_reparacion = intval($id_reparacion);
+        
+        $sql = "SELECT ruta_archivo FROM reparacion_imagen WHERE id_imagen = $id_imagen AND id_reparacion = $id_reparacion";
+        $result = $this->conn->query($sql);
+        if ($result && $result->num_rows > 0) {
+            $row = $result->fetch_assoc();
+            $ruta = $row['ruta_archivo'];
+            
+            $sql_del = "DELETE FROM reparacion_imagen WHERE id_imagen = $id_imagen AND id_reparacion = $id_reparacion";
+            if ($this->conn->query($sql_del)) {
+                return $ruta;
+            }
+        }
+        return false;
     }
 }
 ?>

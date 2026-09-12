@@ -43,6 +43,7 @@ class SalesController extends BaseController
             if ($input) {
                 $items = $input['items'] ?? [];
                 $metodo_pago = $input['metodo_pago'] ?? '';
+                $descripcion = $input['descripcion'] ?? '';
 
                 if (empty($items) || empty($metodo_pago)) {
                     echo json_encode(['success' => false, 'message' => 'Datos incompletos']);
@@ -50,7 +51,7 @@ class SalesController extends BaseController
                 }
 
                 try {
-                    $id_venta = $this->sales_model->create_sale_transaction($items, $metodo_pago, $_SESSION['user_id']);
+                    $id_venta = $this->sales_model->create_sale_transaction($items, $metodo_pago, $_SESSION['user_id'], $descripcion);
                     echo json_encode(['success' => true, 'message' => 'Venta registrada con éxito', 'id_venta' => $id_venta]);
                 } catch (Exception $e) {
                     echo json_encode(['success' => false, 'message' => $e->getMessage()]);

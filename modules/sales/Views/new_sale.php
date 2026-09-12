@@ -196,6 +196,12 @@ else Layout::renderEmployeeSidebar('ventas');
                     </div>
                 </div>
             </div>
+
+            <!-- Descripción de la Venta -->
+            <div class="mt-4">
+                <label class="block text-[11px] font-bold text-text-muted uppercase tracking-widest mb-2">Descripción / Notas (Opcional)</label>
+                <textarea id="venta_descripcion" rows="2" class="w-full bg-surface border border-border/50 rounded-lg py-2 px-3 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="Ej: Este equipo cuenta con 3 meses de garantía..."></textarea>
+            </div>
         </div>
 
         <!-- Footer -->

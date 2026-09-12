@@ -66,6 +66,50 @@ if ($_SESSION['role'] === 'admin') {
                     <?php endif; ?>
                 </div>
 
+                <!-- FOTOS -->
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="flex justify-between items-center border-b border-border/50 pb-2 mb-4">
+                        <h3 class="text-lg font-display font-medium text-text-main flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary text-xl">photo_camera</span> Fotos del Equipo
+                        </h3>
+                    </div>
+
+                    <form method="POST" action="" enctype="multipart/form-data" class="flex gap-2 mb-6">
+                        <input type="hidden" name="action" value="add_image">
+                        <select name="tipo_imagen" class="bg-surface border border-border px-3 py-2 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
+                            <option value="Progreso">Progreso</option>
+                            <option value="Finalizado">Finalizado</option>
+                            <option value="Otro">Otro</option>
+                        </select>
+                        <input type="file" name="foto" required accept="image/*" class="flex-1 bg-surface border border-border px-3 py-2 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20">
+                        <button type="submit" class="bg-surface hover:bg-surface-hover border border-border px-4 py-2 rounded-lg text-sm font-medium transition-colors text-text-main whitespace-nowrap">Subir Foto</button>
+                    </form>
+
+                    <?php if(!empty($images)): ?>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <?php foreach($images as $img): ?>
+                        <div class="relative group">
+                            <a href="<?php echo BASE_URL; ?>/assets/img/reparaciones/<?php echo htmlspecialchars($img['ruta_archivo']); ?>" target="_blank" class="block aspect-square overflow-hidden rounded-xl border border-border relative">
+                                <img src="<?php echo BASE_URL; ?>/assets/img/reparaciones/<?php echo htmlspecialchars($img['ruta_archivo']); ?>" alt="Foto" class="w-full h-full object-cover hover:scale-110 transition-transform duration-300">
+                            </a>
+                            <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] p-1 text-center font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                <?php echo htmlspecialchars($img['tipo']); ?>
+                            </div>
+                            <form method="POST" action="" class="absolute top-2 right-2">
+                                <input type="hidden" name="action" value="delete_image">
+                                <input type="hidden" name="id_imagen" value="<?php echo $img['id_imagen']; ?>">
+                                <button type="submit" onclick="return confirm('¿Seguro que deseas eliminar esta foto?')" class="w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110">
+                                    <span class="material-symbols-outlined text-[16px]">close</span>
+                                </button>
+                            </form>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php else: ?>
+                        <p class="text-sm text-text-muted text-center py-4">No hay fotos subidas para esta reparación.</p>
+                    <?php endif; ?>
+                </div>
+
                 <!-- REPUESTOS -->
                 <div class="glass-card rounded-2xl p-6">
                     <div class="flex justify-between items-center border-b border-border/50 pb-2 mb-4">
