@@ -327,5 +327,70 @@ class SalesModel extends BaseModel
             throw $e;
         }
     }
+
+    public function get_sales_daily($days = 7)
+    {
+        $days = intval($days);
+        $sql = "SELECT DATE(fecha) as dia, SUM(total) as total_ventas 
+                FROM venta 
+                WHERE fecha >= DATE(NOW()) - INTERVAL $days DAY 
+                GROUP BY DATE(fecha) 
+                ORDER BY dia ASC";
+        $result = $this->conn->query($sql);
+        
+        $labels = [];
+        $data = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $labels[] = $row['dia'];
+                $data[] = $row['total_ventas'];
+            }
+        }
+        return ['labels' => $labels, 'data' => $data];
+    }
+
+    public function get_sales_methods()
+    {
+        $sql = "SELECT m.metodo, SUM(v.total) as total_ventas 
+                FROM venta v
+                JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago
+                WHERE v.fecha >= DATE(NOW()) - INTERVAL 30 DAY
+                GROUP BY m.metodo";
+        $result = $this->conn->query($sql);
+        
+        $labels = [];
+        $data = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $labels[] = $row['metodo'];
+                $data[] = $row['total_ventas'];
+            }
+        }
+        return ['labels' => $labels, 'data' => $data];
+    }
+
+    public function get_top_sales_products($limit = 5)
+    {
+        $limit = intval($limit);
+        $sql = "SELECT p.nombre, SUM(dv.cantidad) as total_vendido
+                FROM detalle_venta dv
+                JOIN inventario i ON dv.id_inventario = i.id_inventario
+                JOIN producto p ON i.id_producto = p.id_producto
+                JOIN venta v ON dv.id_venta = v.id_venta
+                WHERE v.fecha >= DATE(NOW()) - INTERVAL 30 DAY
+                GROUP BY p.id_producto
+                ORDER BY total_vendido DESC LIMIT $limit";
+        $result = $this->conn->query($sql);
+        
+        $labels = [];
+        $data = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $labels[] = $row['nombre'];
+                $data[] = $row['total_vendido'];
+            }
+        }
+        return ['labels' => $labels, 'data' => $data];
+    }
 }
 ?>
