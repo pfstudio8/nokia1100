@@ -272,5 +272,23 @@ class InventoryModel extends BaseModel
         $stmt->close();
         return $logs;
     }
+
+    public function get_critical_stock_details()
+    {
+        $sql = "SELECT p.nombre, i.cantidad, pd.stock_minimo, pd.marca, pd.modelo 
+                FROM inventario i
+                JOIN producto_detalle pd ON i.id_producto = pd.id_producto
+                JOIN producto p ON i.id_producto = p.id_producto
+                WHERE p.is_active = 1 AND i.cantidad <= pd.stock_minimo
+                ORDER BY i.cantidad ASC";
+        $result = $this->conn->query($sql);
+        $products = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $products[] = $row;
+            }
+        }
+        return $products;
+    }
 }
 ?>

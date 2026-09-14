@@ -278,5 +278,21 @@ class WorkshopModel extends BaseModel
         }
         return false;
     }
+
+    public function get_all_repairs_for_report()
+    {
+        $sql = "SELECT r.*, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono 
+                FROM reparacion r
+                LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
+                ORDER BY r.fecha_ingreso DESC";
+        $result = $this->conn->query($sql);
+        $repairs = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $repairs[] = $row;
+            }
+        }
+        return $repairs;
+    }
 }
 ?>
