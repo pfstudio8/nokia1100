@@ -110,7 +110,7 @@ class Layout
             ['id' => 'taller', 'url' => BASE_URL . '/modules/workshop/index.php', 'icon' => 'home_repair_service', 'label' => 'Taller'],
             ['id' => 'clientes', 'url' => BASE_URL . '/modules/clients/clients.php', 'icon' => 'contact_page', 'label' => 'Clientes'],
             ['id' => 'ventas', 'url' => BASE_URL . '/modules/sales/sales.php', 'icon' => 'payments', 'label' => 'Ventas'],
-            ['id' => 'graficos', 'url' => BASE_URL . '/modules/sales/sales_charts.php', 'icon' => 'bar_chart', 'label' => 'Estadísticas'],
+            ['id' => 'reportes', 'url' => BASE_URL . '/modules/reports/index.php', 'icon' => 'analytics', 'label' => 'Reportes'],
             ['id' => 'proveedores', 'url' => BASE_URL . '/modules/suppliers/suppliers.php', 'icon' => 'local_shipping', 'label' => 'Proveedores'],
             ['id' => 'auditoria', 'url' => BASE_URL . '/modules/admin/audit.php', 'icon' => 'security', 'label' => 'Auditoría'],
             ['id' => 'perfil', 'url' => BASE_URL . '/modules/admin/profile.php', 'icon' => 'person', 'label' => 'Mi Perfil'],
