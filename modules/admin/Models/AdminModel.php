@@ -355,5 +355,42 @@ class AdminModel extends BaseModel
         $stmt->close();
         return $logs;
     }
+
+    public function get_financial_stats()
+    {
+        $sql = "
+            SELECT 
+                m.mes,
+                COALESCE(v.total_ventas, 0) AS ingresos,
+                COALESCE(c.total_compras, 0) AS gastos
+            FROM (
+                SELECT DATE_FORMAT(DATE_SUB(NOW(), INTERVAL i MONTH), '%Y-%m') AS mes
+                FROM (SELECT 0 as i UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5) temp
+            ) m
+            LEFT JOIN (
+                SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(total) AS total_ventas
+                FROM venta
+                GROUP BY DATE_FORMAT(fecha, '%Y-%m')
+            ) v ON m.mes = v.mes
+            LEFT JOIN (
+                SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(total) AS total_compras
+                FROM compra
+                GROUP BY DATE_FORMAT(fecha, '%Y-%m')
+            ) c ON m.mes = c.mes
+            ORDER BY m.mes ASC;
+        ";
+        $result = $this->conn->query($sql);
+        $labels = [];
+        $ingresos = [];
+        $gastos = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $labels[] = $row['mes'];
+                $ingresos[] = $row['ingresos'];
+                $gastos[] = $row['gastos'];
+            }
+        }
+        return ['labels' => $labels, 'ingresos' => $ingresos, 'gastos' => $gastos];
+    }
 }
 ?>

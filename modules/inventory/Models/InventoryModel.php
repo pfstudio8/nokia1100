@@ -290,5 +290,46 @@ class InventoryModel extends BaseModel
         }
         return $products;
     }
+
+    public function get_stock_stats()
+    {
+        $sql = "SELECT 
+                SUM(CASE WHEN i.cantidad > pd.stock_minimo THEN 1 ELSE 0 END) as sano,
+                SUM(CASE WHEN i.cantidad > 0 AND i.cantidad <= pd.stock_minimo THEN 1 ELSE 0 END) as bajo,
+                SUM(CASE WHEN i.cantidad = 0 THEN 1 ELSE 0 END) as agotado
+                FROM inventario i
+                JOIN producto_detalle pd ON i.id_producto = pd.id_producto
+                JOIN producto p ON i.id_producto = p.id_producto
+                WHERE p.is_active = 1";
+        $result = $this->conn->query($sql);
+        if ($result && $row = $result->fetch_assoc()) {
+            return [
+                'sano' => (int)$row['sano'],
+                'bajo' => (int)$row['bajo'],
+                'agotado' => (int)$row['agotado']
+            ];
+        }
+        return ['sano' => 0, 'bajo' => 0, 'agotado' => 0];
+    }
+    
+    public function get_top_value_products($limit = 5)
+    {
+        $limit = intval($limit);
+        $sql = "SELECT p.nombre, (p.precio * i.cantidad) as valor_total
+                FROM inventario i
+                JOIN producto p ON i.id_producto = p.id_producto
+                WHERE p.is_active = 1 AND i.cantidad > 0
+                ORDER BY valor_total DESC LIMIT $limit";
+        $result = $this->conn->query($sql);
+        $products = [];
+        $values = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $products[] = $row['nombre'];
+                $values[] = $row['valor_total'];
+            }
+        }
+        return ['products' => $products, 'values' => $values];
+    }
 }
 ?>
