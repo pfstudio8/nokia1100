@@ -178,7 +178,7 @@ class Layout
 
         $links = [
             ['id' => 'dashboard', 'url' => BASE_URL . '/modules/employee/dashboard.php', 'icon' => 'home', 'label' => 'Inicio'],
-            ['id' => 'venta', 'url' => BASE_URL . '/modules/sales/new_sale.php', 'icon' => 'point_of_sale', 'label' => 'Generar Venta'],
+            ['id' => 'venta', 'url' => BASE_URL . '/modules/sales/index.php?action=new_sale', 'icon' => 'point_of_sale', 'label' => 'Generar Venta'],
             ['id' => 'taller', 'url' => BASE_URL . '/modules/workshop/index.php', 'icon' => 'home_repair_service', 'label' => 'Taller'],
             ['id' => 'clientes', 'url' => BASE_URL . '/modules/clients/clients.php', 'icon' => 'contact_page', 'label' => 'Clientes'],
             ['id' => 'inventario', 'url' => BASE_URL . '/modules/inventory/inventory.php', 'icon' => 'inventory_2', 'label' => 'Consultar Stock'],
