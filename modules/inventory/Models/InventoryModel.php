@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // modules/inventory/Models/InventoryModel.php
 
 require_once __DIR__ . '/../../../classes/BaseModel.php';
@@ -312,24 +312,49 @@ class InventoryModel extends BaseModel
         return ['sano' => 0, 'bajo' => 0, 'agotado' => 0];
     }
     
+    public function get_stock_by_brand()
+    {
+        $sql = "SELECT COALESCE(pd.marca, 'Otros') as marca, SUM(i.cantidad) as total_stock
+                FROM inventario i
+                JOIN producto p ON i.id_producto = p.id_producto
+                JOIN producto_detalle pd ON i.id_producto = pd.id_producto
+                WHERE p.is_active = 1
+                GROUP BY pd.marca
+                ORDER BY total_stock DESC
+                LIMIT 5";
+        $result = $this->conn->query($sql);
+        $labels = [];
+        $values = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $labels[] = $row['marca'];
+                $values[] = (int)$row['total_stock'];
+            }
+        }
+        return ['labels' => $labels, 'values' => $values];
+    }
+
     public function get_top_value_products($limit = 5)
     {
         $limit = intval($limit);
-        $sql = "SELECT p.nombre, (p.precio * i.cantidad) as valor_total
+        $sql = "SELECT TRIM(CONCAT(d.marca, ' ', d.modelo)) as product_name, i.cantidad as stock_quantity
                 FROM inventario i
                 JOIN producto p ON i.id_producto = p.id_producto
+                JOIN producto_detalle d ON p.id_producto = d.id_producto
                 WHERE p.is_active = 1 AND i.cantidad > 0
-                ORDER BY valor_total DESC LIMIT $limit";
+                ORDER BY i.cantidad DESC LIMIT $limit";
         $result = $this->conn->query($sql);
         $products = [];
         $values = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
-                $products[] = $row['nombre'];
-                $values[] = $row['valor_total'];
+                $products[] = $row['product_name'];
+                $values[] = $row['stock_quantity'];
             }
         }
         return ['products' => $products, 'values' => $values];
     }
 }
 ?>
+
+

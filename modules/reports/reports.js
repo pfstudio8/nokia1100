@@ -17,56 +17,80 @@ document.addEventListener('DOMContentLoaded', () => {
         const charts = {};
 
         function renderFinancial() {
-            if (charts.financial) return;
-            if (document.getElementById('financialChart') && data.financial && data.financial.labels) {
-                charts.financial = new Chart(document.getElementById('financialChart').getContext('2d'), {
-                    type: 'line',
-                    data: {
-                        labels: data.financial.labels,
-                        datasets: [
-                            { label: 'Ingresos (Ventas)', data: data.financial.ingresos, borderColor: '#4FE0E5', backgroundColor: 'rgba(79, 224, 229, 0.1)', borderWidth: 2, fill: true, tension: 0.4 },
-                            { label: 'Gastos (Compras)', data: data.financial.gastos, borderColor: '#F472B6', backgroundColor: 'rgba(244, 114, 182, 0.1)', borderWidth: 2, fill: true, tension: 0.4 }
-                        ]
+            if (charts.revenueCategory) return;
+            
+            if (document.getElementById('revenueCategoryChart') && data.revenueCategory && data.revenueCategory.labels) {
+                charts.revenueCategory = new Chart(document.getElementById('revenueCategoryChart').getContext('2d'), {
+                    type: 'bar',
+                    data: { 
+                        labels: data.revenueCategory.labels, 
+                        datasets: [{ 
+                            label: 'Ingresos', 
+                            data: data.revenueCategory.values, 
+                            backgroundColor: 'rgba(79, 224, 229, 0.8)', 
+                            borderColor: '#4FE0E5', 
+                            borderWidth: 1, 
+                            borderRadius: 4 
+                        }] 
                     },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: textMuted, font: { family: 'Inter' } } } }, scales: { y: { grid: { color: border }, ticks: { color: textMuted } }, x: { grid: { color: border }, ticks: { color: textMuted } } } }
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(context.raw); } } } }, scales: { y: { grid: { color: border }, ticks: { color: textMuted, callback: function(value) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', notation: 'compact' }).format(value); } } }, x: { grid: { display: false }, ticks: { color: textMuted, font: { family: 'Inter' } } } } }
+                });
+            }
+
+            if (document.getElementById('topProfitableChart') && data.topProfitable && data.topProfitable.names) {
+                charts.topProfitable = new Chart(document.getElementById('topProfitableChart').getContext('2d'), {
+                    type: 'bar',
+                    data: { 
+                        labels: data.topProfitable.names, 
+                        datasets: [{ 
+                            label: 'Rentabilidad', 
+                            data: data.topProfitable.values, 
+                            backgroundColor: 'rgba(244, 114, 182, 0.8)', 
+                            borderColor: '#F472B6', 
+                            borderWidth: 1, 
+                            borderRadius: 4 
+                        }] 
+                    },
+                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(context) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(context.raw); } } } }, scales: { x: { grid: { color: border }, ticks: { color: textMuted, callback: function(value) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', notation: 'compact' }).format(value); } } }, y: { grid: { display: false }, ticks: { color: textMuted, font: { family: 'Inter' } } } } }
                 });
             }
         }
 
         function renderInventory() {
-            if (charts.inventory1) return;
-            if (document.getElementById('stockStateChart') && data.stock && typeof data.stock.sano !== 'undefined') {
-                charts.inventory1 = new Chart(document.getElementById('stockStateChart').getContext('2d'), {
+            if (charts.inventory2) return;
+            
+            if (document.getElementById('stockByBrandChart') && data.stockBrand && data.stockBrand.labels) {
+                charts.inventory1 = new Chart(document.getElementById('stockByBrandChart').getContext('2d'), {
                     type: 'doughnut',
-                    data: { labels: ['Sano', 'Crítico', 'Agotado'], datasets: [{ data: [data.stock.sano, data.stock.bajo, data.stock.agotado], backgroundColor: ['#34D399', '#FBBF24', '#EF4444'], borderColor: '#111113', borderWidth: 4 }] },
-                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { color: textMuted, font: { family: 'Inter', size: 12 }, padding: 20 } }, tooltip: { backgroundColor: 'rgba(17, 17, 19, 0.9)', titleColor: textMain, bodyColor: '#fff', borderColor: border, borderWidth: 1, padding: 12 } } }
+                    data: { labels: data.stockBrand.labels, datasets: [{ data: data.stockBrand.values, backgroundColor: ['#4FE0E5', '#F472B6', '#818CF8', '#FBBF24', '#34D399'], borderColor: '#111113', borderWidth: 4 }] },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { color: textMuted, font: { family: 'Inter', size: 12 }, padding: 20 } } } }
                 });
             }
 
             if (document.getElementById('topValueChart') && data.topValue && data.topValue.products) {
                 charts.inventory2 = new Chart(document.getElementById('topValueChart').getContext('2d'), {
                     type: 'bar',
-                    data: { labels: data.topValue.products, datasets: [{ label: 'Valor en Stock ($)', data: data.topValue.values, backgroundColor: 'rgba(244, 114, 182, 0.8)', borderColor: '#F472B6', borderWidth: 1, borderRadius: 4 }] },
-                    options: { indexAxis: 'x', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(17, 17, 19, 0.9)', titleColor: textMain, bodyColor: '#F472B6', borderColor: border, borderWidth: 1, padding: 12, callbacks: { label: (c) => '$' + c.raw.toFixed(2) } } }, scales: { x: { grid: { display: false }, ticks: { color: textMuted, font: { family: 'Inter' } } }, y: { grid: { color: border }, ticks: { color: textMuted, font: { family: 'Inter' } } } } }
+                    data: { labels: data.topValue.products.map(name => { if(name.length > 12 && name.indexOf(' ') !== -1) { let p = name.split(' '); return [p[0], p.slice(1).join(' ').substring(0, 12) + (p.slice(1).join(' ').length > 12 ? '...' : '')]; } return name; }), datasets: [{ label: 'Cantidad en Stock', data: data.topValue.values, backgroundColor: 'rgba(244, 114, 182, 0.8)', borderColor: '#F472B6', borderWidth: 1, borderRadius: 4 }] },
+                    options: { indexAxis: 'x', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(17, 17, 19, 0.9)', titleColor: textMain, bodyColor: '#F472B6', borderColor: border, borderWidth: 1, padding: 12, callbacks: { label: (c) => c.raw } } }, scales: { x: { grid: { display: false }, ticks: { color: textMuted, font: { family: 'Inter' } } }, y: { grid: { color: border }, ticks: { color: textMuted, font: { family: 'Inter' } } } } }
                 });
             }
         }
 
         function renderSales() {
             if (charts.sales1) return;
-            if (document.getElementById('topSalesChart') && data.topSales && data.topSales.products) {
+            if (document.getElementById('topSalesChart') && data.topSales && data.topSales.names) {
                 charts.sales1 = new Chart(document.getElementById('topSalesChart').getContext('2d'), {
                     type: 'bar',
-                    data: { labels: data.topSales.products, datasets: [{ label: 'Unidades Vendidas', data: data.topSales.amounts, backgroundColor: 'rgba(79, 224, 229, 0.8)', borderColor: '#4FE0E5', borderWidth: 1, borderRadius: 4 }] },
+                    data: { labels: data.topSales.names, datasets: [{ label: 'Unidades Vendidas', data: data.topSales.quantities, backgroundColor: 'rgba(79, 224, 229, 0.8)', borderColor: '#4FE0E5', borderWidth: 1, borderRadius: 4 }] },
                     options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { color: border }, ticks: { color: textMuted, font: { family: 'Inter' }, precision: 0 } }, y: { grid: { display: false }, ticks: { color: textMuted, font: { family: 'Inter' } } } } }
                 });
             }
 
-            if (document.getElementById('salesChart') && data.salesDaily && data.salesDaily.dates) {
-                charts.sales2 = new Chart(document.getElementById('salesChart').getContext('2d'), {
-                    type: 'line',
-                    data: { labels: data.salesDaily.dates, datasets: [{ label: 'Ventas Totales ($)', data: data.salesDaily.totals, backgroundColor: 'rgba(79, 224, 229, 0.2)', borderColor: primary, borderWidth: 2, fill: true, tension: 0.4 }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: border }, ticks: { color: textMuted } }, x: { grid: { color: border }, ticks: { color: textMuted } } } }
+            if (document.getElementById('salesCategoryChart') && data.salesCategory && data.salesCategory.labels) {
+                charts.sales2 = new Chart(document.getElementById('salesCategoryChart').getContext('2d'), {
+                    type: 'bar',
+                    data: { labels: data.salesCategory.labels, datasets: [{ label: 'Unidades', data: data.salesCategory.values, backgroundColor: 'rgba(79, 224, 229, 0.8)', borderColor: '#4FE0E5', borderWidth: 1, borderRadius: 4 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: border }, ticks: { color: textMuted } }, x: { grid: { display: false }, ticks: { color: textMuted, font: { family: 'Inter' } } } } }
                 });
             }
 
@@ -75,6 +99,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     type: 'doughnut',
                     data: { labels: data.salesMethods.methods, datasets: [{ data: data.salesMethods.amounts, backgroundColor: ['#4FE0E5', '#F472B6', '#818CF8', '#FBBF24', '#34D399'], borderColor: '#111113', borderWidth: 4 }] },
                     options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { color: textMuted, font: { family: 'Inter', size: 12 }, padding: 20 } } } }
+                });
+            }
+        }
+
+        function renderWorkshop() {
+            if (charts.workshop1) return;
+            if (document.getElementById('repairStatusChart') && data.repairStatus && data.repairStatus.labels) {
+                const statusColors = {
+                    'Recibido': '#818CF8', 'En diagnóstico': '#FBBF24', 'En reparación': '#FBBF24',
+                    'Listo': '#34D399', 'Entregado': '#4FE0E5', 'Cancelado': '#EF4444'
+                };
+                const colors = data.repairStatus.labels.map(l => statusColors[l] || '#A1A1AA');
+                charts.workshop1 = new Chart(document.getElementById('repairStatusChart').getContext('2d'), {
+                    type: 'doughnut',
+                    data: { labels: data.repairStatus.labels, datasets: [{ data: data.repairStatus.counts, backgroundColor: colors, borderColor: '#111113', borderWidth: 4 }] },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { legend: { position: 'bottom', labels: { color: textMuted, font: { family: 'Inter', size: 12 }, padding: 20 } } } }
+                });
+            }
+
+            if (document.getElementById('repairByBrandChart') && data.repairBrand && data.repairBrand.labels) {
+                charts.workshop2 = new Chart(document.getElementById('repairByBrandChart').getContext('2d'), {
+                    type: 'bar',
+                    data: { labels: data.repairBrand.labels, datasets: [{ label: 'Reparaciones', data: data.repairBrand.counts, backgroundColor: 'rgba(244, 114, 182, 0.8)', borderColor: '#F472B6', borderWidth: 1, borderRadius: 4 }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { grid: { color: border }, ticks: { color: textMuted, precision: 0 } }, x: { grid: { display: false }, ticks: { color: textMuted, font: { family: 'Inter' } } } } }
                 });
             }
         }
@@ -98,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if(targetId === 'tab-finanzas') renderFinancial();
                         if(targetId === 'tab-inventario') renderInventory();
                         if(targetId === 'tab-ventas') renderSales();
+                        if(targetId === 'tab-taller') renderWorkshop();
                     } else {
                         content.classList.add('hidden');
                         content.classList.remove('block');
