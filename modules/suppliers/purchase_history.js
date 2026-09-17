@@ -6,8 +6,19 @@ function toggleDetails(id) {
     }
 }
 
-function receivePurchase(id) {
-    if (confirm('¿Está seguro que desea marcar este pedido como recibido? Esto actualizará el stock en el inventario.')) {
+async function receivePurchase(id) {
+    let isConfirmed = false;
+    if (typeof showConfirmModal === 'function') {
+        isConfirmed = await showConfirmModal(
+            'Recibir Pedido',
+            'Esto actualizará el stock en el inventario. ¿Confirmás?',
+            'Sí, recibir', 'Cancelar', false
+        );
+    } else {
+        isConfirmed = confirm('¿Está seguro que desea marcar este pedido como recibido? Esto actualizará el stock en el inventario.');
+    }
+
+    if (isConfirmed) {
         fetch('index.php?action=receive_purchase', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -26,8 +37,19 @@ function receivePurchase(id) {
     }
 }
 
-function cancelPurchase(id) {
-    if (confirm('¿Está seguro que desea cancelar este pedido? Esta acción no se puede deshacer.')) {
+async function cancelPurchase(id) {
+    let isConfirmed = false;
+    if (typeof showConfirmModal === 'function') {
+        isConfirmed = await showConfirmModal(
+            'Cancelar Pedido',
+            'Esta acción no se puede deshacer. ¿Confirmás la cancelación?',
+            'Sí, cancelar', 'Volver', true
+        );
+    } else {
+        isConfirmed = confirm('¿Está seguro que desea cancelar este pedido? Esta acción no se puede deshacer.');
+    }
+
+    if (isConfirmed) {
         fetch('index.php?action=cancel_purchase', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
