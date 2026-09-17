@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // modules/sales/Models/SalesModel.php
 
 require_once __DIR__ . '/../../../classes/BaseModel.php';
@@ -112,10 +112,10 @@ class SalesModel extends BaseModel
     public function get_top_products($limit = 5)
     {
         $limit = (int) $limit;
-        $sql = "SELECT p.nombre, SUM(dv.cantidad) as total_vendido 
+        $sql = "SELECT CONCAT(pd.marca, ' ', pd.modelo) as nombre_real, SUM(dv.cantidad) as total_vendido 
                 FROM detalle_venta dv
                 JOIN venta v ON dv.id_venta = v.id_venta
-                JOIN producto p ON dv.id_producto = p.id_producto
+                JOIN producto_detalle pd ON dv.id_producto = pd.id_producto
                 WHERE v.estado = 'completada'
                 GROUP BY dv.id_producto
                 ORDER BY total_vendido DESC
@@ -125,11 +125,78 @@ class SalesModel extends BaseModel
         $quantities = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
-                $names[] = $row['nombre'];
-                $quantities[] = $row['total_vendido'];
+                $names[] = $row['nombre_real'];
+                $quantities[] = (int)$row['total_vendido'];
             }
         }
         return ['names' => $names, 'quantities' => $quantities];
+    }
+
+    public function get_revenue_by_category()
+    {
+        $sql = "SELECT COALESCE(pd.categoria, 'Otros') as categoria, SUM(dv.cantidad * dv.precio_unitario) as total_ingresos
+                FROM detalle_venta dv
+                JOIN venta v ON dv.id_venta = v.id_venta
+                JOIN producto_detalle pd ON dv.id_producto = pd.id_producto
+                WHERE v.estado = 'completada'
+                GROUP BY pd.categoria
+                ORDER BY total_ingresos DESC";
+        $result = $this->conn->query($sql);
+        $labels = [];
+        $values = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $labels[] = $row['categoria'];
+                $values[] = (float)$row['total_ingresos'];
+            }
+        }
+        return ['labels' => $labels, 'values' => $values];
+    }
+
+    public function get_top_profitable_products($limit = 5)
+    {
+        $limit = (int) $limit;
+        $sql = "SELECT CONCAT(pd.marca, ' ', pd.modelo) as nombre_real, 
+                        SUM((dv.precio_unitario - p.precio_costo) * dv.cantidad) as rentabilidad
+                FROM detalle_venta dv
+                JOIN venta v ON dv.id_venta = v.id_venta
+                JOIN producto p ON dv.id_producto = p.id_producto
+                JOIN producto_detalle pd ON p.id_producto = pd.id_producto
+                WHERE v.estado = 'completada'
+                GROUP BY dv.id_producto
+                ORDER BY rentabilidad DESC
+                LIMIT $limit";
+        $result = $this->conn->query($sql);
+        $names = [];
+        $values = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $names[] = $row['nombre_real'];
+                $values[] = (float)$row['rentabilidad'];
+            }
+        }
+        return ['names' => $names, 'values' => $values];
+    }
+
+    public function get_sales_by_category()
+    {
+        $sql = "SELECT COALESCE(pd.categoria, 'Otros') as categoria, SUM(dv.cantidad) as total_unidades
+                FROM detalle_venta dv
+                JOIN venta v ON dv.id_venta = v.id_venta
+                JOIN producto_detalle pd ON dv.id_producto = pd.id_producto
+                WHERE v.estado = 'completada'
+                GROUP BY pd.categoria
+                ORDER BY total_unidades DESC";
+        $result = $this->conn->query($sql);
+        $labels = [];
+        $values = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $labels[] = $row['categoria'];
+                $values[] = (int)$row['total_unidades'];
+            }
+        }
+        return ['labels' => $labels, 'values' => $values];
     }
 
     public function get_sales_export_data()
@@ -394,3 +461,4 @@ class SalesModel extends BaseModel
     }
 }
 ?>
+

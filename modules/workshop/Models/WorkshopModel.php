@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // modules/workshop/Models/WorkshopModel.php
 
 require_once __DIR__ . '/../../../classes/BaseModel.php';
@@ -279,6 +279,43 @@ class WorkshopModel extends BaseModel
         return false;
     }
 
+    public function get_repair_status_stats()
+    {
+        $sql = "SELECT estado, COUNT(*) as total
+                FROM reparacion
+                GROUP BY estado
+                ORDER BY FIELD(estado, 'Recibido','En diagnóstico','En reparación','Listo','Entregado','Cancelado')";
+        $result = $this->conn->query($sql);
+        $labels = [];
+        $counts = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $labels[] = $row['estado'];
+                $counts[] = (int)$row['total'];
+            }
+        }
+        return ['labels' => $labels, 'counts' => $counts];
+    }
+
+    public function get_repairs_by_brand()
+    {
+        $sql = "SELECT equipo_marca, COUNT(*) as total
+                FROM reparacion
+                GROUP BY equipo_marca
+                ORDER BY total DESC
+                LIMIT 5";
+        $result = $this->conn->query($sql);
+        $labels = [];
+        $counts = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $labels[] = $row['equipo_marca'];
+                $counts[] = (int)$row['total'];
+            }
+        }
+        return ['labels' => $labels, 'counts' => $counts];
+    }
+
     public function get_all_repairs_for_report()
     {
         $sql = "SELECT r.*, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono 
@@ -296,3 +333,4 @@ class WorkshopModel extends BaseModel
     }
 }
 ?>
+

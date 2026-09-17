@@ -25,10 +25,18 @@ Layout::renderAdminSidebar('reportes');
 
         <!-- CONTENIDO: FINANCIERO -->
         <div id="tab-finanzas" class="tab-content block">
-            <div class="bg-surface/30 p-6 rounded-2xl border border-border/30 h-[60vh]">
-                <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase mb-4">Ingresos vs Compras (Últimos 6 Meses)</h3>
-                <div class="w-full h-full pb-8">
-                    <canvas id="financialChart"></canvas>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                <div class="bg-surface/30 p-6 rounded-2xl border border-border/30 h-[50vh]">
+                    <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase mb-4">Ingresos por Categoría</h3>
+                    <div class="w-full h-full pb-8">
+                        <canvas id="revenueCategoryChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-surface/30 p-6 rounded-2xl border border-border/30 h-[50vh]">
+                    <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase mb-4">Top 5 Productos más Rentables</h3>
+                    <div class="w-full h-full pb-8">
+                        <canvas id="topProfitableChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -36,16 +44,65 @@ Layout::renderAdminSidebar('reportes');
         <!-- CONTENIDO: INVENTARIO -->
         <div id="tab-inventario" class="tab-content hidden">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                <div class="bg-surface/30 p-6 rounded-2xl border border-border/30 h-[50vh] flex flex-col items-center">
+                <div class="bg-surface/30 p-6 rounded-2xl border border-border/30 h-[50vh] flex flex-col">
                     <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase mb-4 w-full text-left">Salud del Stock</h3>
-                    <div class="w-full h-full flex items-center justify-center pb-8">
-                        <canvas id="stockStateChart"></canvas>
+                    <div class="w-full h-full flex flex-col gap-3 justify-center pb-8">
+                        <!-- Item Sano -->
+                        <div class="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-background/50 hover:bg-surface/50 transition-colors">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400">
+                                    <span class="material-symbols-outlined">check_circle</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-text-main font-semibold text-sm">Sano</h4>
+                                    <p class="text-text-muted text-xs mt-0.5">Stock por encima del nivel mínimo requerido</p>
+                                </div>
+                            </div>
+                            <span class="text-xl font-bold text-text-main"><?php echo $stock_stats['sano']; ?></span>
+                        </div>
+
+                        <!-- Item Crítico -->
+                        <div class="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-background/50 hover:bg-surface/50 transition-colors">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400">
+                                    <span class="material-symbols-outlined">warning</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-text-main font-semibold text-sm">Crítico</h4>
+                                    <p class="text-text-muted text-xs mt-0.5">Stock bajo, requiere reabastecimiento pronto</p>
+                                </div>
+                            </div>
+                            <span class="text-xl font-bold text-text-main"><?php echo $stock_stats['bajo']; ?></span>
+                        </div>
+
+                        <!-- Item Agotado -->
+                        <div class="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-background/50 hover:bg-surface/50 transition-colors">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+                                    <span class="material-symbols-outlined">block</span>
+                                </div>
+                                <div>
+                                    <h4 class="text-text-main font-semibold text-sm">Agotado</h4>
+                                    <p class="text-text-muted text-xs mt-0.5">Sin unidades disponibles, ventas bloqueadas</p>
+                                </div>
+                            </div>
+                            <span class="text-xl font-bold text-text-main"><?php echo $stock_stats['agotado']; ?></span>
+                        </div>
                     </div>
                 </div>
                 <div class="lg:col-span-2 bg-surface/30 p-6 rounded-2xl border border-border/30 h-[50vh]">
-                    <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase mb-4">Top 5 Productos por Valor de Inventario</h3>
+                    <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase mb-4">Top 5 Productos con Mayor Stock</h3>
                     <div class="w-full h-full pb-8">
                         <canvas id="topValueChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="bg-surface/30 p-6 rounded-2xl border border-border/30 h-[50vh] flex flex-col items-center">
+                    <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase mb-4 w-full text-left">Distribución de stock por marca</h3>
+                    <div class="w-full h-full flex items-center justify-center pb-8">
+                        <canvas id="stockByBrandChart"></canvas>
                     </div>
                 </div>
             </div>
@@ -109,9 +166,9 @@ Layout::renderAdminSidebar('reportes');
                     </div>
                 </div>
                 <div class="lg:col-span-2 bg-surface/30 p-6 rounded-2xl border border-border/30 h-[50vh]">
-                    <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase mb-4">Ventas por Día (Últimos 30 días)</h3>
+                    <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase mb-4">Ventas por Categoría (unidades)</h3>
                     <div class="w-full h-full pb-8">
-                        <canvas id="salesChart"></canvas>
+                        <canvas id="salesCategoryChart"></canvas>
                     </div>
                 </div>
                 <div class="bg-surface/30 p-6 rounded-2xl border border-border/30 h-[50vh] flex flex-col items-center">
@@ -125,6 +182,20 @@ Layout::renderAdminSidebar('reportes');
 
         <!-- CONTENIDO: TALLER -->
         <div id="tab-taller" class="tab-content hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="bg-surface/30 p-6 rounded-2xl border border-border/30 h-[50vh] flex flex-col items-center">
+                    <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase mb-4 w-full text-left">Estado de Reparaciones</h3>
+                    <div class="w-full h-full flex items-center justify-center pb-8">
+                        <canvas id="repairStatusChart"></canvas>
+                    </div>
+                </div>
+                <div class="lg:col-span-2 bg-surface/30 p-6 rounded-2xl border border-border/30 h-[50vh]">
+                    <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase mb-4">Reparaciones por marca de equipo</h3>
+                    <div class="w-full h-full pb-8">
+                        <canvas id="repairByBrandChart"></canvas>
+                    </div>
+                </div>
+            </div>
             <div class="bg-surface/30 p-6 rounded-2xl border border-border/30">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase">Historial de Reparaciones</h3>
@@ -184,12 +255,22 @@ Layout::renderAdminSidebar('reportes');
 <script>
     window.reportsData = {
         financial: <?php echo json_encode($financial ?? []); ?>,
+        revenueCategory: <?php echo json_encode($revenue_category ?? []); ?>,
+        topProfitable: <?php echo json_encode($top_profitable ?? []); ?>,
         stock: <?php echo json_encode($stock_stats ?? []); ?>,
         topValue: <?php echo json_encode($top_value ?? []); ?>,
+        stockBrand: <?php echo json_encode($stock_brand ?? []); ?>,
         salesDaily: <?php echo json_encode($sales_daily ?? []); ?>,
         salesMethods: <?php echo json_encode($sales_methods ?? []); ?>,
-        topSales: <?php echo json_encode($top_sales ?? []); ?>
+        topSales: <?php echo json_encode($top_sales ?? []); ?>,
+        salesCategory: <?php echo json_encode($sales_category ?? []); ?>,
+        repairStatus: <?php echo json_encode($repair_status ?? []); ?>,
+        repairBrand: <?php echo json_encode($repair_brand ?? []); ?>
     };
 </script>
 <script src="<?php echo BASE_URL; ?>/modules/reports/reports.js?v=<?php echo time(); ?>"></script>
 <?php Layout::renderFooter(); ?>
+
+
+
+
