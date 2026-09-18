@@ -136,3 +136,55 @@ CREATE TABLE `venta` (
   KEY `fk_venta_usuario` (`id_usuario`),
   CONSTRAINT `fk_venta_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Tablas del módulo Taller
+
+CREATE TABLE IF NOT EXISTS eparacion (
+  id_reparacion int NOT NULL AUTO_INCREMENT,
+  codigo_orden varchar(20) NOT NULL,
+  id_cliente int NOT NULL,
+  equipo_marca varchar(50) NOT NULL,
+  equipo_modelo varchar(50) NOT NULL,
+  equipo_imei varchar(30) DEFAULT NULL,
+  alla_declarada text,
+  observaciones text,
+  presupuesto decimal(10,2) DEFAULT 0,
+  costo_total decimal(10,2) DEFAULT 0,
+  estado varchar(30) NOT NULL DEFAULT 'Recibido',
+  id_usuario_recibe int DEFAULT NULL,
+  echa_ingreso timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  echa_entrega timestamp NULL DEFAULT NULL,
+  PRIMARY KEY (id_reparacion),
+  KEY id_cliente (id_cliente)
+);
+
+CREATE TABLE IF NOT EXISTS eparacion_historial (
+  id_historial int NOT NULL AUTO_INCREMENT,
+  id_reparacion int NOT NULL,
+  estado_anterior varchar(30) DEFAULT NULL,
+  estado_nuevo varchar(30) NOT NULL,
+  
+ota text,
+  id_usuario int DEFAULT NULL,
+  echa_cambio timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_historial),
+  KEY id_reparacion (id_reparacion)
+);
+
+CREATE TABLE IF NOT EXISTS eparacion_repuesto (
+  id_reparacion_repuesto int NOT NULL AUTO_INCREMENT,
+  id_reparacion int NOT NULL,
+  id_producto int NOT NULL,
+  cantidad int NOT NULL DEFAULT 1,
+  precio_unitario decimal(10,2) NOT NULL,
+  PRIMARY KEY (id_reparacion_repuesto)
+);
+
+CREATE TABLE IF NOT EXISTS eparacion_imagen (
+  id_imagen int NOT NULL AUTO_INCREMENT,
+  id_reparacion int NOT NULL,
+  uta_archivo varchar(255) NOT NULL,
+  	ipo varchar(20) DEFAULT 'Ingreso',
+  echa_subida timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id_imagen)
+);

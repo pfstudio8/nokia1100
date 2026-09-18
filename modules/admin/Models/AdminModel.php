@@ -46,6 +46,20 @@ class AdminModel extends BaseModel
 
     // --- Gestión de Usuarios ---
 
+    public function count_active_admins($exclude_id = null)
+    {
+        if ($exclude_id) {
+            $stmt = $this->conn->prepare("SELECT COUNT(*) AS total FROM usuario WHERE rol = 'admin' AND is_active = 1 AND id_usuario != ?");
+            $stmt->bind_param("i", $exclude_id);
+        } else {
+            $stmt = $this->conn->prepare("SELECT COUNT(*) AS total FROM usuario WHERE rol = 'admin' AND is_active = 1");
+        }
+        $stmt->execute();
+        $total = $stmt->get_result()->fetch_assoc()['total'];
+        $stmt->close();
+        return (int)$total;
+    }
+
     public function get_all_users($filter = 'activos')
     {
         $where = match($filter) {

@@ -236,6 +236,15 @@ class AdminController extends BaseController
             $this->redirect("users.php?error=" . urlencode("No puedes desactivarte a ti mismo"));
         }
 
+        $target = $this->admin_model->find_user_by_id($id_usuario);
+
+        // No permitir desactivar al único admin activo del sistema
+        if ($target && $target['rol'] === 'admin' && (int)$target['is_active'] === 1) {
+            if ($this->admin_model->count_active_admins($id_usuario) === 0) {
+                $this->redirect("users.php?error=" . urlencode("No podés desactivar al único administrador del sistema"));
+            }
+        }
+
         $res = $this->admin_model->toggle_user_status($id_usuario);
 
         if ($res['success']) {
@@ -301,6 +310,14 @@ class AdminController extends BaseController
 
         if ($id_usuario === (int)$_SESSION['user_id']) {
             $this->redirect("users.php?error=" . urlencode("No puedes cambiar tu propio rol"));
+        }
+
+        // No permitir degradar al único admin activo
+        if ($rol === 'empleado') {
+            $target = $this->admin_model->find_user_by_id($id_usuario);
+            if ($target && $target['rol'] === 'admin' && $this->admin_model->count_active_admins($id_usuario) === 0) {
+                $this->redirect("users.php?error=" . urlencode("No podés quitarle el rol de administrador al único admin del sistema"));
+            }
         }
 
         if ($this->admin_model->update_user_role($id_usuario, $rol)) {
