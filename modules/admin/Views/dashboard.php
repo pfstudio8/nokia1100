@@ -18,17 +18,9 @@ Layout::renderAdminSidebar('dashboard');
         </header>
 
         <?php // Banner visual ?>
-        <section class="mb-10 w-full overflow-hidden rounded-3xl relative h-56 sm:h-64 flex items-center shadow-[0_8px_30px_rgb(0,0,0,0.12)] border border-border/30">
-            <div class="absolute inset-0 z-0 bg-background">
-                <?php // Imagen de fondo con mezcla ?>
-                <img src="<?php echo BASE_URL; ?>/assets/img/nokia_store_banner.png" alt="Nokia Premium Store" class="w-full h-full object-cover opacity-30 mix-blend-lighten filter brightness-110 saturate-150 transition-all duration-1000 hover:scale-105 hover:opacity-40">
-                <?php // Capa de gradiente para contraste ?>
-                <div class="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent"></div>
-                <div class="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-60"></div>
-            </div>
-            
+        <section class="mb-10 w-full rounded-3xl relative flex items-center bg-card shadow-lg border border-border">
             <div class="relative z-10 w-full p-8 md:p-12 flex flex-col justify-center h-full max-w-3xl">
-                <h2 class="text-4xl md:text-5xl font-display font-bold text-text-main mb-4 drop-shadow-md tracking-tight">Bienvenido a Nokia1100</h2>
+                <h2 class="text-4xl md:text-5xl font-display font-bold text-text-main mb-4 tracking-tight">Bienvenido a Nokia1100</h2>
                 <p class="text-sm md:text-base text-text-muted font-medium max-w-lg leading-relaxed">Supervisa todas las operaciones, controla el inventario en tiempo real y analiza el rendimiento corporativo con precisión.</p>
             </div>
         </section>
@@ -36,13 +28,13 @@ Layout::renderAdminSidebar('dashboard');
         <!-- Metrics -->
         <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             
-            <div class="glass-card p-6 rounded-3xl flex flex-col justify-between group hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative overflow-hidden bg-surface/50 border-border/80">
-                <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl transition-all group-hover:bg-primary/20"></div>
+            <div class="bg-card p-6 rounded-3xl flex flex-col justify-between group hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative overflow-hidden border border-border">
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl transition-all group-hover:bg-primary/10"></div>
                 <div class="flex justify-between items-start mb-6 relative z-10">
-                    <div class="p-3 bg-gradient-to-br from-primary/20 to-primary/5 text-primary rounded-2xl border border-primary/10 shadow-inner">
-                        <span class="material-symbols-outlined text-2xl">payments</span>
+                    <div class="p-3 text-primary rounded-xl border border-primary/20 bg-primary/5 shadow-inner">
+                        <span class="material-symbols-outlined text-xl">payments</span>
                     </div>
-                    <span class="text-[10px] uppercase font-bold text-primary tracking-widest bg-primary/10 px-3 py-1.5 rounded-full border border-primary/10">Ventas Totales</span>
+                    <span class="text-[10px] uppercase font-bold text-primary tracking-widest bg-transparent px-3 py-1.5 rounded-full border border-primary/30">Ventas Totales</span>
                 </div>
                 <div class="relative z-10">
                     <p class="text-xs text-text-muted mb-2 font-semibold uppercase tracking-wider">Ingresos Registrados</p>
@@ -50,13 +42,13 @@ Layout::renderAdminSidebar('dashboard');
                 </div>
             </div>
 
-            <div class="glass-card p-6 rounded-3xl flex flex-col justify-between group hover:border-secondary/40 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative overflow-hidden bg-surface/50 border-border/80">
-                <div class="absolute -top-10 -right-10 w-32 h-32 bg-secondary/10 rounded-full blur-3xl transition-all group-hover:bg-secondary/20"></div>
+            <div class="bg-card p-6 rounded-3xl flex flex-col justify-between group hover:border-secondary/40 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative overflow-hidden border border-border">
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-secondary/5 rounded-full blur-2xl transition-all group-hover:bg-secondary/10"></div>
                 <div class="flex justify-between items-start mb-6 relative z-10">
-                    <div class="p-3 bg-gradient-to-br from-secondary/20 to-secondary/5 text-secondary rounded-2xl border border-secondary/10 shadow-inner">
-                        <span class="material-symbols-outlined text-2xl">group</span>
+                    <div class="p-3 text-secondary rounded-xl border border-secondary/20 bg-secondary/5 shadow-inner">
+                        <span class="material-symbols-outlined text-xl">group</span>
                     </div>
-                    <span class="text-[10px] uppercase font-bold text-secondary tracking-widest bg-secondary/10 px-3 py-1.5 rounded-full border border-secondary/10">Cuentas</span>
+                    <span class="text-[10px] uppercase font-bold text-secondary tracking-widest bg-transparent px-3 py-1.5 rounded-full border border-secondary/30">Cuentas</span>
                 </div>
                 <div class="relative z-10">
                     <p class="text-xs text-text-muted mb-2 font-semibold uppercase tracking-wider">Usuarios Activos</p>
@@ -64,11 +56,11 @@ Layout::renderAdminSidebar('dashboard');
                 </div>
             </div>
 
-            <div class="glass-card p-6 rounded-3xl flex flex-col justify-between cursor-pointer hover:border-red-500/40 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative overflow-hidden bg-surface/50 border-border/80 group" onclick="window.location.href='<?php echo BASE_URL; ?>/modules/inventory/inventory.php?filter=low_stock';">
-                <div class="absolute -top-10 -right-10 w-32 h-32 bg-red-500/10 rounded-full blur-3xl transition-all group-hover:bg-red-500/20"></div>
+            <div class="bg-card p-6 rounded-3xl flex flex-col justify-between cursor-pointer hover:border-error/40 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative overflow-hidden border border-border group" onclick="window.location.href='<?php echo BASE_URL; ?>/modules/inventory/inventory.php?filter=low_stock';">
+                <div class="absolute -top-10 -right-10 w-32 h-32 bg-error/5 rounded-full blur-2xl transition-all group-hover:bg-error/10"></div>
                 <div class="flex justify-between items-start mb-6 relative z-10">
-                    <div class="p-3 bg-gradient-to-br from-red-500/20 to-red-500/5 text-red-500 rounded-2xl border border-red-500/10 shadow-inner">
-                        <span class="material-symbols-outlined text-2xl">warning</span>
+                    <div class="p-3 text-error rounded-xl border border-error/20 bg-error/5 shadow-inner">
+                        <span class="material-symbols-outlined text-xl">warning</span>
                     </div>
                     <div id="stock-badge-container"></div>
                 </div>
@@ -86,28 +78,28 @@ Layout::renderAdminSidebar('dashboard');
         <section class="grid grid-cols-1 gap-6">
             
             <!-- Ventas Recientes -->
-            <div class="col-span-12 glass-card rounded-3xl overflow-hidden p-0 flex flex-col justify-between bg-surface/30 border-border/80 shadow-lg">
+            <div class="col-span-12 bg-card rounded-3xl overflow-hidden p-0 flex flex-col justify-between border border-border shadow-lg">
                 <div>
-                    <div class="p-6 md:p-8 border-b border-border/30 flex justify-between items-center bg-surface/50 backdrop-blur-sm">
+                    <div class="p-6 md:p-8 border-b border-border flex justify-between items-center bg-transparent">
                         <div class="flex items-center gap-3">
-                            <div class="p-2.5 bg-primary/10 rounded-xl text-primary border border-primary/20">
-                                <span class="material-symbols-outlined text-xl">receipt_long</span>
+                            <div class="p-2 text-primary">
+                                <span class="material-symbols-outlined text-2xl">receipt_long</span>
                             </div>
-                            <h3 class="font-display text-xl font-bold text-text-main tracking-tight">Ventas Recientes</h3>
+                            <h3 class="font-display text-lg font-bold text-text-main tracking-tight">Ventas Recientes</h3>
                         </div>
-                        <a href="<?php echo BASE_URL; ?>/modules/sales/sales.php" class="text-sm font-bold text-primary hover:text-primary-light hover:underline transition-colors flex items-center gap-1 bg-primary/5 px-4 py-2 rounded-full border border-primary/10">Ver todas <span class="material-symbols-outlined text-sm">arrow_forward</span></a>
+                        <a href="<?php echo BASE_URL; ?>/modules/sales/sales.php" class="text-sm font-medium text-text-muted hover:text-text-main transition-colors flex items-center gap-1">Ver todas <span class="material-symbols-outlined text-sm">arrow_right_alt</span></a>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
                             <thead>
-                                <tr class="bg-surface/20">
+                                <tr class="bg-surface/50 border-b border-border">
                                     <th class="px-6 md:px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">ID Venta</th>
                                     <th class="px-6 md:px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Fecha</th>
                                     <th class="px-6 md:px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Método</th>
                                     <th class="px-6 md:px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest text-right">Monto</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-border/30">
+                            <tbody class="divide-y divide-border">
                                 <!-- Skeleton Rows -->
                                 <tr id="sales-skeleton-1" class="skeleton-row">
                                     <td class="px-6 md:px-8 py-5"><div class="skeleton h-4 w-16 rounded"></div></td>

@@ -1,6 +1,6 @@
 /* assets/css/pages/login.css */
 body {
-    background: #0A0A0B !important;
+    background: #181E26 !important;
     color: #FAFAFA !important;
     min-height: 100vh !important;
     display: flex !important;
@@ -14,19 +14,19 @@ body {
 
 /* Contenedor principal estilo Glassmorphism Double Slider */
 .double-slider-container {
-    background: rgba(17, 17, 19, 0.75) !important;
-    backdrop-filter: blur(20px) !important;
-    -webkit-backdrop-filter: blur(20px) !important;
-    border-radius: 24px !important;
-    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6) !important;
+    background: rgba(38, 51, 71, 0.4) !important; /* Card background #263347 with opacity */
+    backdrop-filter: blur(24px) !important;
+    -webkit-backdrop-filter: blur(24px) !important;
+    border-radius: 30px !important;
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
     position: relative !important;
     overflow: hidden !important;
-    width: 850px !important;
+    width: 900px !important;
     max-width: 100% !important;
-    min-height: 580px !important;
-    transition: all 0.6s ease-in-out !important;
+    min-height: 600px !important;
+    transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1) !important;
     z-index: 10 !important;
-    border: 1px solid #27272A !important;
+    border: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
 .form-container {
@@ -84,29 +84,38 @@ body {
 .overlay-container {
     position: absolute !important;
     top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
+    left: 50% !important;
+    width: 50% !important;
     height: 100% !important;
     overflow: hidden !important;
-    pointer-events: none !important;
+    transition: transform 0.7s cubic-bezier(0.76, 0, 0.24, 1) !important;
     z-index: 100 !important;
+    background: #1F2937 !important; /* Surface */
+    border-left: 1px solid rgba(255, 255, 255, 0.05) !important;
+    box-shadow: -15px 0 40px rgba(0, 0, 0, 0.4) !important;
+}
+
+.double-slider-container.right-panel-active .overlay-container {
+    transform: translateX(-100%) !important;
+    border-left: none !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
+    box-shadow: 15px 0 40px rgba(0, 0, 0, 0.4) !important;
 }
 
 .overlay {
-    background: #000000 !important;
+    background: radial-gradient(circle at top right, rgba(14, 165, 160, 0.15) 0%, transparent 60%),
+                radial-gradient(circle at bottom left, rgba(94, 234, 212, 0.1) 0%, transparent 60%) !important;
     color: #ffffff !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
+    position: relative !important;
+    left: -100% !important;
     height: 100% !important;
-    width: 100% !important;
-    pointer-events: auto !important;
-    clip-path: polygon(48% 0, 100% 0, 100% 100%, 66% 100%) !important;
-    transition: clip-path 0.6s cubic-bezier(0.76, 0, 0.24, 1) !important;
+    width: 200% !important;
+    transform: translateX(0) !important;
+    transition: transform 0.7s cubic-bezier(0.76, 0, 0.24, 1) !important;
 }
 
 .double-slider-container.right-panel-active .overlay {
-    clip-path: polygon(0 0, 52% 0, 34% 100%, 0 100%) !important;
+    transform: translateX(50%) !important;
 }
 
 .overlay-panel {
@@ -114,10 +123,12 @@ body {
     display: flex !important;
     justify-content: center !important;
     flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
     top: 0 !important;
     height: 100% !important;
-    width: 35% !important;
-    transition: all 0.6s ease-in-out !important;
+    width: 50% !important;
+    transition: transform 0.7s cubic-bezier(0.76, 0, 0.24, 1) !important;
 }
 
 .overlay-panel h1 {
@@ -131,182 +142,195 @@ body {
 }
 
 .overlay-panel p {
-    font-size: 13px !important;
-    font-weight: 300 !important;
+    font-size: 14px !important;
+    font-weight: 400 !important;
     line-height: 1.6 !important;
-    color: rgba(255, 255, 255, 0.75) !important;
+    color: rgba(255, 255, 255, 0.7) !important;
     margin-bottom: 1.5rem !important;
-    text-align: left !important;
+    text-align: center !important;
 }
 
 .overlay-left {
     left: 0 !important;
-    padding-left: 3.5rem !important;
-    padding-right: 1.5rem !important;
-    align-items: flex-start !important;
+    padding: 0 3rem !important;
+    transform: translateX(-15%) !important;
     opacity: 0 !important;
-    transform: translateX(-50px) !important;
     pointer-events: none !important;
 }
 
 .double-slider-container.right-panel-active .overlay-left {
-    opacity: 1 !important;
     transform: translateX(0) !important;
+    opacity: 1 !important;
     pointer-events: auto !important;
 }
 
 .overlay-right {
     right: 0 !important;
-    padding-right: 3.5rem !important;
-    padding-left: 1.5rem !important;
-    align-items: flex-start !important;
-    opacity: 1 !important;
+    padding: 0 3rem !important;
     transform: translateX(0) !important;
+    opacity: 1 !important;
     pointer-events: auto !important;
 }
 
 .double-slider-container.right-panel-active .overlay-right {
+    transform: translateX(15%) !important;
     opacity: 0 !important;
-    transform: translateX(50px) !important;
     pointer-events: none !important;
 }
 
-/* Estilos de Campos de Entrada Diagonal Split */
+/* Estilos de Campos de Entrada Premium Modernos */
 .double-slider-container .input-box {
     position: relative !important;
-    margin: 15px 0 !important;
-    border-bottom: 2px solid #27272A !important;
-    background: transparent !important;
-    border-top: none !important;
-    border-left: none !important;
-    border-right: none !important;
-    border-radius: 0 !important;
+    margin: 12px 0 !important;
+    background: rgba(31, 41, 55, 0.5) !important; /* Surface #1F2937 */
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
     padding: 0 !important;
-    box-shadow: none !important;
-    transition: border-color 0.3s ease !important;
+    transition: all 0.3s ease !important;
 }
 
 .double-slider-container .sign-in-container .input-box:focus-within {
-    border-color: #21b8bd !important;
+    border-color: #0EA5A0 !important;
+    background: rgba(14, 165, 160, 0.05) !important;
+    box-shadow: 0 0 0 3px rgba(14, 165, 160, 0.1) !important;
 }
 .double-slider-container .sign-up-container .input-box:focus-within {
-    border-color: #E04FEE !important;
+    border-color: #5EEAD4 !important;
+    background: rgba(94, 234, 212, 0.05) !important;
+    box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.1) !important;
 }
 
 .double-slider-container input {
     width: 100% !important;
-    height: 40px !important;
+    height: 48px !important;
     background: transparent !important;
     border: none !important;
     outline: none !important;
-    font-size: 15px !important;
+    font-size: 14px !important;
     color: #FAFAFA !important;
     font-weight: 500 !important;
-    padding: 0 30px 0 0 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
+    padding: 0 40px 0 16px !important; /* Espacio para el ícono */
+    border-radius: 12px !important;
+}
+
+/* Evitar fondo blanco en autocompletado para el login */
+.double-slider-container input:-webkit-autofill,
+.double-slider-container input:-webkit-autofill:hover, 
+.double-slider-container input:-webkit-autofill:focus, 
+.double-slider-container input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #1F2937 inset !important;
+    -webkit-text-fill-color: #FAFAFA !important;
+    color: #FAFAFA !important;
+    caret-color: #FAFAFA !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+    border-radius: 12px !important;
 }
 
 .double-slider-container label {
     display: inline-block !important;
     margin-bottom: 0 !important;
     position: absolute !important;
-    left: 0 !important;
+    left: 16px !important;
     top: 50% !important;
     transform: translateY(-50%) !important;
-    font-size: 15px !important;
-    color: #A1A1AA !important;
+    font-size: 14px !important;
+    color: #9CA3AF !important;
     pointer-events: none !important;
-    transition: all 0.3s ease !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     text-transform: none !important;
-    letter-spacing: normal !important;
-    font-weight: 500 !important;
-    background: transparent !important;
-    padding: 0 !important;
+    font-weight: 400 !important;
 }
 
 .double-slider-container .sign-in-container input:focus ~ label,
 .double-slider-container .sign-in-container input:not(:placeholder-shown) ~ label {
-    top: -5px !important;
-    font-size: 12px !important;
-    color: #21b8bd !important;
+    top: 0 !important;
+    left: 12px !important;
+    font-size: 11px !important;
+    color: #0EA5A0 !important;
     font-weight: 600 !important;
+    background: #181E26 !important; /* Fake background to cut through border */
+    padding: 0 4px !important;
+    border-radius: 4px !important;
 }
 .double-slider-container .sign-up-container input:focus ~ label,
 .double-slider-container .sign-up-container input:not(:placeholder-shown) ~ label {
-    top: -5px !important;
-    font-size: 12px !important;
-    color: #E04FEE !important;
+    top: 0 !important;
+    left: 12px !important;
+    font-size: 11px !important;
+    color: #5EEAD4 !important;
     font-weight: 600 !important;
+    background: #181E26 !important;
+    padding: 0 4px !important;
+    border-radius: 4px !important;
 }
 
 .double-slider-container .input-box i {
     position: absolute !important;
-    right: 5px !important;
+    right: 14px !important;
     top: 50% !important;
     transform: translateY(-50%) !important;
-    font-size: 18px !important;
-    background: transparent !important;
-    padding: 0 !important;
+    font-size: 20px !important;
+    color: #6B7280 !important;
+    transition: color 0.3s ease !important;
 }
-.double-slider-container .sign-in-container .input-box i {
-    color: #21b8bd !important;
+.double-slider-container .sign-in-container .input-box:focus-within i {
+    color: #0EA5A0 !important;
 }
-.double-slider-container .sign-up-container .input-box i {
-    color: #E04FEE !important;
+.double-slider-container .sign-up-container .input-box:focus-within i {
+    color: #5EEAD4 !important;
 }
 
 /* Botón de Estilo Píldora */
 .double-slider-container .sign-in-container button.auth-btn-pill {
     width: 100% !important;
-    height: 45px !important;
-    background: #21b8bd !important;
-    color: #0A0A0B !important;
+    height: 48px !important;
+    background: linear-gradient(135deg, #0EA5A0 0%, #097572 100%) !important;
+    color: #FFFFFF !important;
     border: none !important;
-    border-radius: 40px !important;
+    border-radius: 12px !important;
     font-size: 15px !important;
     font-weight: 600 !important;
     cursor: pointer !important;
     margin-top: 1.5rem !important;
-    transition: all 0.3s ease !important;
-    box-shadow: 0 8px 20px rgba(33, 184, 189, 0.25) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 4px 15px rgba(14, 165, 160, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 0.5rem !important;
     padding: 0 !important;
-    transform: none !important;
 }
 .double-slider-container .sign-in-container button.auth-btn-pill:hover {
-    background: #1a9498 !important;
     transform: translateY(-2px) !important;
-    box-shadow: 0 12px 24px rgba(33, 184, 189, 0.35) !important;
+    box-shadow: 0 8px 25px rgba(14, 165, 160, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
+    filter: brightness(1.1) !important;
 }
 
 .double-slider-container .sign-up-container button.auth-btn-pill {
     width: 100% !important;
-    height: 45px !important;
-    background: #E04FEE !important;
-    color: #0A0A0B !important;
-    border: none !important;
-    border-radius: 40px !important;
+    height: 48px !important;
+    background: rgba(31, 41, 55, 0.8) !important; /* Surface con opacidad */
+    color: #5EEAD4 !important; /* Acento 2 */
+    border: 1px solid rgba(94, 234, 212, 0.5) !important; /* Borde Acento 2 translúcido */
+    border-radius: 12px !important;
     font-size: 15px !important;
-    font-weight: 600 !important;
+    font-weight: 700 !important;
     cursor: pointer !important;
     margin-top: 1.5rem !important;
-    transition: all 0.3s ease !important;
-    box-shadow: 0 8px 20px rgba(224, 79, 238, 0.25) !important;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: 0 4px 15px rgba(94, 234, 212, 0.1) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 0.5rem !important;
     padding: 0 !important;
-    transform: none !important;
 }
 .double-slider-container .sign-up-container button.auth-btn-pill:hover {
-    background: #c03ebd !important;
     transform: translateY(-2px) !important;
-    box-shadow: 0 12px 24px rgba(224, 79, 238, 0.35) !important;
+    background: linear-gradient(135deg, #5EEAD4 0%, #2DD4BF 100%) !important;
+    color: #181E26 !important;
+    border-color: transparent !important;
+    box-shadow: 0 8px 25px rgba(94, 234, 212, 0.4) !important;
 }
 
 .double-slider-container button.auth-btn-pill:active {
@@ -322,7 +346,7 @@ body {
 }
 
 .double-slider-container .sign-in-container .toggle-link button {
-    color: #21b8bd !important;
+    color: #0EA5A0 !important;
     font-weight: 700 !important;
     text-decoration: underline !important;
     background: transparent !important;
@@ -332,7 +356,7 @@ body {
     font-size: 13px !important;
 }
 .double-slider-container .sign-up-container .toggle-link button {
-    color: #E04FEE !important;
+    color: #5EEAD4 !important;
     font-weight: 700 !important;
     text-decoration: underline !important;
     background: transparent !important;
@@ -355,7 +379,7 @@ body {
 }
 
 .forgot-link a:hover {
-    color: #21b8bd !important;
+    color: #0EA5A0 !important;
     text-decoration: underline !important;
 }
 

@@ -15,7 +15,7 @@ class Layout
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="' . BASE_URL . '/assets/css/style.css?v=' . time() . '">
-    <script src="' . BASE_URL . '/assets/js/tailwind_config.js"></script>
+    <script src="' . BASE_URL . '/assets/js/tailwind_config.js?v=' . time() . '"></script>
     <script src="' . BASE_URL . '/assets/js/session-cache.js?v=' . time() . '"></script>
 </head>
 <body class="font-sans antialiased text-text-main selection:bg-primary/20 selection:text-primary">
@@ -135,7 +135,7 @@ class Layout
             }
             $isActive = ($activePage === $l['id']);
             if ($isActive) {
-                echo '<a href="' . $l['url'] . '" class="flex items-center gap-3 px-4 py-3 bg-surface rounded-lg border border-border text-primary transition-colors">
+                echo '<a href="' . $l['url'] . '" class="flex items-center gap-3 px-4 py-3 bg-card rounded-lg border border-border text-primary transition-colors">
                         <span class="material-symbols-outlined">' . $l['icon'] . '</span>
                         <span class="text-sm font-medium">' . $l['label'] . '</span>
                       </a>';
@@ -226,7 +226,7 @@ class Layout
             }
             $isActive = ($activePage === $l['id']);
             if ($isActive) {
-                echo '<a href="' . $l['url'] . '" class="flex items-center gap-3 px-4 py-3 bg-surface rounded-lg border border-border text-primary transition-colors">
+                echo '<a href="' . $l['url'] . '" class="flex items-center gap-3 px-4 py-3 bg-card rounded-lg border border-border text-primary transition-colors">
                         <span class="material-symbols-outlined">' . $l['icon'] . '</span>
                         <span class="text-sm font-medium">' . $l['label'] . '</span>
                       </a>';
@@ -252,7 +252,8 @@ class Layout
     public static function renderFooter()
     {
         echo '
-<script src="' . BASE_URL . '/assets/js/sileo-toaster.bundle.js?v=' . time() . '"></script>
+
+<script src="' . BASE_URL . '/assets/js/framer-toaster.js?v=' . time() . '"></script>
 <script src="' . BASE_URL . '/assets/js/export-helper.js?v=' . time() . '"></script>
 <script src="' . BASE_URL . '/assets/js/main.js?v=' . time() . '"></script>
 <script>
@@ -267,6 +268,27 @@ class Layout
                 document.body.classList.toggle("sidebar-collapsed");
                 localStorage.setItem("sidebarCollapsed", document.body.classList.contains("sidebar-collapsed"));
             });
+        }
+        
+        // Global Toast Notification Interceptor for CRUD actions
+        const urlParams = new URLSearchParams(window.location.search);
+        let msgShowed = false;
+        
+        if (urlParams.has("success")) {
+            if (typeof showToast === "function") showToast(urlParams.get("success"), "success");
+            urlParams.delete("success");
+            msgShowed = true;
+        }
+        if (urlParams.has("error")) {
+            if (typeof showToast === "function") showToast(urlParams.get("error"), "error");
+            urlParams.delete("error");
+            msgShowed = true;
+        }
+        
+        // Clean URL if messages were shown
+        if (msgShowed) {
+            const newUrl = window.location.pathname + (urlParams.toString() ? "?" + urlParams.toString() : "");
+            window.history.replaceState({}, document.title, newUrl);
         }
     });
 </script>

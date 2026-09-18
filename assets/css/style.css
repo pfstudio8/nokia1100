@@ -2,34 +2,27 @@
 
 :root {
     /* Minimalist Aesthetic Tech */
-    --background: #0A0A0B;
-    --surface: #111113;
-    --surface-hover: #18181B;
+    --background: #181E26;
+    --surface: #1F2937;
+    --card: #263347;
+    --surface-hover: #263347;
     
-    --primary-color: #21b8bd; /* Minimalist Cyan User Selected */
-    --primary-hover: #1a9498;
+    --primary-color: #0EA5A0; /* Acento User Selected */
+    --primary-hover: #0b827e;
     
-    --secondary-color: #E04FEE; /* Minimalist Magenta */
+    --secondary-color: #5EEAD4; /* Acento 2 */
     
     --text-main: #FAFAFA;
-    --text-muted: #A1A1AA;
-    --text-inverse: #0A0A0B;
+    --text-muted: #9CA3AF;
+    --text-inverse: #ffffff;
 
-    --border: #27272A;
+    --border: #374151;
 
-    --error: #ff716c;
-    --error-bg: rgba(239, 68, 68, 0.1);
-    --success: #22C55E;
-    --success-bg: rgba(34, 197, 94, 0.1);
+    --error: #F87171;
+    --error-bg: rgba(248, 113, 113, 0.1);
+    --success: #4ADE80;
+    --success-bg: rgba(74, 222, 128, 0.1);
     
-    /* Valores por defecto para animación de resorte del Toast */
-    --sileo-duration: 0.7s;
-    --sileo-spring-easing: linear(
-    0, 0.009, 0.035 2.1%, 0.141, 0.281 6.7%, 0.723 12.9%, 0.938 16.7%, 1.017,
-    1.077, 1.121, 1.149 24.3%, 1.159, 1.163, 1.161, 1.154 29.9%, 1.129 32.8%,
-    1.051 39.6%, 1.017 43.1%, 0.991, 0.977 51%, 0.974 53.8%, 0.975 57.1%,
-    0.997 69.8%, 1.003 76.9%, 1.004 83.8%, 1
-  );
 }
 
 * {
@@ -102,9 +95,7 @@ body.sidebar-collapsed #sidebarToggle {
 
 /* The Glass Card (Minimalist) */
 .glass-card {
-    background: rgba(17, 17, 19, 0.7);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    background: var(--card);
     border: 1px solid var(--border);
     border-radius: 16px;
     padding: 2.5rem;
@@ -146,6 +137,19 @@ input:focus, select:focus {
     outline: none;
     border-color: var(--primary-color);
     background: var(--surface);
+}
+
+/* Evitar fondo blanco en autocompletado del navegador */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #1F2937 inset !important;
+    -webkit-text-fill-color: #FAFAFA !important;
+    color: #FAFAFA !important;
+    caret-color: #FAFAFA !important;
+    transition: background-color 5000s ease-in-out 0s;
+    border-radius: 8px;
 }
 
 /* Premium Icons */
@@ -766,178 +770,14 @@ html.is-animating body {
     color: var(--primary-color);
 }
 
-/* ============================================================
-   Toast / Notification Overrides (Sileo)
-   Ubicación en parte superior central, adaptable, sólido y centrado
-   ============================================================ */
 
-/* Viewport: mayor z-index, padding y desplazamiento superior para no tapar el título ni indicador de usuario de la cabecera */
-[data-sileo-viewport] {
-    z-index: 99999 !important;
-    padding: 1.5rem !important;
-    padding-top: 5.5rem !important;
-}
-
-/* Ocultar el canvas SVG por completo para usar estilos CSS nativos */
-[data-sileo-toast] [data-sileo-canvas] {
-    display: none !important;
-}
-
-/* Toast: Ancho adaptativo al contenido, fondo sólido y borde premium */
-[data-sileo-toast] {
-    width: max-content !important;
-    min-width: 200px !important;
-    max-width: 450px !important;
-    min-height: 56px !important;
-    height: auto !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 1rem 1.5rem !important;
-    position: relative !important;
-    
-    /* Fondo oscuro sólido y premium (no cristalizado) */
-    background-color: #121214 !important; /* Mismo fondo de las tarjetas premium */
-    border: 1px solid rgba(255, 255, 255, 0.15) !important; /* Borde sólido de alta visibilidad */
-    border-radius: 9999px !important; /* Forma de píldora perfecta */
-    
-    /* Sombra premium con resplandor neón sutil */
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6), 
-                0 0 12px rgba(33, 184, 189, 0.1) !important;
-}
-
-/* Hacer que el header esté en el flujo (relative) para que dicte el ancho del toast */
-[data-sileo-header] {
-    position: relative !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: auto !important;
-    height: 100% !important;
-    padding: 0 !important;
-    left: auto !important;
-    transform: none !important;
-    max-width: none !important;
-    z-index: 20 !important;
-}
-
-[data-sileo-header-stack] {
-    position: relative !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: auto !important;
-    height: 100% !important;
-}
-
-[data-sileo-header-inner] {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 0.75rem !important;
-    width: auto !important;
-    white-space: normal !important;
-}
-
-/* Título del toast: legible y con colores neon vistosos según el estado */
-[data-sileo-title] {
-    font-size: 0.95rem !important;
-    line-height: 1.4 !important;
-    font-weight: 600 !important;
-    letter-spacing: -0.01em;
-    text-transform: none !important;
-    text-align: left !important;
-}
-
-[data-sileo-title][data-state="success"] {
-    color: #4ade80 !important; /* Verde menta brillante */
-    text-shadow: 0 0 8px rgba(74, 222, 128, 0.4) !important;
-}
-
-[data-sileo-title][data-state="error"] {
-    color: #f87171 !important; /* Rojo rosado brillante */
-    text-shadow: 0 0 8px rgba(248, 113, 113, 0.4) !important;
-}
-
-[data-sileo-title][data-state="warning"] {
-    color: #fbbf24 !important; /* Amarillo ámbar brillante */
-    text-shadow: 0 0 8px rgba(251, 191, 36, 0.4) !important;
-}
-
-[data-sileo-title][data-state="info"] {
-    color: #38bdf8 !important; /* Celeste / Cyan brillante */
-    text-shadow: 0 0 8px rgba(56, 189, 248, 0.4) !important;
-}
-
-/* Badge/icono: adaptado al tamaño compacto y con el color del estado unificado */
-[data-sileo-badge] {
-    height: 28px !important;
-    width: 28px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-
-[data-sileo-badge][data-state="success"] {
-    color: #4ade80 !important;
-    background-color: rgba(74, 222, 128, 0.15) !important;
-}
-
-[data-sileo-badge][data-state="error"] {
-    color: #f87171 !important;
-    background-color: rgba(248, 113, 113, 0.15) !important;
-}
-
-[data-sileo-badge][data-state="warning"] {
-    color: #fbbf24 !important;
-    background-color: rgba(251, 191, 36, 0.15) !important;
-}
-
-[data-sileo-badge][data-state="info"] {
-    color: #38bdf8 !important;
-    background-color: rgba(56, 189, 248, 0.15) !important;
-}
-
-/* Forzar que el icono SVG interno use currentColor para heredar el color del estado */
-[data-sileo-badge] svg,
-[data-sileo-badge] svg * {
-    stroke: currentColor !important;
-}
-
-/* Sombra premium en el toast */
-[data-sileo-toast][data-ready="true"] {
-    filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.5)) drop-shadow(0 0 12px rgba(33, 184, 189, 0.08));
-}
-
-/* Descripción si existe: más clara y legible */
-[data-sileo-description] {
-    font-size: 0.95rem !important;
-    color: #E4E4E7 !important;
-    opacity: 1 !important;
-}
-
-/* Responsive: en pantallas chicas el toast ocupa casi todo el ancho */
-@media (max-width: 520px) {
-    [data-sileo-toast] {
-        --sileo-width: calc(100vw - 2rem) !important;
-    }
-}
 
 /* Head Layout Styles */
 .material-symbols-outlined {
     font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
 }
 
-body {
-    background-color: #0A0A0B;
-    color: #FAFAFA;
-}
 
-.glass-card {
-    background: rgba(17, 17, 19, 0.7);
-    backdrop-filter: blur(16px);
-    border: 1px solid #27272A;
-}
 
 main a {
     transition: all 0.2s ease;

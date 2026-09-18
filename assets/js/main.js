@@ -51,7 +51,7 @@ function initCustomFormValidation() {
                     if (typeof showToast === 'function') {
                         // Formateamos el nombre a Capital Case para que se vea mejor y acortamos el mensaje
                         fieldName = fieldName.toLowerCase().replace(/(?:^|\s)\S/g, a => a.toUpperCase());
-                        showToast(`Por favor completa el campo ${fieldName}`, 'error');
+                        showToast(`Por favor completa el campo ${fieldName}`, 'warning');
                     } else {
                         alert(`Error:\nPor favor, completa correctamente el campo: ${fieldName}`);
                     }
@@ -140,9 +140,6 @@ function initTableSearch() {
         }
     });
 }
-
-// showToast se define globalmente mediante el componente Sileo React (sileo-toaster.bundle.js)
-// showConfirmModal se define globalmente mediante el componente Sileo React
 
 // Intercepta los clicks en enlaces o botones con atributo data-confirm
 // Ejemplo: <a href="delete.php" data-confirm="¿Eliminar usuario?">Borrar</a>

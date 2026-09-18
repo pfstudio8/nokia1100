@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // modules/sales/Models/SalesModel.php
 
 require_once __DIR__ . '/../../../classes/BaseModel.php';
@@ -157,7 +157,7 @@ class SalesModel extends BaseModel
     {
         $limit = (int) $limit;
         $sql = "SELECT CONCAT(pd.marca, ' ', pd.modelo) as nombre_real, 
-                        SUM((dv.precio_unitario - p.precio_costo) * dv.cantidad) as rentabilidad
+                        SUM((dv.precio_unitario - COALESCE((SELECT AVG(precio_compra) FROM detalle_compra WHERE id_producto = p.id_producto), 0)) * dv.cantidad) as rentabilidad
                 FROM detalle_venta dv
                 JOIN venta v ON dv.id_venta = v.id_venta
                 JOIN producto p ON dv.id_producto = p.id_producto
@@ -377,7 +377,7 @@ class SalesModel extends BaseModel
                 
                 // Registrar en auditoría el retorno de stock
                 audit_log($this->conn, 'INVENTORY_UPDATE', (int)$user_id, 'Inventario', $row['id_producto'],
-                    "Stock de '{$row['nombre_producto']}' devuelto ({$row['cantidad']} unidades) por anulación de venta (Usuario: $username_audit)");
+                    "Stock de '{$row['nombre_producto']}' devuelto ({$row['cantidad']} unidades) por anulación de venta");
                 
                 $items_revertidos++;
             }
