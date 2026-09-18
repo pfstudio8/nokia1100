@@ -4,14 +4,17 @@ tailwind.config = {
     theme: {
         extend: {
             colors: {
-                background: "#0A0A0B",
-                surface: "#111113",
-                "surface-hover": "#18181B",
-                primary: "#21b8bd",
-                secondary: "#E04FEE",
-                border: "#27272A",
+                background: "#181E26", // Base
+                surface: "#1F2937",    // Surface
+                card: "#263347",       // Card
+                "surface-hover": "#263347", 
+                primary: "#0EA5A0",    // Acento
+                secondary: "#5EEAD4",  // Acento 2
+                success: "#4ADE80",    // Éxito
+                error: "#F87171",      // Alerta
+                border: "#374151",
                 "text-main": "#FAFAFA",
-                "text-muted": "#A1A1AA",
+                "text-muted": "#9CA3AF",
             },
             fontFamily: {
                 sans: ["Inter", "sans-serif"],

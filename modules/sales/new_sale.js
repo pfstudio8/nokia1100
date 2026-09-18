@@ -272,3 +272,26 @@ async function submitSaleFromModal() {
         confirmBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">receipt_long</span> Confirmar Venta';
     }
 }
+
+function showSuccessModal(id_venta) {
+    const modal = document.getElementById('success-modal');
+    const printBtn = document.getElementById('btn-print-invoice');
+    
+    // Configurar el botón de imprimir para que vaya a la factura
+    printBtn.onclick = () => {
+        window.location.href = `index.php?action=invoice&id=${id_venta}`;
+    };
+    
+    modal.classList.remove('hidden');
+}
+
+function closeSuccessModal() {
+    const modal = document.getElementById('success-modal');
+    modal.classList.add('hidden');
+    // Ya que se cerró el modal, asumimos que el usuario quiere hacer una nueva venta
+    // Resetear formulario si es necesario (carrito ya fue vaciado)
+    document.getElementById('venta_descripcion').value = '';
+    const confirmBtn = document.getElementById('btn-confirm-sale');
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">receipt_long</span> Confirmar Venta';
+}

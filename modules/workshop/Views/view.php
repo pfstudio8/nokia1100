@@ -74,16 +74,134 @@ if ($_SESSION['role'] === 'admin') {
                         </h3>
                     </div>
 
-                    <form method="POST" action="" enctype="multipart/form-data" class="flex gap-2 mb-6">
+                    <form method="POST" action="" enctype="multipart/form-data" class="mb-6 space-y-4">
                         <input type="hidden" name="action" value="add_image">
-                        <select name="tipo_imagen" class="bg-surface border border-border px-3 py-2 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
-                            <option value="Progreso">Progreso</option>
-                            <option value="Finalizado">Finalizado</option>
-                            <option value="Otro">Otro</option>
-                        </select>
-                        <input type="file" name="foto" required accept="image/*" class="flex-1 bg-surface border border-border px-3 py-2 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary file:mr-2 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20">
-                        <button type="submit" class="bg-surface hover:bg-surface-hover border border-border px-4 py-2 rounded-lg text-sm font-medium transition-colors text-text-main whitespace-nowrap">Subir Foto</button>
+                        
+                        <div class="bg-surface/30 border border-border rounded-xl p-1 shadow-sm">
+                            <div class="flex flex-col md:flex-row bg-background rounded-lg overflow-hidden border border-border/50">
+                                
+                                <!-- Sección Tipo de Foto -->
+                                <div class="w-full md:w-1/3 bg-surface/40 p-5 flex flex-col justify-center border-b md:border-b-0 md:border-r border-border/50 relative overflow-hidden">
+                                    <div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+                                    <div class="relative z-10">
+                                        <label class="text-xs font-semibold uppercase tracking-wider text-text-muted mb-2 flex items-center gap-1.5">
+                                            <span class="material-symbols-outlined text-[16px]">category</span>
+                                            Etiqueta
+                                        </label>
+                                        <div class="relative">
+                                            <select name="tipo_imagen" class="w-full appearance-none bg-background border border-border hover:border-primary/50 focus:border-primary px-4 py-2.5 rounded-lg text-sm font-medium text-text-main focus:outline-none transition-all cursor-pointer shadow-sm">
+                                                <option value="Progreso">Progreso</option>
+                                                <option value="Finalizado">Finalizado</option>
+                                                <option value="Otro">Otro</option>
+                                            </select>
+                                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted text-[18px]">expand_more</span>
+                                        </div>
+                                        <p class="text-[11px] text-text-muted mt-2 leading-relaxed">Clasifica la foto para el historial.</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Sección Subir Foto -->
+                                <div class="w-full md:w-2/3 p-5 bg-background relative group transition-colors hover:bg-surface/30">
+                                    <input type="file" name="foto" id="foto_upload" required accept="image/*" class="hidden">
+                                    <label for="foto_upload" class="cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-4 w-full h-full min-h-[120px] bg-transparent border-2 border-dashed border-border hover:border-primary/70 px-4 py-6 rounded-xl text-sm transition-all text-text-muted group-hover:text-primary">
+                                        <div class="w-12 h-12 rounded-full bg-primary/5 text-primary border border-primary/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all shadow-sm shrink-0">
+                                            <span class="material-symbols-outlined text-[24px]">cloud_upload</span>
+                                        </div>
+                                        <div class="text-center sm:text-left flex flex-col">
+                                            <span id="file_name_display" class="font-medium text-text-main text-[15px]">Seleccionar o arrastrar imagen</span>
+                                            <span class="text-[11px] font-medium text-text-muted mt-1 uppercase tracking-wider">JPG, PNG, WEBP (MAX. 5MB)</span>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                            </div>
+                        </div>
+                        
+                        <!-- Contenedor de vista previa -->
+                        <div id="image_preview_container" class="hidden flex flex-col sm:flex-row items-center gap-5 bg-surface/80 border border-border p-5 rounded-xl shadow-sm">
+                            <div class="w-28 h-28 sm:w-36 sm:h-36 rounded-lg overflow-hidden border border-border shrink-0 bg-background flex items-center justify-center shadow-inner relative group/preview">
+                                <img id="image_preview" src="" alt="Vista previa" class="w-full h-full object-cover">
+                                <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/preview:opacity-100 transition-opacity flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-white text-3xl">visibility</span>
+                                </div>
+                            </div>
+                            <div class="flex-1 flex flex-col items-center sm:items-start gap-3 w-full">
+                                <div class="text-center sm:text-left w-full">
+                                    <h4 class="text-text-main font-medium mb-1 flex items-center justify-center sm:justify-start gap-1.5">
+                                        <span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>
+                                        Imagen seleccionada
+                                    </h4>
+                                    <p class="text-[13px] text-text-muted">Revisa que la imagen sea correcta antes de subirla.</p>
+                                </div>
+                                <div class="flex items-center gap-2 w-full mt-2">
+                                    <button type="button" id="btn_cancelar_imagen" class="flex-1 sm:flex-none px-4 py-2 rounded-lg border border-border bg-background hover:bg-surface-hover text-sm font-medium transition-colors text-text-main">Cancelar</button>
+                                    <button type="submit" class="flex-1 sm:flex-none bg-primary text-background px-6 py-2 rounded-lg text-sm font-medium hover:bg-primary-hover transition-colors flex items-center justify-center gap-2 shadow-sm">
+                                        Subir Foto <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </form>
+
+                    <script>
+                    document.getElementById('foto_upload').addEventListener('change', function(e) {
+                        const file = e.target.files[0];
+                        const previewContainer = document.getElementById('image_preview_container');
+                        const previewImage = document.getElementById('image_preview');
+                        const fileNameDisplay = document.getElementById('file_name_display');
+                        const uploadLabel = document.querySelector('label[for="foto_upload"]');
+                    
+                        if (file) {
+                            if (!file.type.startsWith('image/')) {
+                                alert('Por favor, selecciona un archivo de imagen válido.');
+                                this.value = '';
+                                resetImagePreview();
+                                return;
+                            }
+                            
+                            fileNameDisplay.textContent = file.name;
+                            
+                            uploadLabel.classList.add('border-primary/50', 'bg-primary/5');
+                            uploadLabel.classList.remove('border-border', 'bg-transparent');
+                            uploadLabel.querySelector('.rounded-full').classList.add('bg-primary/10', 'border-primary/30', 'text-primary');
+                            uploadLabel.querySelector('.rounded-full').classList.remove('bg-primary/5', 'border-primary/20');
+                    
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                previewImage.src = e.target.result;
+                                previewContainer.classList.remove('hidden');
+                                setTimeout(() => {
+                                    previewContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                                }, 100);
+                            }
+                            reader.readAsDataURL(file);
+                        } else {
+                            resetImagePreview();
+                        }
+                    });
+                    
+                    document.getElementById('btn_cancelar_imagen').addEventListener('click', function() {
+                        document.getElementById('foto_upload').value = '';
+                        resetImagePreview();
+                    });
+                    
+                    function resetImagePreview() {
+                        const previewContainer = document.getElementById('image_preview_container');
+                        const previewImage = document.getElementById('image_preview');
+                        const fileNameDisplay = document.getElementById('file_name_display');
+                        const uploadLabel = document.querySelector('label[for="foto_upload"]');
+                        
+                        previewContainer.classList.add('hidden');
+                        previewImage.src = '';
+                        
+                        fileNameDisplay.textContent = 'Seleccionar o arrastrar imagen';
+                        
+                        uploadLabel.classList.remove('border-primary/50', 'bg-primary/5');
+                        uploadLabel.classList.add('border-border', 'bg-transparent');
+                        uploadLabel.querySelector('.rounded-full').classList.remove('bg-primary/10', 'border-primary/30', 'text-primary');
+                        uploadLabel.querySelector('.rounded-full').classList.add('bg-primary/5', 'border-primary/20');
+                    }
+                    </script>
 
                     <?php if(!empty($images)): ?>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -169,7 +287,7 @@ if ($_SESSION['role'] === 'admin') {
             <div class="space-y-6">
                 
                 <?php // Cambio de estado y presupuesto ?>
-                <form method="POST" action="" class="glass-card rounded-2xl p-6 border-l-4 border-l-primary">
+                <form method="POST" action="" class="glass-card rounded-2xl p-6">
                     <input type="hidden" name="action" value="update_status">
                     <h3 class="text-lg font-display font-medium text-text-main mb-4 border-b border-border/50 pb-2 flex items-center gap-2">
                         <span class="material-symbols-outlined text-xl">update</span> Actualizar Orden

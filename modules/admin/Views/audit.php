@@ -50,7 +50,7 @@ Layout::renderAdminSidebar('auditoria');
                     <?php else: ?>
                         <?php foreach ($logs as $log): ?>
                             <tr class="hover:bg-surface/30 transition-colors group">
-                                <td class="p-4 text-text-muted">#<?php echo $log['id_audit']; ?></td>
+                                <td class="p-4 text-text-muted">#<?php echo $log['id_log']; ?></td>
                                 <td class="p-4 whitespace-nowrap"><?php echo date('d/m/Y H:i:s', strtotime($log['fecha'])); ?></td>
                                 <td class="p-4 text-primary font-medium uppercase tracking-wider text-xs">
                                     <?php echo htmlspecialchars($log['tabla_afectada'] ?? 'Sistema'); ?>
@@ -73,8 +73,8 @@ Layout::renderAdminSidebar('auditoria');
                                 <td class="p-4">
                                     <?php echo htmlspecialchars($log['nombre_usuario'] ?? $log['username_intent'] ?? 'Sistema/Anónimo'); ?>
                                 </td>
-                                <td class="p-4 max-w-md break-words whitespace-normal text-text-muted group-hover:text-text-main transition-colors" title="<?php echo htmlspecialchars($log['descripcion']); ?>">
-                                    <?php echo htmlspecialchars($log['descripcion']); ?>
+                                <td class="p-4 max-w-md break-words whitespace-normal text-text-muted group-hover:text-text-main transition-colors" title="<?php echo htmlspecialchars(preg_replace('/ \(Usuario: [^)]+\)/', '', $log['descripcion'])); ?>">
+                                    <?php echo htmlspecialchars(preg_replace('/ \(Usuario: [^)]+\)/', '', $log['descripcion'])); ?>
                                 </td>
                                 <td class="p-4 text-text-muted text-xs">
                                     <?php echo htmlspecialchars($log['ip']); ?>

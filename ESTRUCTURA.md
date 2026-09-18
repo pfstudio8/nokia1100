@@ -54,7 +54,7 @@ Los únicos assets que permanecen en `assets/` son los **globales** (compartidos
 - `assets/js/main.js` — Interacciones generales del sistema
 - `assets/js/export-helper.js` — Exportación a Excel/PDF
 - `assets/js/filtros.js` — Filtros de búsqueda globales
-- `assets/js/sileo-toaster.bundle.js` — Componente de notificaciones
+- `assets/js/framer-toaster.js` — Componente de notificaciones con Framer Motion
 - `assets/css/login.css` — Estilo de la página de login (standalone)
 - `assets/css/forgot_password.css` — Estilo de recuperación de contraseña (standalone)
 - `assets/css/auth_verify.css` — Estilo de verificación (standalone)
@@ -91,7 +91,7 @@ Los únicos assets que permanecen en `assets/` son los **globales** (compartidos
 | `main.js` | Interacciones del sistema (sidebar, toasts, confirmaciones) |
 | `export-helper.js` | Exportar tablas a Excel y PDF |
 | `filtros.js` | Filtros de búsqueda en tablas |
-| `sileo-toaster.bundle.js` | Componente de notificaciones toast |
+| `framer-toaster.js` | Componente de notificaciones toast |
 | `login.js` | Animación del slider login/registro en `index.php` |
 
 ---

@@ -12,7 +12,7 @@ else Layout::renderEmployeeSidebar('ventas');
                 <h2 class="text-2xl font-display font-medium text-text-main">Nueva Venta</h2>
                 <p class="text-text-muted text-sm mt-1">Terminal de Punto de Venta (POS)</p>
             </div>
-            <a href="<?php echo BASE_URL . ($_SESSION['role'] === 'admin' ? '/modules/admin/dashboard.php' : '/modules/employee/dashboard.php'); ?>"
+            <a href="<?php echo BASE_URL . ($_SESSION['role'] === 'admin' ? '/modules/sales/sales.php' : '/modules/employee/dashboard.php'); ?>"
                class="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-sm font-medium text-text-main transition-colors flex items-center gap-2">
                 <span class="material-symbols-outlined text-[18px]">arrow_back</span> Volver
             </a>
@@ -211,6 +211,26 @@ else Layout::renderEmployeeSidebar('ventas');
             </button>
             <button type="button" onclick="submitSaleFromModal()" id="btn-confirm-sale" class="bg-primary text-background hover:bg-primary-hover font-medium py-2 px-5 rounded-lg transition-all flex items-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
                 <span class="material-symbols-outlined text-[16px]">receipt_long</span> Confirmar Venta
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Venta Exitosa -->
+<div id="success-modal" class="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-surface border border-border/50 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col text-center p-8">
+        <div class="w-20 h-20 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center mx-auto mb-6">
+            <span class="material-symbols-outlined text-[40px]">check_circle</span>
+        </div>
+        <h3 class="text-2xl font-display font-semibold text-text-main mb-2">¡Venta Registrada!</h3>
+        <p class="text-text-muted text-sm mb-8">La venta ha sido procesada correctamente en el sistema.</p>
+        
+        <div class="flex flex-col gap-3">
+            <button type="button" id="btn-print-invoice" class="w-full bg-primary text-background hover:bg-primary-hover font-medium py-3 px-6 rounded-xl transition-all shadow-lg shadow-primary/20 flex justify-center items-center gap-2">
+                <span class="material-symbols-outlined text-[20px]">print</span> Imprimir Factura
+            </button>
+            <button type="button" onclick="closeSuccessModal()" class="w-full bg-surface-hover text-text-main hover:bg-border/50 font-medium py-3 px-6 rounded-xl border border-border/50 transition-all flex justify-center items-center gap-2">
+                <span class="material-symbols-outlined text-[20px]">add_circle</span> Nueva Venta
             </button>
         </div>
     </div>

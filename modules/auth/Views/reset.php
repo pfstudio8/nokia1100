@@ -27,16 +27,11 @@
             </div>
             
             <div class="text-center mt-6">
-                <a href="<?php echo BASE_URL; ?>/forgot_password.php" class="auth-btn inline-block text-center no-underline">SOLICITAR NUEVO ENLACE</a>
+                <a href="<?php echo BASE_URL; ?>/auth/forgot_password.php" class="auth-btn inline-block text-center no-underline">SOLICITAR NUEVO ENLACE</a>
             </div>
         <?php else: ?>
 
-            <?php if (isset($_GET['error'])): ?>
-                <div class="bg-red-500/10 border border-red-500/20 text-red-500 text-sm p-4 rounded-xl mb-6 font-medium flex gap-3 items-center">
-                    <span class="material-symbols-outlined text-lg">error</span>
-                    <?php echo htmlspecialchars($_GET['error']); ?>
-                </div>
-            <?php endif; ?>
+
 
             <form action="<?php echo BASE_URL; ?>/modules/auth/index.php?action=reset_password" method="POST" class="space-y-5" novalidate>
                 <input type="hidden" name="token" value="<?php echo htmlspecialchars($token); ?>">
@@ -70,6 +65,39 @@
             <a href="<?php echo BASE_URL; ?>/index.php" class="text-primary hover:text-primary-hover transition-colors hover:underline font-semibold bg-transparent border-none cursor-pointer">Volver al inicio de sesión</a>
         </div>
     </div>
+    </div>
+
+    <!-- Contenedor Unificado para Notificaciones Toasts Flotantes -->
+    <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col items-end pointer-events-none gap-2"></div>
+
+    <script src="<?php echo BASE_URL; ?>/assets/js/framer-toaster.js?v=<?php echo time(); ?>"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let msgShowed = false;
+            
+            if (urlParams.has("success")) {
+                if (typeof showToast === "function") showToast(urlParams.get("success"), "success");
+                urlParams.delete("success");
+                msgShowed = true;
+            }
+            if (urlParams.has("error")) {
+                if (typeof showToast === "function") showToast(urlParams.get("error"), "error");
+                urlParams.delete("error");
+                msgShowed = true;
+            }
+            
+            if (msgShowed) {
+                // Mantener el parámetro de acción y token si existían
+                const newParams = new URLSearchParams();
+                if (urlParams.has("action")) newParams.set("action", urlParams.get("action"));
+                if (urlParams.has("token")) newParams.set("token", urlParams.get("token"));
+                
+                const queryStr = newParams.toString() ? "?" + newParams.toString() : "";
+                window.history.replaceState({}, document.title, window.location.pathname + queryStr);
+            }
+        });
+    </script>
 </body>
 
 </html>

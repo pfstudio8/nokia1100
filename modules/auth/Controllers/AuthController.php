@@ -288,13 +288,13 @@ class AuthController extends BaseController
     public function forgot_password()
     {
         if ($_SERVER["REQUEST_METHOD"] !== "POST") {
-            $this->redirect(BASE_URL . "/forgot_password.php");
+            $this->redirect(BASE_URL . "/auth/forgot_password.php");
         }
 
         $email = $_POST['email'] ?? '';
 
         if (empty($email)) {
-            $this->redirect(BASE_URL . "/forgot_password.php?error=Por favor ingrese su correo electrónico");
+            $this->redirect(BASE_URL . "/auth/forgot_password.php?error=Por favor ingrese su correo electrónico");
         }
 
         $user = $this->auth_model->find_by_email($email);
@@ -426,7 +426,7 @@ class AuthController extends BaseController
             }
         }
 
-        $this->redirect(BASE_URL . "/forgot_password.php?success=Si el correo existe en nuestra base de datos, hemos enviado un enlace de recuperación.");
+        $this->redirect(BASE_URL . "/auth/forgot_password.php?success=Si el correo existe en nuestra base de datos, hemos enviado un enlace de recuperación.");
     }
 
     public function reset_password_view()

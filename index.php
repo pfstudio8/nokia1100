@@ -37,7 +37,7 @@ if (isset($_SESSION['user_id'])) {
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/login.css?v=<?php echo time(); ?>">
 
-    <script src="<?php echo BASE_URL; ?>/assets/js/tailwind_config.js"></script>
+    <script src="<?php echo BASE_URL; ?>/assets/js/tailwind_config.js?v=<?php echo time(); ?>"></script>
 </head>
 
 <body class="font-sans antialiased">
@@ -54,12 +54,7 @@ if (isset($_SESSION['user_id'])) {
             <div id="register-form-wrapper" class="w-full flex flex-col justify-center">
                 <h2>Crear Cuenta</h2>
                 
-                <?php if (isset($_GET['error']) && $isRegister): ?>
-                    <div class="bg-red-500/10 border border-red-500/20 text-red-500 text-xs p-3 rounded-xl mb-3 font-medium flex gap-2 items-center">
-                        <span class="material-symbols-outlined text-base">error</span>
-                        <?php echo htmlspecialchars($_GET['error']); ?>
-                    </div>
-                <?php endif; ?>
+
 
                 <form action="<?php echo BASE_URL; ?>/modules/auth/index.php?action=register" method="POST" novalidate>
                     <div class="grid grid-cols-2 gap-x-4">
@@ -127,8 +122,8 @@ if (isset($_SESSION['user_id'])) {
                         <span>o bien</span>
                         <span class="h-[1px] w-6 bg-border/40"></span>
                     </div>
-                    <a href="javascript:void(0)" onclick="showGuestForm(true)" class="text-text-muted hover:text-primary hover:underline font-medium flex items-center gap-1.5 transition-colors text-xs">
-                        <span class="material-symbols-outlined text-[16px]">person</span>
+                    <a href="javascript:void(0)" onclick="showGuestForm(true)" class="w-full flex items-center justify-center gap-2 py-2.5 px-4 mt-1 rounded-xl border border-[rgba(255,255,255,0.08)] hover:border-[#0EA5A0]/50 text-text-muted hover:text-[#0EA5A0] transition-all duration-300 font-medium text-[13px] bg-[#1F2937]/50 hover:bg-[#0EA5A0]/5">
+                        <span class="material-symbols-outlined text-[18px]">person</span>
                         Ingresar como Invitado
                     </a>
                 </div>
@@ -167,19 +162,7 @@ if (isset($_SESSION['user_id'])) {
             <div id="login-form-wrapper" class="w-full flex flex-col justify-center">
                 <h2>Iniciar Sesión</h2>
                 
-                <?php if (isset($_GET['error']) && !$isRegister): ?>
-                    <div class="bg-red-500/10 border border-red-500/20 text-red-500 text-xs p-3 rounded-xl mb-3 font-medium flex gap-2 items-center">
-                        <span class="material-symbols-outlined text-base">error</span>
-                        <?php echo htmlspecialchars($_GET['error']); ?>
-                    </div>
-                <?php endif; ?>
-                
-                <?php if (isset($_GET['success'])): ?>
-                    <div class="bg-green-500/10 border border-green-500/20 text-green-600 text-xs p-3 rounded-xl mb-3 font-medium flex gap-2 items-center">
-                        <span class="material-symbols-outlined text-base">check_circle</span>
-                        <?php echo htmlspecialchars($_GET['success']); ?>
-                    </div>
-                <?php endif; ?>
+
 
                 <form action="<?php echo BASE_URL; ?>/modules/auth/index.php?action=login" method="POST" novalidate>
                     <div class="input-box">
@@ -196,8 +179,8 @@ if (isset($_SESSION['user_id'])) {
                         </a>
                     </div>
 
-                    <div class="forgot-link">
-                        <a href="forgot_password.php">¿Olvidaste la clave?</a>
+                    <div class="flex items-center justify-between mt-2">
+                        <a href="auth/forgot_password.php">¿Olvidaste la clave?</a>
                     </div>
 
                     <button type="submit" class="auth-btn-pill">
@@ -234,11 +217,39 @@ if (isset($_SESSION['user_id'])) {
     <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col items-end pointer-events-none gap-2"></div>
 
     <!-- Cargar Scripts del Sistema para animaciones Toasts y decodificación de URL -->
-    <script src="<?php echo BASE_URL; ?>/assets/js/sileo-toaster.bundle.js?v=<?php echo time(); ?>"></script>
+
+    <script src="<?php echo BASE_URL; ?>/assets/js/framer-toaster.js?v=<?php echo time(); ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/main.js?v=<?php echo time(); ?>"></script>
 
     <!-- Script de Gestión de Acceso -->
     <script src="<?php echo BASE_URL; ?>/assets/js/login.js?v=<?php echo time(); ?>"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let msgShowed = false;
+            
+            if (urlParams.has("success")) {
+                if (typeof showToast === "function") showToast(urlParams.get("success"), "success");
+                urlParams.delete("success");
+                msgShowed = true;
+            }
+            if (urlParams.has("error")) {
+                if (typeof showToast === "function") showToast(urlParams.get("error"), "error");
+                urlParams.delete("error");
+                msgShowed = true;
+            }
+            
+            if (msgShowed) {
+                // Si la URL contenía 'action=register', mantenerlo
+                if (urlParams.has("action")) {
+                    const action = urlParams.get("action");
+                    window.history.replaceState({}, document.title, window.location.pathname + "?action=" + action);
+                } else {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+            }
+        });
+    </script>
 </body>
 
 </html>
