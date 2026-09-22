@@ -27,27 +27,34 @@ Copia o clona la carpeta del proyecto dentro del directorio raíz de tu servidor
 
 *Nota: La base de datos ya incluye la estructura de tablas de negocio, seguridad y auditoría requeridas para el funcionamiento del sistema.*
 
-### 3. Configurar la Conexión en PHP
-Abre el archivo de configuración de la base de datos en [config/db.php](file:///c:/xampp/htdocs/nokia1100/config/db.php) y verifica que los datos de conexión correspondan a tu entorno local:
+### 3. Configurar la Conexión en PHP y las Variables de Entorno
+El sistema utiliza un archivo `.env` para manejar todas las contraseñas y variables sensibles.
 
-```php
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', ''); // Contraseña de tu MySQL
-define('DB_NAME', 'nokia1100');
-define('BASE_URL', '/nokia1100'); // Ruta relativa en el servidor web
+1. En la raíz del proyecto, copia el archivo `.env.example` y renómbralo a `.env`.
+2. Abre el nuevo archivo `.env` y verifica que los datos de conexión a la base de datos correspondan a tu entorno local:
+
+```env
+# Configuración de Base de Datos
+DB_HOST=localhost
+DB_USER=root
+DB_PASS=tu_contraseña_aqui
+DB_NAME=nokia1100
+BASE_URL=/nokia1100
 ```
 
 ### 4. Configurar el Envío de Correos (SMTP)
-El sistema envía correos de verificación al registrar cuentas y de recuperación de contraseñas. Para configurar las credenciales:
-1. Abre [config/config_mail.php](file:///c:/xampp/htdocs/nokia1100/config/config_mail.php).
-2. Configura los parámetros SMTP de tu de correo (ej. Gmail, Outlook) o crea un archivo personalizado `config/mail.local.php` para sobrescribir las constantes de forma local:
+El sistema envía correos de verificación al registrar cuentas y de recuperación de contraseñas. 
 
-```php
-<?php
-// Ejemplo para config/mail.local.php
-define('SMTP_USER', 'tu_correo@gmail.com');
-define('SMTP_PASS', 'tu_contraseña_de_aplicacion');
+1. En el mismo archivo `.env` que creaste en el paso anterior, edita la sección de SMTP con las credenciales de tu proveedor de correo (ej. Gmail, Outlook):
+
+```env
+# Configuración de Correo (SMTP)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=tu_correo@gmail.com
+SMTP_PASS=tu_contraseña_de_aplicacion
+SMTP_FROM_EMAIL=tu_correo@gmail.com
+SMTP_FROM_NAME="Nokia 1100 System"
 ```
 
 ---

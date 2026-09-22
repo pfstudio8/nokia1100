@@ -50,7 +50,7 @@ Layout::renderAdminSidebar('auditoria');
                     <?php else: ?>
                         <?php foreach ($logs as $log): ?>
                             <tr class="hover:bg-surface/30 transition-colors group">
-                                <td class="p-4 text-text-muted">#<?php echo $log['id_log']; ?></td>
+                                <td class="p-4 text-text-muted">#<?php echo $log['id_audit'] ?? $log['id_log'] ?? $log['id_auditoria'] ?? ''; ?></td>
                                 <td class="p-4 whitespace-nowrap"><?php echo date('d/m/Y H:i:s', strtotime($log['fecha'])); ?></td>
                                 <td class="p-4 text-primary font-medium uppercase tracking-wider text-xs">
                                     <?php echo htmlspecialchars($log['tabla_afectada'] ?? 'Sistema'); ?>
