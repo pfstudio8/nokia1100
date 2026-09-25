@@ -2,3 +2,5 @@
 .env.*
 !.env.example
 config/mail.local.php
+
+*.sql

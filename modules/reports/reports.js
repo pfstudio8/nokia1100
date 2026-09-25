@@ -58,7 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             borderRadius: 6 
                         }] 
                     },
-                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1F2937', titleColor: '#FAFAFA', bodyColor: secondary, borderColor: '#374151', borderWidth: 1, padding: 12, callbacks: { label: function(context) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(context.raw); } } } }, scales: { x: { grid: { color: border }, ticks: { color: textMuted, callback: function(value) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', notation: 'compact' }).format(value); } } }, y: { grid: { display: false }, ticks: { color: textMuted, font: { family: 'Outfit, sans-serif' } } } } }
+                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1F2937', titleColor: '#FAFAFA', bodyColor: secondary, borderColor: '#374151', borderWidth: 1, padding: 12, callbacks: { label: function(context) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(context.raw); } } } }, scales: { x: { grid: { color: border }, ticks: { maxRotation: 0, minRotation: 0, color: textMuted, callback: function(value) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', notation: 'compact' }).format(value); } } }, y: { grid: { display: false }, ticks: { color: textMuted, font: { family: 'Outfit, sans-serif' } } } } }
                 });
             }
         }
