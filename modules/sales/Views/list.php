@@ -73,6 +73,10 @@ Layout::renderAdminSidebar('ventas');
                                         <button type="button" onclick="confirmRollback(<?php echo $row['id_venta']; ?>)" class="whitespace-nowrap px-3 py-1 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-400 hover:bg-red-500 hover:text-white transition inline-flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.1)] hover:shadow-[0_0_15px_rgba(239,68,68,0.3)]" style="width: auto; padding: 0.35rem 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75rem;">
                                             <span class="material-symbols-outlined text-[1rem]">undo</span> Anular
                                         </button>
+                                        <?php else: ?>
+                                        <a href="credit_note.php?id=<?php echo $row['id_venta']; ?>" target="_blank" class="whitespace-nowrap px-3 py-1 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-400 hover:bg-red-500 hover:text-white transition inline-flex items-center gap-1">
+                                            <span class="material-symbols-outlined text-[1rem]">receipt_long</span> Nota Crédito
+                                        </a>
                                         <?php endif; ?>
                                     </div>
                                 </td>

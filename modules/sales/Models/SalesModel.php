@@ -31,7 +31,7 @@ class SalesModel extends BaseModel
 
     public function find_sale_by_id($id)
     {
-        $stmt = $this->conn->prepare("SELECT id_venta, fecha, total, metodo_de_pago FROM venta WHERE id_venta = ?");
+        $stmt = $this->conn->prepare("SELECT id_venta, fecha, total, metodo_de_pago, estado FROM venta WHERE id_venta = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();

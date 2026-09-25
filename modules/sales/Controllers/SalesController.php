@@ -89,6 +89,32 @@ class SalesController extends BaseController
         ]);
     }
 
+    public function credit_note()
+    {
+        $this->check_auth();
+
+        $id_venta = isset($_GET['id']) ? intval($_GET['id']) : 0;
+        if ($id_venta === 0) {
+            die("ID de venta no especificado.");
+        }
+
+        $venta = $this->sales_model->find_sale_by_id($id_venta);
+        if (!$venta) {
+            die("Venta no encontrada.");
+        }
+
+        if ($venta['estado'] !== 'anulada') {
+            die("Esta venta no ha sido anulada, por lo que no se puede emitir una nota de crédito.");
+        }
+
+        $detalles = $this->sales_model->get_sale_details($id_venta);
+
+        $this->render_view(__DIR__ . '/../Views/credit_note.php', [
+            'venta' => $venta,
+            'detalles' => $detalles
+        ]);
+    }
+
     public function sales_charts()
     {
         $this->check_access('graficos');

@@ -54,8 +54,8 @@ Layout::renderAdminSidebar('reportes');
                                     <span class="material-symbols-outlined">check_circle</span>
                                 </div>
                                 <div>
-                                    <h4 class="text-text-main font-semibold text-sm">Sano</h4>
-                                    <p class="text-text-muted text-xs mt-0.5">Stock por encima del nivel mínimo requerido</p>
+                                    <h4 class="text-text-main font-semibold text-sm">Stock Máximo</h4>
+                                    <p class="text-text-muted text-xs mt-0.5">Nivel de stock óptimo. No es necesario reponer.</p>
                                 </div>
                             </div>
                             <span class="text-xl font-bold text-text-main"><?php echo $stock_stats['sano']; ?></span>
@@ -68,8 +68,8 @@ Layout::renderAdminSidebar('reportes');
                                     <span class="material-symbols-outlined">warning</span>
                                 </div>
                                 <div>
-                                    <h4 class="text-text-main font-semibold text-sm">Crítico</h4>
-                                    <p class="text-text-muted text-xs mt-0.5">Stock bajo, requiere reabastecimiento pronto</p>
+                                    <h4 class="text-text-main font-semibold text-sm">Stock Mínimo</h4>
+                                    <p class="text-text-muted text-xs mt-0.5">¡Atención! Queda poco, hay que pedir más</p>
                                 </div>
                             </div>
                             <span class="text-xl font-bold text-text-main"><?php echo $stock_stats['bajo']; ?></span>
@@ -83,7 +83,7 @@ Layout::renderAdminSidebar('reportes');
                                 </div>
                                 <div>
                                     <h4 class="text-text-main font-semibold text-sm">Agotado</h4>
-                                    <p class="text-text-muted text-xs mt-0.5">Sin unidades disponibles, ventas bloqueadas</p>
+                                    <p class="text-text-muted text-xs mt-0.5">No nos queda nada, no se puede vender</p>
                                 </div>
                             </div>
                             <span class="text-xl font-bold text-text-main"><?php echo $stock_stats['agotado']; ?></span>
