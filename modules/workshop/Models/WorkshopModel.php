@@ -1,11 +1,43 @@
-﻿<?php
+<?php
 // modules/workshop/Models/WorkshopModel.php
 
 require_once __DIR__ . '/../../../classes/BaseModel.php';
 
 class WorkshopModel extends BaseModel
 {
-    public function get_repairs($status = '', $search = '')
+    public function get_repairs($status = '', $search = '', $limit = 50, $offset = 0)
+    {
+        $where_parts = [];
+        if ($status) {
+            $where_parts[] = "r.estado = '" . $this->conn->real_escape_string($status) . "'";
+        }
+        if ($search) {
+            $escaped = $this->conn->real_escape_string($search);
+            $where_parts[] = "(r.codigo_orden LIKE '%$escaped%' OR c.nombre LIKE '%$escaped%' OR r.equipo_marca LIKE '%$escaped%' OR r.equipo_modelo LIKE '%$escaped%')";
+        }
+
+        $where_clause = count($where_parts) > 0 ? " WHERE " . implode(" AND ", $where_parts) : "";
+        $limit = (int)$limit;
+        $offset = (int)$offset;
+
+        $sql = "SELECT r.id_reparacion, r.codigo_orden, c.nombre AS cliente_nombre, r.equipo_marca, r.equipo_modelo, r.estado, r.fecha_ingreso, r.presupuesto, r.costo_total 
+                FROM reparacion r
+                LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
+                $where_clause 
+                ORDER BY r.fecha_ingreso DESC
+                LIMIT $limit OFFSET $offset";
+
+        $result = $this->conn->query($sql);
+        $repairs = [];
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $repairs[] = $row;
+            }
+        }
+        return $repairs;
+    }
+
+    public function get_repairs_count($status = '', $search = '')
     {
         $where_parts = [];
         if ($status) {
@@ -18,12 +50,25 @@ class WorkshopModel extends BaseModel
 
         $where_clause = count($where_parts) > 0 ? " WHERE " . implode(" AND ", $where_parts) : "";
 
-        $sql = "SELECT r.id_reparacion, r.codigo_orden, c.nombre AS cliente_nombre, r.equipo_marca, r.equipo_modelo, r.estado, r.fecha_ingreso, r.presupuesto 
+        $sql = "SELECT COUNT(*) as total
                 FROM reparacion r
                 LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
-                $where_clause 
-                ORDER BY r.fecha_ingreso DESC";
+                $where_clause";
 
+        $res = $this->conn->query($sql);
+        if ($res && $row = $res->fetch_assoc()) {
+            return (int)$row['total'];
+        }
+        return 0;
+    }
+
+    public function get_chargeable_repairs()
+    {
+        $sql = "SELECT r.id_reparacion, r.codigo_orden, c.nombre AS cliente_nombre, r.equipo_marca, r.equipo_modelo, r.estado, r.fecha_ingreso, r.presupuesto, r.costo_total, r.falla_declarada, r.observaciones 
+                FROM reparacion r
+                LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
+                WHERE r.estado NOT IN ('Entregado', 'Cancelado')
+                ORDER BY r.fecha_ingreso ASC";
         $result = $this->conn->query($sql);
         $repairs = [];
         if ($result && $result->num_rows > 0) {
@@ -32,6 +77,38 @@ class WorkshopModel extends BaseModel
             }
         }
         return $repairs;
+    }
+
+    public function get_paid_repairs_history($limit = 50, $offset = 0)
+    {
+        $limit = (int)$limit;
+        $offset = (int)$offset;
+        $sql = "SELECT v.id_venta, v.fecha, v.total, v.metodo_de_pago, v.descripcion, u.nombre_usuario 
+                FROM venta v
+                LEFT JOIN usuario u ON v.id_usuario = u.id_usuario
+                WHERE v.descripcion LIKE 'Cobro de Reparación #%'
+                ORDER BY v.fecha DESC
+                LIMIT $limit OFFSET $offset";
+        $result = $this->conn->query($sql);
+        $history = [];
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $history[] = $row;
+            }
+        }
+        return $history;
+    }
+
+    public function get_paid_repairs_history_count()
+    {
+        $sql = "SELECT COUNT(*) as total
+                FROM venta v
+                WHERE v.descripcion LIKE 'Cobro de Reparación #%'";
+        $result = $this->conn->query($sql);
+        if ($result && $row = $result->fetch_assoc()) {
+            return (int)$row['total'];
+        }
+        return 0;
     }
 
     public function find_repair_by_id($id)
@@ -93,7 +170,7 @@ class WorkshopModel extends BaseModel
         $sql = "SELECT p.id_producto, p.nombre, p.precio, i.cantidad 
                 FROM producto p 
                 JOIN inventario i ON p.id_producto = i.id_producto 
-                WHERE p.is_active = 1 AND i.cantidad > 0 
+                WHERE p.is_active = 1 AND i.cantidad > 0 AND p.id_producto != 13
                 ORDER BY p.nombre ASC";
         $result = $this->conn->query($sql);
         $products = [];
@@ -233,6 +310,76 @@ class WorkshopModel extends BaseModel
             }
         } else {
             throw new Exception("No hay stock suficiente de ese repuesto.");
+        }
+    }
+
+    public function remove_repuesto_from_repair($id_reparacion_repuesto)
+    {
+        $id_reparacion_repuesto = intval($id_reparacion_repuesto);
+
+        $res = $this->conn->query("SELECT id_reparacion, id_producto, cantidad, precio_unitario FROM reparacion_repuesto WHERE id_reparacion_repuesto = $id_reparacion_repuesto");
+        $row = $res ? $res->fetch_assoc() : null;
+
+        if ($row) {
+            $this->conn->begin_transaction();
+            try {
+                // Eliminar el registro
+                $this->conn->query("DELETE FROM reparacion_repuesto WHERE id_reparacion_repuesto = $id_reparacion_repuesto");
+
+                // Restaurar inventario
+                $this->conn->query("UPDATE inventario SET cantidad = cantidad + " . $row['cantidad'] . " WHERE id_producto = " . $row['id_producto']);
+
+                // Restar del costo total
+                $costo = $row['cantidad'] * $row['precio_unitario'];
+                $this->conn->query("UPDATE reparacion SET costo_total = costo_total - $costo WHERE id_reparacion = " . $row['id_reparacion']);
+
+                $this->conn->commit();
+                return true;
+            } catch (Exception $e) {
+                $this->conn->rollback();
+                throw $e;
+            }
+        }
+        return false;
+    }
+
+    public function register_repair_payment($id_reparacion, $monto, $metodo_pago, $id_usuario)
+    {
+        $id_reparacion = intval($id_reparacion);
+        $monto = floatval($monto);
+        $id_usuario = intval($id_usuario);
+        
+        // Obtener detalles de la reparación
+        $repair = $this->find_repair_by_id($id_reparacion);
+        if (!$repair) throw new Exception("Reparación no encontrada");
+
+        $descripcion = "Cobro de Reparación #" . $repair['codigo_orden'] . " - " . $repair['equipo_marca'] . " " . $repair['equipo_modelo'];
+        $fecha = date('Y-m-d H:i:s');
+
+        $this->conn->begin_transaction();
+        try {
+            // 1. Crear Venta
+            $stmt = $this->conn->prepare("INSERT INTO venta (fecha, total, metodo_de_pago, id_usuario, descripcion) VALUES (?, ?, ?, ?, ?)");
+            $stmt->bind_param("sdsis", $fecha, $monto, $metodo_pago, $id_usuario, $descripcion);
+            if (!$stmt->execute()) throw new Exception("Error al registrar el ingreso");
+            $id_venta = $stmt->insert_id;
+            $stmt->close();
+
+            // 2. Crear Detalle de Venta (Usando el producto Genérico ID 13)
+            // Verificar si el ID 13 existe, sino usar NULL o un producto genérico
+            $id_producto_servicio = 13; // El que creamos recientemente
+            
+            $stmt = $this->conn->prepare("INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, nombre_producto, precio_copiado) VALUES (?, ?, 1, ?, ?, ?)");
+            $nombre_prod = "Servicio Técnico Taller";
+            $stmt->bind_param("iidsd", $id_venta, $id_producto_servicio, $monto, $nombre_prod, $monto);
+            $stmt->execute();
+            $stmt->close();
+
+            $this->conn->commit();
+            return $id_venta;
+        } catch (Exception $e) {
+            $this->conn->rollback();
+            throw $e;
         }
     }
 

@@ -37,9 +37,14 @@ Layout::renderAdminSidebar('perfil');
                     <input type="text" name="apellido" value="<?php echo htmlspecialchars($current_data['apellido']); ?>" required 
                            class="w-full bg-surface border border-border/60 p-3.5 rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm text-text-main shadow-sm hover:border-border">
                 </div>
+                <div class="group">
+                    <label class="block text-[11px] font-bold text-text-muted mb-2 uppercase tracking-wider group-focus-within:text-primary transition-colors">DNI</label>
+                    <input type="text" name="dni" value="<?php echo htmlspecialchars($current_data['dni']); ?>" required 
+                           class="w-full bg-surface border border-border/60 p-3.5 rounded-xl focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all text-sm text-text-main shadow-sm hover:border-border">
+                </div>
                 <div>
-                    <label class="block text-[11px] font-bold text-text-muted mb-2 uppercase tracking-wider">DNI (No editable)</label>
-                    <input type="text" value="<?php echo htmlspecialchars($current_data['dni']); ?>" disabled 
+                    <label class="block text-[11px] font-bold text-text-muted mb-2 uppercase tracking-wider">Email (No editable)</label>
+                    <input type="email" value="<?php echo htmlspecialchars($current_data['email']); ?>" disabled 
                            class="w-full bg-surface/30 border border-transparent p-3.5 rounded-xl text-text-muted/60 cursor-not-allowed text-sm">
                 </div>
             </div>

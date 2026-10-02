@@ -21,7 +21,6 @@ switch ($action) {
     case 'delete_product':
         $controller->delete_product();
         break;
-
     case 'inventory':
     default:
         $controller->inventory();

@@ -16,15 +16,26 @@ class SalesController extends BaseController
 
     public function sales()
     {
-        $this->check_access('ventas');
-        if ($_SESSION['role'] !== 'admin') {
-            $this->redirect(BASE_URL . "/index.php");
+        if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+            $this->check_access('ventas');
+        } else {
+            $this->check_access('venta');
         }
 
-        $sales = $this->sales_model->get_sales();
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        if ($page < 1) $page = 1;
+        $limit = 10;
+        $offset = ($page - 1) * $limit;
+
+        $total_items = $this->sales_model->get_sales_count();
+        $total_pages = ceil($total_items / $limit);
+
+        $sales = $this->sales_model->get_sales($limit, $offset);
 
         $this->render_view(__DIR__ . '/../Views/list.php', [
-            'sales' => $sales
+            'sales' => $sales,
+            'page' => $page,
+            'total_pages' => $total_pages
         ]);
     }
 
@@ -86,6 +97,62 @@ class SalesController extends BaseController
         $this->render_view(__DIR__ . '/../Views/invoice.php', [
             'venta' => $venta,
             'detalles' => $detalles
+        ]);
+    }
+
+    public function repairs_to_charge()
+    {
+        $this->check_auth();
+        // Verificar acceso a ventas
+        if ($_SESSION['role'] === 'admin') {
+            $this->check_access('ventas');
+        } else {
+            $this->check_access('venta');
+        }
+
+        require_once __DIR__ . '/../../workshop/Models/WorkshopModel.php';
+        $workshop_model = new WorkshopModel();
+
+        // Procesar cobro si viene por POST
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'charge_repair') {
+            try {
+                $id_reparacion = (int)($_POST['id_reparacion'] ?? 0);
+                $metodo = trim($_POST['metodo_pago'] ?? 'Efectivo');
+                
+                $repair = $workshop_model->find_repair_by_id($id_reparacion);
+                if (!$repair) {
+                    throw new Exception("Reparación no encontrada.");
+                }
+
+                $presupuesto_base = floatval($repair['presupuesto']);
+                $costo_repuestos = floatval($repair['costo_total'] ?? 0);
+                $total_a_cobrar = $presupuesto_base + $costo_repuestos;
+                
+                // Actualizamos estado en Taller y registramos el pago
+                // NOTA: mantenemos el presupuesto base intacto en la tabla reparación
+                $workshop_model->update_repair_status_and_budget($id_reparacion, 'Entregado', $presupuesto_base, 'Cobrado y entregado desde Ventas', $_SESSION['user_id']);
+                
+                // Registramos el pago por el TOTAL (presupuesto + repuestos)
+                $workshop_model->register_repair_payment($id_reparacion, $total_a_cobrar, $metodo, $_SESSION['user_id']);
+
+                $this->redirect("index.php?action=repairs_to_charge&success=" . urlencode("Reparación cobrada y entregada correctamente."));
+            } catch (Exception $e) {
+                $this->redirect("index.php?action=repairs_to_charge&error=" . urlencode($e->getMessage()));
+            }
+        }
+
+        // Obtener todas las reparaciones pendientes de cobro/entrega
+        $repairs = $workshop_model->get_chargeable_repairs();
+        
+        // Obtener los repuestos asignados a cada reparación
+        $repairs_parts = [];
+        foreach ($repairs as $r) {
+            $repairs_parts[$r['id_reparacion']] = $workshop_model->get_repair_repuestos($r['id_reparacion']);
+        }
+
+        $this->render_view(__DIR__ . '/../Views/repairs_to_charge.php', [
+            'repairs' => $repairs,
+            'repairs_parts' => $repairs_parts
         ]);
     }
 

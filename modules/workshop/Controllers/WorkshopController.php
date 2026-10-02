@@ -24,12 +24,44 @@ class WorkshopController extends BaseController
         $estado_filter = $_GET['estado'] ?? '';
         $search = $_GET['search'] ?? '';
 
-        $repairs = $this->workshop_model->get_repairs($estado_filter, $search);
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        if ($page < 1) $page = 1;
+        $limit = 10;
+        $offset = ($page - 1) * $limit;
+
+        $total_items = $this->workshop_model->get_repairs_count($estado_filter, $search);
+        $total_pages = ceil($total_items / $limit);
+
+        $repairs = $this->workshop_model->get_repairs($estado_filter, $search, $limit, $offset);
 
         $this->render_view(__DIR__ . '/../Views/index.php', [
             'repairs' => $repairs,
             'estado_filter' => $estado_filter,
-            'search' => $search
+            'search' => $search,
+            'page' => $page,
+            'total_pages' => $total_pages
+        ]);
+    }
+
+    public function history()
+    {
+        $this->check_auth();
+        $this->check_access('taller');
+
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        if ($page < 1) $page = 1;
+        $limit = 10;
+        $offset = ($page - 1) * $limit;
+
+        $total_items = $this->workshop_model->get_paid_repairs_history_count();
+        $total_pages = ceil($total_items / $limit);
+
+        $paid_repairs = $this->workshop_model->get_paid_repairs_history($limit, $offset);
+
+        $this->render_view(__DIR__ . '/../Views/history.php', [
+            'paid_repairs' => $paid_repairs,
+            'page' => $page,
+            'total_pages' => $total_pages
         ]);
     }
 
@@ -37,6 +69,10 @@ class WorkshopController extends BaseController
     {
         $this->check_auth();
         $this->check_access('taller');
+        
+        if ($_SESSION['role'] !== 'admin') {
+            $this->redirect(BASE_URL . "/modules/workshop/index.php");
+        }
 
         $error = '';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -57,7 +93,7 @@ class WorkshopController extends BaseController
 
                 // Handle image uploads
                 if (isset($_FILES['fotos']) && is_array($_FILES['fotos']['tmp_name'])) {
-                    $upload_dir = __DIR__ . '/../../../../assets/img/reparaciones/';
+                    $upload_dir = __DIR__ . '/../../../assets/img/reparaciones/';
                     if (!is_dir($upload_dir)) {
                         mkdir($upload_dir, 0777, true);
                     }
@@ -111,14 +147,22 @@ class WorkshopController extends BaseController
         // Action: update_status
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
             try {
+                $estado = trim($_POST['estado'] ?? '');
+                $presupuesto = (float)($_POST['presupuesto'] ?? 0);
+                
                 $this->workshop_model->update_repair_status_and_budget(
                     $id_reparacion,
-                    $_POST['estado'] ?? '',
-                    $_POST['presupuesto'] ?? '',
-                    $_POST['nota_historial'] ?? '',
+                    $estado,
+                    $presupuesto,
+                    trim($_POST['nota_historial'] ?? ''),
                     $_SESSION['user_id']
                 );
-                $this->redirect("index.php?action=view&id=$id_reparacion&success=" . urlencode("Orden actualizada correctamente."));
+                
+                $msg = "Orden actualizada correctamente.";
+                
+
+
+                $this->redirect("index.php?action=view&id=$id_reparacion&success=" . urlencode($msg));
             } catch (Exception $e) {
                 $this->redirect("index.php?action=view&id=$id_reparacion&error=" . urlencode($e->getMessage()));
             }
@@ -135,11 +179,22 @@ class WorkshopController extends BaseController
             }
         }
 
+        // Action: remove_repuesto
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'remove_repuesto') {
+            try {
+                $id_rr = (int)($_POST['id_reparacion_repuesto'] ?? 0);
+                $this->workshop_model->remove_repuesto_from_repair($id_rr);
+                $this->redirect("index.php?action=view&id=$id_reparacion&success=" . urlencode("Repuesto devuelto al inventario."));
+            } catch (Exception $e) {
+                $this->redirect("index.php?action=view&id=$id_reparacion&error=" . urlencode($e->getMessage()));
+            }
+        }
+
         // Action: add_image
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_image') {
             try {
                 if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
-                    $upload_dir = __DIR__ . '/../../../../assets/img/reparaciones/';
+                    $upload_dir = __DIR__ . '/../../../assets/img/reparaciones/';
                     if (!is_dir($upload_dir)) {
                         mkdir($upload_dir, 0777, true);
                     }
@@ -176,7 +231,7 @@ class WorkshopController extends BaseController
                 $id_imagen = (int)($_POST['id_imagen'] ?? 0);
                 $ruta_eliminada = $this->workshop_model->delete_repair_image($id_imagen, $id_reparacion);
                 if ($ruta_eliminada) {
-                    $file_path = __DIR__ . '/../../../../assets/img/reparaciones/' . $ruta_eliminada;
+                    $file_path = __DIR__ . '/../../../assets/img/reparaciones/' . $ruta_eliminada;
                     if (file_exists($file_path)) {
                         unlink($file_path);
                     }

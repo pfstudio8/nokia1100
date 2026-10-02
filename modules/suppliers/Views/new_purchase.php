@@ -35,10 +35,7 @@ Layout::renderAdminSidebar('proveedores');
                 <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Tiempo Entrega</label>
                 <input type="text" id="tiempo_entrega" placeholder="Ej: 30 días" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
             </div>
-            <div>
-                <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">IVA (%)</label>
-                <input type="number" id="iva" min="0" step="0.01" value="0" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
-            </div>
+
             <div>
                 <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Autorizado Por</label>
                 <input type="text" id="autorizado_por" placeholder="Ej: Pedro P." class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
@@ -61,29 +58,30 @@ Layout::renderAdminSidebar('proveedores');
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-end">
-                <div class="md:col-span-3">
+            <div class="flex flex-col lg:flex-row gap-4 items-end">
+                <div class="w-full lg:flex-1">
                     <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Producto / Nro Parte</label>
                     <input type="text" id="product_nombre" placeholder="Nombre" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
                 </div>
-                <div class="md:col-span-2">
+                <div class="w-full lg:w-[15%]">
                     <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Marca</label>
                     <input type="text" id="product_marca" placeholder="Opcional" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
                 </div>
-                <div class="md:col-span-2">
+                <div class="w-full lg:w-[15%]">
                     <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Modelo</label>
                     <input type="text" id="product_modelo" placeholder="Opcional" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
                 </div>
-                <div class="md:col-span-2">
+                
+                <div class="w-full lg:w-[12%]">
                     <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Costo Unit.</label>
                     <input type="number" id="costo" min="0" step="0.01" value="0" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
                 </div>
-                <div class="md:col-span-1">
+                <div class="w-full lg:w-[8%]">
                     <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Cant.</label>
                     <input type="number" id="cantidad" min="1" value="1" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">
                 </div>
-                <div class="md:col-span-2 flex">
-                    <button type="button" class="w-full bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-background font-medium py-3 rounded-xl transition-all flex justify-center items-center gap-2" onclick="addToCart()">
+                <div class="w-full lg:w-auto flex-shrink-0">
+                    <button type="button" class="w-full h-[46px] px-6 bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-background font-medium rounded-xl transition-all flex justify-center items-center gap-2" onclick="addToCart()">
                         <span class="material-symbols-outlined text-[18px]">add_box</span> Añadir
                     </button>
                 </div>
@@ -106,9 +104,10 @@ Layout::renderAdminSidebar('proveedores');
                     <tr><td colspan="5" class="p-8 text-center text-text-muted text-sm border-none">Aún no hay productos en la orden de compra</td></tr>
                 </tbody>
                 <tfoot>
+
                     <tr class="border-t border-border/50 bg-surface/30">
-                        <td colspan="3" class="p-4 text-right font-medium text-text-muted">TOTAL COMPRA:</td>
-                        <td id="cart-total" class="p-4 text-right font-display text-xl font-semibold text-primary">$0.00</td>
+                        <td colspan="3" class="p-4 text-right font-semibold text-text-main">TOTAL COMPRA:</td>
+                        <td id="cart-total" class="p-4 text-right font-display text-xl font-bold text-primary">$0.00</td>
                         <td></td>
                     </tr>
                 </tfoot>

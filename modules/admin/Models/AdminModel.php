@@ -169,17 +169,19 @@ class AdminModel extends BaseModel
             $id_persona = $this->conn->insert_id;
             $stmt->close();
 
+            $modulos_permitidos = ($user_data['rol'] === 'admin') ? null : 'dashboard,venta,inventario,taller,clientes';
             $stmt = $this->conn->prepare(
-                "INSERT INTO usuario (id_persona, nombre_usuario, contrasena, rol, email, verificado, is_active, token_verificacion, token_expira) 
-                 VALUES (?, ?, ?, ?, ?, 1, 1, NULL, NULL)"
+                "INSERT INTO usuario (id_persona, nombre_usuario, contrasena, rol, email, verificado, is_active, token_verificacion, token_expira, modulos_permitidos) 
+                 VALUES (?, ?, ?, ?, ?, 1, 1, NULL, NULL, ?)"
             );
             $stmt->bind_param(
-                "issss",
+                "isssss",
                 $id_persona,
                 $user_data['username'],
                 $user_data['hashed_password'],
                 $user_data['rol'],
-                $user_data['email']
+                $user_data['email'],
+                $modulos_permitidos
             );
             if (!$stmt->execute()) {
                 throw new Exception("Error al registrar la cuenta de usuario");

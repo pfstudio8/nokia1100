@@ -81,14 +81,32 @@ if ($_SESSION['role'] === 'admin') {
                             <textarea name="falla_declarada" required rows="3" class="w-full bg-surface border border-border px-4 py-2.5 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors"></textarea>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-text-muted mb-1">Fotos del Equipo (Opcional)</label>
-                            <div class="flex items-center gap-2">
-                                <input type="file" id="fotos-input" name="fotos[]" multiple accept="image/*" class="flex-1 bg-surface border border-border px-4 py-2 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary/10 file:text-primary hover:file:bg-primary/20">
-                                <button type="button" id="clear-fotos-btn" class="hidden w-10 h-10 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white rounded-xl flex items-center justify-center transition-colors shadow-sm" title="Quitar fotos">
-                                    <span class="material-symbols-outlined text-[18px]">close</span>
+                            <label class="block text-xs font-medium text-text-muted mb-2">Fotos del Equipo (Opcional)</label>
+                            
+                            <div class="bg-surface/30 border border-border rounded-xl p-1 shadow-sm mb-2">
+                                <div class="bg-background rounded-lg overflow-hidden border border-border/50">
+                                    <div class="w-full p-5 relative group transition-colors hover:bg-surface/30">
+                                        <input type="file" name="fotos[]" id="fotos-input" multiple accept="image/*" class="hidden">
+                                        <label for="fotos-input" class="cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-4 w-full h-full min-h-[120px] bg-transparent border-2 border-dashed border-border hover:border-primary/70 px-4 py-6 rounded-xl text-sm transition-all text-text-muted group-hover:text-primary">
+                                            <div class="w-12 h-12 rounded-full bg-primary/5 text-primary border border-primary/20 flex items-center justify-center group-hover:scale-110 group-hover:bg-primary/10 transition-all shadow-sm shrink-0">
+                                                <span class="material-symbols-outlined text-[24px]">cloud_upload</span>
+                                            </div>
+                                            <div class="text-center sm:text-left flex flex-col">
+                                                <span id="file_name_display" class="font-medium text-text-main text-[15px]">Seleccionar o arrastrar imágenes</span>
+                                                <span class="text-[11px] font-medium text-text-muted mt-1 uppercase tracking-wider">JPG, PNG, WEBP (MAX. 5MB)</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center justify-between mt-1">
+                                <p class="text-[11px] text-text-muted">Se pueden subir varias imágenes para documentar el estado del equipo.</p>
+                                <button type="button" id="clear-fotos-btn" class="hidden text-[11px] font-medium bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-3 py-1.5 rounded-lg transition-colors shadow-sm flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[14px]">delete</span> Quitar
                                 </button>
                             </div>
-                            <p class="text-xs text-text-muted mt-1">Se pueden subir varias imágenes para documentar el estado del equipo al ingresar.</p>
+                            <div id="image-preview-container" class="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
                         </div>
                     </div>
                 </div>
@@ -146,21 +164,70 @@ document.getElementById('id_cliente_existente').addEventListener('change', funct
     }
 });
 
-// Lógica para limpiar el input de fotos
+// Lógica para limpiar el input de fotos y mostrar vista previa
 const fotosInput = document.getElementById('fotos-input');
 const clearFotosBtn = document.getElementById('clear-fotos-btn');
+const previewContainer = document.getElementById('image-preview-container');
 
 fotosInput.addEventListener('change', function() {
+    previewContainer.innerHTML = ''; // Limpiar vistas previas anteriores
+    const fileNameDisplay = document.getElementById('file_name_display');
+    const uploadLabel = document.querySelector('label[for="fotos-input"]');
+    
     if (this.files.length > 0) {
         clearFotosBtn.classList.remove('hidden');
+        
+        if (this.files.length === 1) {
+            fileNameDisplay.textContent = this.files[0].name;
+        } else {
+            fileNameDisplay.textContent = this.files.length + ' imágenes seleccionadas';
+        }
+        
+        uploadLabel.classList.add('border-primary/50', 'bg-primary/5');
+        uploadLabel.classList.remove('border-border', 'bg-transparent');
+        uploadLabel.querySelector('.rounded-full').classList.add('bg-primary/10', 'border-primary/30', 'text-primary');
+        uploadLabel.querySelector('.rounded-full').classList.remove('bg-primary/5', 'border-primary/20');
+        
+        // Generar vistas previas
+        Array.from(this.files).forEach(file => {
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = document.createElement('img');
+                    img.src = e.target.result;
+                    img.className = 'w-full aspect-square object-cover rounded-lg border border-border shadow-sm';
+                    previewContainer.appendChild(img);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
     } else {
         clearFotosBtn.classList.add('hidden');
+        if(fileNameDisplay) fileNameDisplay.textContent = 'Seleccionar o arrastrar imágenes';
+        if(uploadLabel) {
+            uploadLabel.classList.remove('border-primary/50', 'bg-primary/5');
+            uploadLabel.classList.add('border-border', 'bg-transparent');
+            uploadLabel.querySelector('.rounded-full').classList.remove('bg-primary/10', 'border-primary/30', 'text-primary');
+            uploadLabel.querySelector('.rounded-full').classList.add('bg-primary/5', 'border-primary/20');
+        }
     }
 });
 
 clearFotosBtn.addEventListener('click', function() {
     fotosInput.value = '';
     clearFotosBtn.classList.add('hidden');
+    previewContainer.innerHTML = ''; // Limpiar vistas previas
+    
+    const fileNameDisplay = document.getElementById('file_name_display');
+    const uploadLabel = document.querySelector('label[for="fotos-input"]');
+    
+    if(fileNameDisplay) fileNameDisplay.textContent = 'Seleccionar o arrastrar imágenes';
+    if(uploadLabel) {
+        uploadLabel.classList.remove('border-primary/50', 'bg-primary/5');
+        uploadLabel.classList.add('border-border', 'bg-transparent');
+        uploadLabel.querySelector('.rounded-full').classList.remove('bg-primary/10', 'border-primary/30', 'text-primary');
+        uploadLabel.querySelector('.rounded-full').classList.add('bg-primary/5', 'border-primary/20');
+    }
 });
 </script>
 

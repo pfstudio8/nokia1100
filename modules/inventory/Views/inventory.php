@@ -83,10 +83,13 @@ if ($_SESSION['role'] === 'admin') {
                                 <td class="p-4 text-text-main font-medium">$<?php echo number_format($row['precio'], 2); ?></td>
                                 <td class="p-4 text-center">
                                     <?php if ($_SESSION['role'] === 'admin'): ?>
-                                        <?php // Enlace para cambiar el estado (activar/desactivar) del producto mediante la API ?>
-                                        <a href="<?php echo BASE_URL; ?>/api/change_status.php?id=<?php echo $row['id_producto']; ?>" class="inline-block px-2.5 py-1 rounded text-[10px] uppercase font-bold tracking-widest transition-colors <?php echo $row['is_active'] ? 'bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20'; ?>">
-                                            <?php echo $row['is_active'] ? 'Activo' : 'Inactivo'; ?>
-                                        </a>
+                                        <form method="POST" action="<?php echo BASE_URL; ?>/api/change_status.php" class="inline-block">
+                                            <input type="hidden" name="id" value="<?php echo $row['id_producto']; ?>">
+                                            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['session_token'] ?? ''; ?>">
+                                            <button type="submit" class="px-2.5 py-1 rounded text-[10px] uppercase font-bold tracking-widest transition-colors <?php echo $row['is_active'] ? 'bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/20'; ?>">
+                                                <?php echo $row['is_active'] ? 'Activo' : 'Inactivo'; ?>
+                                            </button>
+                                        </form>
                                     <?php else: ?>
                                         <span class="inline-block px-2.5 py-1 rounded text-[10px] uppercase font-bold tracking-widest <?php echo $row['is_active'] ? 'bg-green-500/10 text-green-500 border border-green-500/20' : 'bg-red-500/10 text-red-500 border border-red-500/20'; ?>">
                                             <?php echo $row['is_active'] ? 'Activo' : 'Inactivo'; ?>
@@ -111,6 +114,15 @@ if ($_SESSION['role'] === 'admin') {
             </table>
         </div>
 
+        <?php if (isset($total_pages) && $total_pages > 0): ?>
+            <div class="mt-6 flex justify-center gap-2">
+                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                    <a href="?search=<?php echo urlencode($search ?? ''); ?>&filter=<?php echo urlencode($filter ?? ''); ?>&page=<?php echo $i; ?>" class="px-3 py-1.5 border border-border rounded-xl text-sm font-medium transition-colors <?php echo $i === ($page ?? 1) ? 'bg-primary text-background' : 'bg-surface text-text-main hover:bg-surface-hover'; ?>">
+                        <?php echo $i; ?>
+                    </a>
+                <?php endfor; ?>
+            </div>
+        <?php endif; ?>
 
     </div>
 </main>

@@ -2,8 +2,8 @@
 // modules/sales/Views/new_sale.php
 
 Layout::renderHead('Nueva Venta - NOKIA1100');
-if ($_SESSION['role'] === 'admin') Layout::renderAdminSidebar('ventas');
-else Layout::renderEmployeeSidebar('ventas');
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') Layout::renderAdminSidebar('ventas');
+else Layout::renderEmployeeSidebar('venta');
 ?>
 <main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen">
     <div class="glass-card mb-8 border border-border/30">
@@ -130,7 +130,6 @@ else Layout::renderEmployeeSidebar('ventas');
                 <div class="bg-surface-hover border border-primary/30 rounded-lg p-4 flex justify-between items-center shadow-[inset_0_0_15px_rgba(0,0,0,0.2)]">
                     <div>
                         <h4 class="text-xs font-bold text-text-muted uppercase tracking-wider mb-0.5">Total a Pagar</h4>
-                        <p class="text-[10px] text-primary/80">Impuestos e IVA incluidos</p>
                     </div>
                     <div id="modal-total-amount" class="text-2xl font-display font-bold text-primary">
                         $0.00

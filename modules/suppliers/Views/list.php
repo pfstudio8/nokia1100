@@ -110,7 +110,6 @@ Layout::renderAdminSidebar('proveedores');
                                                         <th>Descripción</th>
                                                         <th>Items</th>
                                                         <th>Total</th>
-                                                        <th>IVA</th>
                                                         <th>Autorizado Por</th>
                                                     </tr>
                                                 </thead>
@@ -121,7 +120,6 @@ Layout::renderAdminSidebar('proveedores');
                                                             <td><?php echo htmlspecialchars($h['descripcion']); ?></td>
                                                             <td><?php echo $h['items']; ?></td>
                                                             <td style="font-weight: 500;">$<?php echo number_format($h['total'], 2); ?></td>
-                                                            <td><?php echo $h['iva']; ?>%</td>
                                                             <td><?php echo htmlspecialchars($h['autorizado_por']); ?></td>
                                                         </tr>
                                                     <?php endforeach; ?>

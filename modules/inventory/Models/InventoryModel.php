@@ -1,11 +1,11 @@
-﻿<?php
+<?php
 // modules/inventory/Models/InventoryModel.php
 
 require_once __DIR__ . '/../../../classes/BaseModel.php';
 
 class InventoryModel extends BaseModel
 {
-    public function get_inventory($search = '', $filter = '')
+    public function get_inventory($search = '', $filter = '', $limit = 50, $offset = 0)
     {
         $where_parts = [];
         if ($search) {
@@ -13,17 +13,21 @@ class InventoryModel extends BaseModel
             $where_parts[] = "(p.nombre LIKE '%$search_esc%' OR d.marca LIKE '%$search_esc%' OR d.modelo LIKE '%$search_esc%')";
         }
         if ($filter === 'low_stock') {
-            $where_parts[] = "i.cantidad <= 5";
+            $where_parts[] = "i.cantidad <= d.stock_minimo";
         }
 
         $where_clause = count($where_parts) > 0 ? " WHERE " . implode(" AND ", $where_parts) : "";
+
+        $limit = (int)$limit;
+        $offset = (int)$offset;
 
         $sql = "SELECT p.id_producto, p.nombre, d.marca, d.modelo, i.cantidad, p.precio, p.is_active
                 FROM inventario i
                 JOIN producto p ON i.id_producto = p.id_producto
                 JOIN producto_detalle d ON p.id_producto = d.id_producto
                 $where_clause
-                ORDER BY p.nombre ASC";
+                ORDER BY p.nombre ASC
+                LIMIT $limit OFFSET $offset";
 
         $result = $this->conn->query($sql);
         $items = [];
@@ -33,6 +37,32 @@ class InventoryModel extends BaseModel
             }
         }
         return $items;
+    }
+
+    public function get_inventory_count($search = '', $filter = '')
+    {
+        $where_parts = [];
+        if ($search) {
+            $search_esc = $this->conn->real_escape_string($search);
+            $where_parts[] = "(p.nombre LIKE '%$search_esc%' OR d.marca LIKE '%$search_esc%' OR d.modelo LIKE '%$search_esc%')";
+        }
+        if ($filter === 'low_stock') {
+            $where_parts[] = "i.cantidad <= d.stock_minimo";
+        }
+
+        $where_clause = count($where_parts) > 0 ? " WHERE " . implode(" AND ", $where_parts) : "";
+
+        $sql = "SELECT COUNT(*) as total
+                FROM inventario i
+                JOIN producto p ON i.id_producto = p.id_producto
+                JOIN producto_detalle d ON p.id_producto = d.id_producto
+                $where_clause";
+
+        $res = $this->conn->query($sql);
+        if ($res && $row = $res->fetch_assoc()) {
+            return (int)$row['total'];
+        }
+        return 0;
     }
 
     public function find_product_by_id($id_producto)
@@ -252,26 +282,6 @@ class InventoryModel extends BaseModel
         return true;
     }
 
-    public function get_inventory_logs($limit = 100)
-    {
-        $limit = intval($limit);
-        $sql = "SELECT a.*, u.nombre_usuario 
-                FROM audit_log a 
-                LEFT JOIN usuario u ON a.id_usuario = u.id_usuario 
-                WHERE a.accion LIKE 'INVENTORY_%' 
-                ORDER BY a.fecha DESC LIMIT ?";
-        
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $limit);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $logs = [];
-        while ($row = $result->fetch_assoc()) {
-            $logs[] = $row;
-        }
-        $stmt->close();
-        return $logs;
-    }
 
     public function get_critical_stock_details()
     {

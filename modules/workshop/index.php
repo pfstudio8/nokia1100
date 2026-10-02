@@ -18,6 +18,9 @@ switch ($action) {
     case 'track':
         $controller->track();
         break;
+    case 'history':
+        $controller->history();
+        break;
     case 'index':
     default:
         $controller->index();

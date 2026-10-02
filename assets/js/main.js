@@ -189,13 +189,17 @@ function handleUrlToasts() {
         const code = urlParams.get('success');
         const msg = messages[code] || decodeURIComponent(code);
         showToast(msg, 'success');
-        window.history.replaceState({}, document.title, window.location.pathname);
+        urlParams.delete('success');
+        const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.history.replaceState({}, document.title, newUrl);
     }
     else if (urlParams.has('error')) {
         const code = urlParams.get('error');
         const msg = messages[code] || decodeURIComponent(code);
         showToast(msg, 'error');
-        window.history.replaceState({}, document.title, window.location.pathname);
+        urlParams.delete('error');
+        const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.history.replaceState({}, document.title, newUrl);
     }
 }
 

@@ -7,18 +7,22 @@ class Database {
     public $conn;
 
     public function __construct() {
-        $this->host = getenv('DB_HOST') ?: "localhost";
-        $this->user = getenv('DB_USER') ?: "root";
-        $this->password = getenv('DB_PASS') !== false ? getenv('DB_PASS') : "";
-        $this->db_name = getenv('DB_NAME') ?: "nokia1100";
+        require_once __DIR__ . '/../config/bootstrap.php';
+
+        $this->host = $_ENV['DB_HOST'];
+        $this->user = $_ENV['DB_USER'];
+        $this->password = $_ENV['DB_PASS'];
+        $this->db_name = $_ENV['DB_NAME'];
         
-        $this->conn = new mysqli($this->host, $this->user, $this->password, $this->db_name);
-        
-        if ($this->conn->connect_error) {
-            die("Connection failed: " . $this->conn->connect_error);
+        mysqli_report(MYSQLI_REPORT_STRICT | MYSQLI_REPORT_ERROR);
+        try {
+            $this->conn = new mysqli($this->host, $this->user, $this->password, $this->db_name);
+            $this->conn->set_charset("utf8mb4");
+            $this->conn->query("SET time_zone = '-03:00'");
+        } catch (Exception $e) {
+            error_log("Connection failed: " . $e->getMessage());
+            die("Error interno de conexión a la base de datos.");
         }
-        
-        $this->conn->set_charset("utf8");
     }
 
     public function getConnection() {

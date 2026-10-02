@@ -21,9 +21,7 @@ switch ($action) {
     case 'reset_password':
         $controller->reset_password();
         break;
-    case 'get_token':
-        $controller->get_token();
-        break;
+
     case 'guestLogin':
         $controller->guestLogin();
         break;

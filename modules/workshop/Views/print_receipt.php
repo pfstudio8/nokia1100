@@ -56,12 +56,15 @@
 
         <div class="row">
             <div class="col">
-                <h3>Presupuesto Estimado</h3>
+                <h3>Total Presupuestado</h3>
                 <p style="font-size: 24px; font-weight: bold; margin-top: 10px;">
-                    <?php echo $repair['presupuesto'] ? '$' . number_format($repair['presupuesto'], 2) : 'A Confirmar'; ?>
+                    <?php 
+                        $total_receipt = floatval($repair['presupuesto']) + floatval($repair['costo_total']);
+                        echo $total_receipt > 0 ? '$' . number_format($total_receipt, 2) : 'A Confirmar'; 
+                    ?>
                 </p>
                 <?php if($repair['costo_total'] > 0) { ?>
-                    <p style="color:#666; font-size: 12px; margin-top:10px;">Costo repuestos asignados: $<?php echo number_format($repair['costo_total'], 2); ?></p>
+                    <p style="color:#666; font-size: 12px; margin-top:10px;">(Incluye repuestos: $<?php echo number_format($repair['costo_total'], 2); ?>)</p>
                 <?php } ?>
             </div>
         </div>

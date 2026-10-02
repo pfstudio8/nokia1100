@@ -26,9 +26,15 @@ if ($_SESSION['role'] === 'admin') {
                     <span class="material-symbols-outlined text-[16px]">download</span> PDF
                 </button>
 
+                <a href="index.php?action=history" class="bg-surface text-text-main hover:bg-surface-hover px-4 py-2 border border-border rounded-lg font-medium text-sm transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">history</span> Historial de Cobros
+                </a>
+
+                <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
                 <a href="add.php" class="bg-primary text-background hover:bg-primary-hover px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2">
                     <span class="material-symbols-outlined text-[18px]">add</span> Nueva Orden
                 </a>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -87,7 +93,10 @@ if ($_SESSION['role'] === 'admin') {
                                 </td>
                                 <td class="p-4 text-text-muted text-sm"><?php echo date('d/m/Y H:i', strtotime($r['fecha_ingreso'])); ?></td>
                                 <td class="p-4 text-text-main font-medium">
-                                    <?php echo $r['presupuesto'] ? '$' . number_format($r['presupuesto'], 2) : '<span class="text-text-muted text-xs">Pte.</span>'; ?>
+                                    <?php 
+                                        $total_list = floatval($r['presupuesto']) + floatval($r['costo_total'] ?? 0);
+                                        echo $total_list > 0 ? '$' . number_format($total_list, 2) : '<span class="text-text-muted text-xs">Pte.</span>'; 
+                                    ?>
                                 </td>
                                 <td class="p-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
@@ -107,6 +116,25 @@ if ($_SESSION['role'] === 'admin') {
                 </tbody>
             </table>
         </div>
+
+        <?php if (isset($total_pages) && $total_pages > 0): ?>
+            <div class="mt-6 flex justify-center gap-2">
+                <?php 
+                $query_args = [];
+                if (!empty($estado_filter)) $query_args['estado'] = $estado_filter;
+                if (!empty($search)) $query_args['search'] = $search;
+                
+                for ($i = 1; $i <= $total_pages; $i++): 
+                    $query_args['page'] = $i;
+                    $qs = http_build_query($query_args);
+                ?>
+                    <a href="?<?php echo $qs; ?>" class="px-3 py-1.5 border border-border rounded-xl text-sm font-medium transition-colors <?php echo $i === ($page ?? 1) ? 'bg-primary text-background' : 'bg-surface text-text-main hover:bg-surface-hover'; ?>">
+                        <?php echo $i; ?>
+                    </a>
+                <?php endfor; ?>
+            </div>
+        <?php endif; ?>
+
     </div>
 </main>
 

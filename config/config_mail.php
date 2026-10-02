@@ -2,54 +2,32 @@
 // config_mail.php
 // Configuración centralizada de correo.
 // Prioriza variables de entorno para no exponer credenciales en código.
-require_once __DIR__ . '/../classes/EnvLoader.php';
-EnvLoader::load(__DIR__ . '/../.env');
-$local_mail_config = __DIR__ . '/mail.local.php';
-if (file_exists($local_mail_config)) {
-    require_once $local_mail_config;
+require_once __DIR__ . '/bootstrap.php';
+$validator = Dotenv\Dotenv::createImmutable(dirname(__DIR__));
+
+$validator->required([
+    'SMTP_HOST', 'SMTP_USER', 'SMTP_PASS',
+    'SMTP_PORT', 'SMTP_FROM_EMAIL', 'SMTP_FROM_NAME'
+])->notEmpty();
+$validator->required('SMTP_PORT')->isInteger();
+
+$port = (int) $_ENV['SMTP_PORT'];
+if ($port < 1 || $port > 65535) {
+    throw new RuntimeException('SMTP_PORT fuera de rango');
+}
+if (!filter_var($_ENV['SMTP_FROM_EMAIL'], FILTER_VALIDATE_EMAIL)) {
+    throw new RuntimeException('SMTP_FROM_EMAIL no válido');
 }
 
-if (!defined('SMTP_HOST')) {
-    define('SMTP_HOST', getenv('SMTP_HOST') ?: 'smtp.gmail.com');
+foreach (['SMTP_HOST', 'SMTP_USER', 'SMTP_PASS',
+          'SMTP_FROM_EMAIL', 'SMTP_FROM_NAME'] as $name) {
+    if (!defined($name)) define($name, $_ENV[$name]);
 }
-if (!defined('SMTP_USER')) {
-    define('SMTP_USER', getenv('SMTP_USER') ?: '');
-}
-if (!defined('SMTP_PASS')) {
-    define('SMTP_PASS', getenv('SMTP_PASS') ?: '');
-}
-if (!defined('SMTP_PORT')) {
-    define('SMTP_PORT', (int) (getenv('SMTP_PORT') ?: 587));
-}
-if (!defined('SMTP_FROM_EMAIL')) {
-    define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL') ?: SMTP_USER);
-}
-if (!defined('SMTP_FROM_NAME')) {
-    define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME') ?: 'Nokia 1100 System');
-}
+if (!defined('SMTP_PORT')) define('SMTP_PORT', $port);
 
-// Función para cargar PHPMailer (Composer o instalación manual)
+
+// Función para verificar si PHPMailer está cargado vía Composer
 function cargarPHPMailer() {
-    if (class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
-        return true;
-    }
-
-    $composer_autoload = dirname(__DIR__) . '/vendor/autoload.php';
-    if (file_exists($composer_autoload)) {
-        require_once $composer_autoload;
-        if (class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
-            return true;
-        }
-    }
-
-    $manual_base_dir = dirname(__DIR__) . '/PHPMailer-master/src/';
-    if (file_exists($manual_base_dir . 'Exception.php')) {
-        require_once $manual_base_dir . 'Exception.php';
-        require_once $manual_base_dir . 'PHPMailer.php';
-        require_once $manual_base_dir . 'SMTP.php';
-        return class_exists('PHPMailer\\PHPMailer\\PHPMailer');
-    }
-
-    return false;
+    return class_exists('PHPMailer\\PHPMailer\\PHPMailer');
 }
 ?>

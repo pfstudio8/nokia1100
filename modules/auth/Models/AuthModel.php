@@ -86,14 +86,16 @@ class AuthModel extends BaseModel
             $verificado = ($rol === 'admin') ? 1 : 0;
             $token = isset($user_data['token_verificacion']) ? $user_data['token_verificacion'] : null;
             $expira = isset($user_data['token_expira']) ? $user_data['token_expira'] : null;
+            
+            $modulos_permitidos = ($rol === 'admin') ? null : 'dashboard,venta,inventario,taller,clientes';
 
             // Insertar datos de usuario
             $stmt = $this->conn->prepare(
-                "INSERT INTO usuario (id_persona, nombre_usuario, contrasena, rol, email, verificado, is_active, token_verificacion, token_expira)
-                 VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?)"
+                "INSERT INTO usuario (id_persona, nombre_usuario, contrasena, rol, email, verificado, is_active, token_verificacion, token_expira, modulos_permitidos)
+                 VALUES (?, ?, ?, ?, ?, ?, 1, ?, ?, ?)"
             );
             $stmt->bind_param(
-                "issssiss",
+                "issssisss",
                 $id_persona,
                 $user_data['username'],
                 $user_data['hashed_password'],
@@ -101,7 +103,8 @@ class AuthModel extends BaseModel
                 $user_data['email'],
                 $verificado,
                 $token,
-                $expira
+                $expira,
+                $modulos_permitidos
             );
             if (!$stmt->execute()) {
                 throw new Exception("Error al registrar usuario");

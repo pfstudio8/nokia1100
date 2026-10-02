@@ -74,7 +74,7 @@ if ($_SESSION['role'] === 'admin') {
                         </h3>
                     </div>
 
-                    <form method="POST" action="" enctype="multipart/form-data" class="mb-6 space-y-4">
+                    <form method="POST" action="" enctype="multipart/form-data" class="mb-6 space-y-4" id="image_upload_form">
                         <input type="hidden" name="action" value="add_image">
                         
                         <div class="bg-surface/30 border border-border rounded-xl p-1 shadow-sm">
@@ -201,42 +201,106 @@ if ($_SESSION['role'] === 'admin') {
                         uploadLabel.querySelector('.rounded-full').classList.remove('bg-primary/10', 'border-primary/30', 'text-primary');
                         uploadLabel.querySelector('.rounded-full').classList.add('bg-primary/5', 'border-primary/20');
                     }
+
+                    document.getElementById('image_upload_form').addEventListener('submit', function(e) {
+                        e.preventDefault();
+                        const formData = new FormData(this);
+                        
+                        const btnSubmit = this.querySelector('button[type="submit"]');
+                        const originalText = btnSubmit.innerHTML;
+                        btnSubmit.innerHTML = 'Subiendo...';
+                        btnSubmit.disabled = true;
+
+                        fetch(window.location.href, {
+                            method: 'POST',
+                            body: formData
+                        })
+                        .then(response => {
+                            if (response.url.includes('&error=')) {
+                                const params = new URLSearchParams(response.url.split('?')[1]);
+                                const errorMsg = params.get('error') || 'Ocurrió un error en el servidor.';
+                                if (typeof showToast === 'function') {
+                                    showToast(errorMsg, 'error');
+                                } else {
+                                    alert(errorMsg);
+                                }
+                                btnSubmit.innerHTML = originalText;
+                                btnSubmit.disabled = false;
+                                return Promise.reject('Backend error');
+                            }
+                            return response.text();
+                        })
+                        .then(html => {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(html, 'text/html');
+                            const newGrid = doc.getElementById('images_grid_container');
+                            if(newGrid) {
+                                document.getElementById('images_grid_container').innerHTML = newGrid.innerHTML;
+                            } else {
+                                if (typeof showToast === 'function') showToast('Error en el servidor al cargar la imagen.', 'error');
+                            }
+                            
+                            this.reset();
+                            resetImagePreview();
+                            
+                            btnSubmit.innerHTML = originalText;
+                            btnSubmit.disabled = false;
+                            
+                            if (typeof showToast === 'function' && newGrid) {
+                                showToast('Foto subida correctamente', 'success');
+                            } else {
+                                alert('¡Foto subida correctamente!');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            if (typeof showToast === 'function') {
+                                showToast('Ocurrió un error al subir la imagen.', 'error');
+                            } else {
+                                alert('Ocurrió un error al subir la imagen.');
+                            }
+                            btnSubmit.innerHTML = originalText;
+                            btnSubmit.disabled = false;
+                        });
+                    });
                     </script>
 
-                    <?php if(!empty($images)): ?>
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <?php foreach($images as $img): ?>
-                        <div class="relative group">
-                            <a href="<?php echo BASE_URL; ?>/assets/img/reparaciones/<?php echo htmlspecialchars($img['ruta_archivo']); ?>" target="_blank" class="block aspect-square overflow-hidden rounded-xl border border-border relative">
-                                <img src="<?php echo BASE_URL; ?>/assets/img/reparaciones/<?php echo htmlspecialchars($img['ruta_archivo']); ?>" alt="Foto" class="w-full h-full object-cover hover:scale-110 transition-transform duration-300">
-                            </a>
-                            <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] p-1 text-center font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                                <?php echo htmlspecialchars($img['tipo']); ?>
+                    <div id="images_grid_container">
+                        <?php if(!empty($images)): ?>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <?php foreach($images as $img): ?>
+                            <div class="relative group">
+                                <a href="<?php echo BASE_URL; ?>/assets/img/reparaciones/<?php echo htmlspecialchars($img['ruta_archivo']); ?>" target="_blank" class="block aspect-square overflow-hidden rounded-xl border border-border relative">
+                                    <img src="<?php echo BASE_URL; ?>/assets/img/reparaciones/<?php echo htmlspecialchars($img['ruta_archivo']); ?>" alt="Foto" class="w-full h-full object-cover hover:scale-110 transition-transform duration-300">
+                                </a>
+                                <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] p-1 text-center font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <?php echo htmlspecialchars($img['tipo']); ?>
+                                </div>
+                                <form method="POST" action="" class="absolute top-2 right-2">
+                                    <input type="hidden" name="action" value="delete_image">
+                                    <input type="hidden" name="id_imagen" value="<?php echo $img['id_imagen']; ?>">
+                                    <button type="submit" data-confirm="¿Seguro que deseas eliminar esta foto?" data-confirm-title="Eliminar Foto" data-destructive="true" class="w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110">
+                                        <span class="material-symbols-outlined text-[16px] pointer-events-none">close</span>
+                                    </button>
+                                </form>
                             </div>
-                            <form method="POST" action="" class="absolute top-2 right-2">
-                                <input type="hidden" name="action" value="delete_image">
-                                <input type="hidden" name="id_imagen" value="<?php echo $img['id_imagen']; ?>">
-                                <button type="submit" onclick="return confirm('¿Seguro que deseas eliminar esta foto?')" class="w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110">
-                                    <span class="material-symbols-outlined text-[16px]">close</span>
-                                </button>
-                            </form>
+                            <?php endforeach; ?>
                         </div>
-                        <?php endforeach; ?>
+                        <?php else: ?>
+                            <p class="text-sm text-text-muted text-center py-4">No hay fotos subidas para esta reparación.</p>
+                        <?php endif; ?>
                     </div>
-                    <?php else: ?>
-                        <p class="text-sm text-text-muted text-center py-4">No hay fotos subidas para esta reparación.</p>
-                    <?php endif; ?>
                 </div>
 
                 <!-- REPUESTOS -->
-                <div class="glass-card rounded-2xl p-6">
+                <div class="glass-card rounded-2xl p-6" id="repuestos_container">
                     <div class="flex justify-between items-center border-b border-border/50 pb-2 mb-4">
                         <h3 class="text-lg font-display font-medium text-text-main flex items-center gap-2">
                             <span class="material-symbols-outlined text-primary text-xl">build</span> Repuestos Utilizados / Cotizados
                         </h3>
                     </div>
                     
-                    <form method="POST" action="" class="flex gap-2 mb-6">
+                    <form method="POST" action="" class="flex gap-2 mb-6 ajax-repuesto-form">
                         <input type="hidden" name="action" value="add_repuesto">
                         <select name="id_producto" required class="flex-1 bg-surface border border-border px-3 py-2 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
                             <option value="">Seleccionar repuesto del inventario...</option>
@@ -252,21 +316,31 @@ if ($_SESSION['role'] === 'admin') {
                             <thead class="bg-surface/50 border-b border-border text-xs uppercase text-text-muted">
                                 <tr>
                                     <th class="p-3">Repuesto</th>
-                                    <th class="p-3">Cant.</th>
+                                    <th class="p-3 text-center">Cant.</th>
                                     <th class="p-3 text-right">Precio</th>
+                                    <th class="p-3 text-center">Acción</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-border/50">
                                 <?php if(count($repuestos)>0): ?>
                                     <?php foreach($repuestos as $rep): ?>
-                                    <tr>
+                                    <tr class="hover:bg-surface/30 transition-colors">
                                         <td class="p-3"><?php echo htmlspecialchars($rep['nombre']); ?></td>
-                                        <td class="p-3"><?php echo $rep['cantidad']; ?></td>
+                                        <td class="p-3 text-center"><?php echo $rep['cantidad']; ?></td>
                                         <td class="p-3 text-right">$<?php echo number_format($rep['precio_unitario'], 2); ?></td>
+                                        <td class="p-3 text-center">
+                                            <form method="POST" action="" class="inline-block ajax-repuesto-form">
+                                                <input type="hidden" name="action" value="remove_repuesto">
+                                                <input type="hidden" name="id_reparacion_repuesto" value="<?php echo $rep['id_reparacion_repuesto']; ?>">
+                                                <button type="submit" class="text-red-400 hover:text-red-500 hover:bg-red-500/10 p-1.5 rounded-lg transition-colors">
+                                                    <span class="material-symbols-outlined text-[16px] pointer-events-none">delete</span>
+                                                </button>
+                                            </form>
+                                        </td>
                                     </tr>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <tr><td colspan="3" class="p-4 text-center text-text-muted text-xs">Aún no se han asignado repuestos a esta orden.</td></tr>
+                                    <tr><td colspan="4" class="p-4 text-center text-text-muted text-xs">Aún no se han asignado repuestos a esta orden.</td></tr>
                                 <?php endif; ?>
                             </tbody>
                             <?php if($repair['costo_total'] > 0): ?>
@@ -274,6 +348,7 @@ if ($_SESSION['role'] === 'admin') {
                                 <tr>
                                     <td colspan="2" class="p-3 text-right font-medium text-text-muted">Subtotal Repuestos:</td>
                                     <td class="p-3 text-right font-medium text-text-main">$<?php echo number_format($repair['costo_total'], 2); ?></td>
+                                    <td></td>
                                 </tr>
                             </tfoot>
                             <?php endif; ?>
@@ -281,6 +356,91 @@ if ($_SESSION['role'] === 'admin') {
                     </div>
                     <p class="text-xs text-text-muted mt-2"><span class="material-symbols-outlined text-[14px] align-middle">info</span> Los repuestos asignados se descuentan automáticamente del stock general de inventario.</p>
                 </div>
+                
+                <script>
+                function attachRepuestoAjax() {
+                    document.querySelectorAll('.ajax-repuesto-form').forEach(form => {
+                        // Avoid attaching multiple listeners
+                        if (form.dataset.ajaxAttached) return;
+                        form.dataset.ajaxAttached = "true";
+
+                        form.addEventListener('submit', async function(e) {
+                            e.preventDefault();
+                            
+                            const actionInput = this.querySelector('input[name="action"]');
+                            if (actionInput && actionInput.value === 'remove_repuesto') {
+                                if (typeof showConfirmModal === 'function') {
+                                    const confirmed = await showConfirmModal('Quitar Repuesto', '¿Seguro que deseas quitar este repuesto de la orden?', 'Sí, quitar', 'Cancelar', true);
+                                    if (!confirmed) return;
+                                } else {
+                                    if (!confirm('¿Quitar este repuesto?')) return;
+                                }
+                            }
+
+                            const formData = new FormData(this);
+                            const btnSubmit = this.querySelector('button[type="submit"]');
+                            const originalHtml = btnSubmit.innerHTML;
+                            
+                            btnSubmit.innerHTML = '<span class="material-symbols-outlined animate-spin text-[16px]">sync</span>';
+                            btnSubmit.disabled = true;
+
+                            fetch(window.location.href, {
+                                method: 'POST',
+                                body: formData
+                            })
+                            .then(response => {
+                                if (response.url.includes('&error=')) {
+                                    const params = new URLSearchParams(response.url.split('?')[1]);
+                                    const errorMsg = params.get('error') || 'Ocurrió un error en el servidor.';
+                                    if (typeof showToast === 'function') {
+                                        showToast(errorMsg, 'error');
+                                    } else {
+                                        alert(errorMsg);
+                                    }
+                                    btnSubmit.innerHTML = originalHtml;
+                                    btnSubmit.disabled = false;
+                                    return Promise.reject('Backend error');
+                                }
+                                return response.text();
+                            })
+                            .then(html => {
+                                const parser = new DOMParser();
+                                const doc = parser.parseFromString(html, 'text/html');
+                                const newContainer = doc.getElementById('repuestos_container');
+                                
+                                if(newContainer) {
+                                    document.getElementById('repuestos_container').innerHTML = newContainer.innerHTML;
+                                    attachRepuestoAjax(); // Re-attach listeners to new elements
+                                } else {
+                                    if (typeof showToast === 'function') showToast('Error en el servidor al cargar los datos.', 'error');
+                                    btnSubmit.innerHTML = originalHtml;
+                                    btnSubmit.disabled = false;
+                                }
+                                
+                                if (typeof showToast === 'function' && newContainer) {
+                                    if (actionInput && actionInput.value === 'remove_repuesto') {
+                                        showToast('Repuesto devuelto al inventario', 'info');
+                                    } else {
+                                        showToast('Repuesto asignado correctamente', 'success');
+                                    }
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                if (typeof showToast === 'function') {
+                                    showToast('Ocurrió un error al procesar el repuesto.', 'error');
+                                } else {
+                                    alert('Ocurrió un error al procesar el repuesto.');
+                                }
+                                btnSubmit.innerHTML = originalHtml;
+                                btnSubmit.disabled = false;
+                            });
+                        });
+                    });
+                }
+                // Run once on load
+                attachRepuestoAjax();
+                </script>
             </div>
 
             <?php // Columnas derechas (Estado y Línea de tiempo) ?>
@@ -298,10 +458,13 @@ if ($_SESSION['role'] === 'admin') {
                             <label class="block text-xs font-medium text-text-muted mb-1">Estado de Reparación</label>
                             <select name="estado" class="w-full bg-surface border border-border px-3 py-2.5 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
                                 <?php 
-                                $estados = ['Recibido', 'En diagnóstico', 'En reparación', 'Listo', 'Entregado', 'Cancelado'];
+                                $estados = ['Recibido', 'En diagnóstico', 'En reparación', 'Listo', 'Cancelado'];
                                 foreach ($estados as $est) {
                                     $sel = ($repair['estado'] === $est) ? 'selected' : '';
                                     echo "<option value='$est' $sel>$est</option>";
+                                }
+                                if ($repair['estado'] === 'Entregado') {
+                                    echo "<option value='Entregado' selected>Entregado (Por Ventas)</option>";
                                 }
                                 ?>
                             </select>
@@ -309,17 +472,21 @@ if ($_SESSION['role'] === 'admin') {
                         
                         <div>
                             <label class="block text-xs font-medium text-text-muted mb-1">Presupuesto / Precio Final ($)</label>
-                            <input type="number" step="0.01" name="presupuesto" value="<?php echo $repair['presupuesto']; ?>" class="w-full bg-surface border border-border px-3 py-2.5 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
+                            <input type="number" step="0.01" name="presupuesto" id="presupuesto_input" value="<?php echo $repair['presupuesto']; ?>" class="w-full bg-surface border border-border px-3 py-2.5 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
                         </div>
                         
                         <div>
                             <label class="block text-xs font-medium text-text-muted mb-1">Nota Interna (Para el historial)</label>
                             <textarea name="nota_historial" rows="2" placeholder="Opcional..." class="w-full bg-surface border border-border px-3 py-2 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary"></textarea>
                         </div>
-                        
+
                         <button type="submit" class="w-full bg-primary text-background rounded-lg py-2.5 text-sm font-medium hover:bg-primary-hover transition-colors mt-2">Guardar Cambios</button>
                     </div>
                 </form>
+
+                <script>
+                    // Validaciones u otros scripts del form si son necesarios
+                </script>
                 
                 <?php // Seguimiento / Línea de tiempo ?>
                 <div class="glass-card rounded-2xl p-6">

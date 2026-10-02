@@ -2,7 +2,11 @@
 // modules/sales/Views/list.php
 
 Layout::renderHead('Historial de Ventas - Nokia 1100');
-Layout::renderAdminSidebar('ventas');
+if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
+    Layout::renderAdminSidebar('ventas');
+} else {
+    Layout::renderEmployeeSidebar('venta');
+}
 ?>
 <link rel="stylesheet" href="<?php echo BASE_URL; ?>/modules/sales/sales_list.css?v=<?php echo time(); ?>">
 
@@ -22,10 +26,18 @@ Layout::renderAdminSidebar('ventas');
                 <button type="button" onclick="exportTableToPDF('sales-table', 'Historial de Ventas', 'ventas', this)" class="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[16px]">download</span> PDF
                 </button>
+                <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=repairs_to_charge" class="px-3 py-1.5 rounded-lg border border-blue-500/30 bg-blue-500/10 text-blue-500 hover:bg-blue-500/20 text-xs font-medium transition-colors flex items-center gap-1.5">
+                    <span class="material-symbols-outlined text-[16px]">build</span> Cobrar Reparaciones
+                </a>
                 <a href="<?php echo BASE_URL; ?>/modules/sales/new_sale.php" class="px-3 py-1.5 rounded-lg border border-primary bg-primary text-background hover:opacity-90 text-xs font-medium transition-colors flex items-center gap-1.5">
                     <span class="material-symbols-outlined text-[16px]">add</span> Nueva Venta
                 </a>
-                <a href="<?php echo BASE_URL; ?>/modules/admin/dashboard.php" class="btn-back">Volver</a>
+                <?php
+                $backUrl = isset($_SESSION['role']) && $_SESSION['role'] === 'admin' 
+                            ? BASE_URL . '/modules/admin/dashboard.php' 
+                            : BASE_URL . '/modules/employee/dashboard.php';
+                ?>
+                <a href="<?php echo $backUrl; ?>" class="btn-back">Volver</a>
             </div>
         </div>
 
@@ -92,6 +104,17 @@ Layout::renderAdminSidebar('ventas');
                 </tbody>
             </table>
         </div>
+        </div>
+
+        <?php if (isset($total_pages) && $total_pages > 0): ?>
+            <div class="mt-6 flex justify-center gap-2">
+                <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+                    <a href="?page=<?php echo $i; ?>" class="px-3 py-1.5 border border-border rounded-xl text-sm font-medium transition-colors <?php echo $i === ($page ?? 1) ? 'bg-primary text-background' : 'bg-surface text-text-main hover:bg-surface-hover'; ?>">
+                        <?php echo $i; ?>
+                    </a>
+                <?php endfor; ?>
+            </div>
+        <?php endif; ?>
     </div>
 </main>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>

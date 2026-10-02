@@ -487,19 +487,7 @@ class AuthController extends BaseController
         }
     }
 
-    public function get_token()
-    {
-        $row = $this->auth_model->get_last_user_token();
-        if ($row) {
-            echo "Last User: " . $row['email'] . "\n";
-            echo "Token: " . $row['token_verificacion'] . "\n";
-            $base_url = "http://localhost/nokia1100";
-            echo "Link: " . $base_url . "/verificar.php?token=" . $row['token_verificacion'] . "\n";
-        } else {
-            echo "No users found.";
-        }
-        exit;
-    }
+
 
     public function guestLogin()
     {

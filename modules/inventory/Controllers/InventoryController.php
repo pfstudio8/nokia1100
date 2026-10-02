@@ -21,12 +21,23 @@ class InventoryController extends BaseController
         $search = isset($_GET['search']) ? $_GET['search'] : '';
         $filter = isset($_GET['filter']) ? $_GET['filter'] : '';
 
-        $items = $this->inventory_model->get_inventory($search, $filter);
+        $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+        if ($page < 1)
+            $page = 1;
+        $limit = 10;
+        $offset = ($page - 1) * $limit;
+
+        $total_items = $this->inventory_model->get_inventory_count($search, $filter);
+        $total_pages = ceil($total_items / $limit);
+
+        $items = $this->inventory_model->get_inventory($search, $filter, $limit, $offset);
 
         $this->render_view(__DIR__ . '/../Views/inventory.php', [
             'items' => $items,
             'search' => $search,
-            'filter' => $filter
+            'filter' => $filter,
+            'page' => $page,
+            'total_pages' => $total_pages
         ]);
     }
 
@@ -53,7 +64,7 @@ class InventoryController extends BaseController
             $modelo = $_POST['modelo'] ?? '';
             $precio = $_POST['precio'] ?? 0;
             $cantidad = $_POST['cantidad'] ?? 0;
-            
+
             $categoria = $_POST['categoria'] ?? '';
             $codigo = $_POST['codigo'] ?? '';
             $descripcion = $_POST['descripcion'] ?? '';
@@ -82,7 +93,7 @@ class InventoryController extends BaseController
                 ];
 
                 $id_nuevo = $this->inventory_model->create_product_transaction($product_data, $detail_data, $cantidad);
-                
+
                 require_once __DIR__ . '/../../../config/audit.php';
                 audit_log($this->conn, 'INVENTORY_CREATE', $_SESSION['user_id'], 'Inventario', $id_nuevo, "Registrado nuevo producto en inventario: $nombre (Stock inicial: $cantidad)");
 
@@ -121,17 +132,17 @@ class InventoryController extends BaseController
                     $detail_data = [
                         'marca' => $marca,
                         'modelo' => $modelo,
-                        'categoria' => 'Accesorios', // default or custom
+                        'categoria' => 'Accesorios',
                         'codigo' => '',
                         'descripcion' => '',
                         'stock_minimo' => 2
                     ];
 
                     $id_nuevo = $this->inventory_model->create_product_transaction($product_data, $detail_data, intval($cantidad));
-                    
+
                     require_once __DIR__ . '/../../../config/audit.php';
                     audit_log($this->conn, 'INVENTORY_CREATE', $_SESSION['user_id'], 'Inventario', $id_nuevo, "Agregado nuevo producto: $nombre (Stock inicial: $cantidad)");
-                    
+
                     $this->redirect("index.php?action=add_stock&success=" . urlencode("Producto agregado exitosamente"));
                 } catch (Exception $e) {
                     $this->redirect("index.php?action=add_stock&error=" . urlencode("Error: " . $e->getMessage()));
@@ -179,7 +190,7 @@ class InventoryController extends BaseController
                     $product_data = ['nombre' => $nombre, 'precio' => floatval($precio)];
                     $detail_data = ['marca' => $marca, 'modelo' => $modelo];
                     $this->inventory_model->update_product_transaction($id_producto, $product_data, $detail_data, intval($cantidad));
-                    
+
                     require_once __DIR__ . '/../../../config/audit.php';
                     audit_log($this->conn, 'INVENTORY_UPDATE', $_SESSION['user_id'], 'Inventario', $id_producto, "Actualizado stock/detalles de producto ID $id_producto: $nombre");
 
@@ -209,24 +220,28 @@ class InventoryController extends BaseController
 
     public function change_status()
     {
-        // Verifica que el usuario haya iniciado sesión (autenticación)
-        $this->check_auth();
+        $this->check_access('inventario');
+        if ($_SESSION['role'] !== 'admin') {
+            $this->redirect(BASE_URL . "/modules/inventory/inventory.php");
+        }
 
-        // Obtiene el ID del producto desde la URL y lo convierte a entero, por defecto 0
-        $id_producto = isset($_GET['id']) ? intval($_GET['id']) : 0;
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect(BASE_URL . "/modules/inventory/inventory.php");
+        }
 
-        // Si el ID del producto es válido (mayor a cero)
+        if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['session_token']) {
+            $this->redirect(BASE_URL . "/modules/inventory/inventory.php?error=" . urlencode("Token CSRF inválido"));
+        }
+
+        $id_producto = isset($_POST['id']) ? intval($_POST['id']) : 0;
+
         if ($id_producto > 0) {
-            // Intenta alternar el estado en la base de datos a través del modelo
             if ($this->inventory_model->toggle_product_status($id_producto)) {
-                // Redirecciona al inventario con un mensaje de éxito
                 $this->redirect(BASE_URL . "/modules/inventory/inventory.php?msg=status_updated");
             } else {
-                // Redirecciona al inventario con un mensaje de error por fallo de actualización
                 $this->redirect(BASE_URL . "/modules/inventory/inventory.php?error=update_failed");
             }
         } else {
-            // Si el ID no es válido, redirecciona al inventario directamente
             $this->redirect(BASE_URL . "/modules/inventory/inventory.php");
         }
     }
@@ -253,7 +268,7 @@ class InventoryController extends BaseController
                 $this->inventory_model->delete_product_completely($id_producto);
                 $tipo_borrado = 'eliminado físicamente';
             }
-            
+
             require_once __DIR__ . '/../../../config/audit.php';
             audit_log($this->conn, 'INVENTORY_DELETE', $_SESSION['user_id'], 'Inventario', $id_producto, "Producto ID $id_producto $tipo_borrado");
             $this->redirect(BASE_URL . "/modules/inventory/inventory.php?success=deleted");
@@ -267,7 +282,7 @@ class InventoryController extends BaseController
         header('Content-Type: application/json');
         $this->check_auth();
 
-        $id_producto = isset($_GET['id_producto']) ? (int)$_GET['id_producto'] : 0;
+        $id_producto = isset($_GET['id_producto']) ? (int) $_GET['id_producto'] : 0;
 
         if ($id_producto <= 0) {
             http_response_code(400);
@@ -281,7 +296,7 @@ class InventoryController extends BaseController
             echo json_encode([
                 'id_producto' => $id_producto,
                 'nombre' => $row['nombre'],
-                'stock' => (int)$row['cantidad']
+                'stock' => (int) $row['cantidad']
             ]);
         } else {
             http_response_code(404);
@@ -363,20 +378,6 @@ class InventoryController extends BaseController
             echo "Error: " . $e->getMessage();
         }
         exit;
-    }
-    public function logs()
-    {
-        $this->check_access('inventario');
-        
-        $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
-        if (!in_array($limit, [100, 500])) $limit = 100;
-        
-        $logs = $this->inventory_model->get_inventory_logs($limit);
-        
-        $this->render_view(__DIR__ . '/../Views/logs.php', [
-            'logs' => $logs,
-            'limit' => $limit
-        ]);
     }
 }
 ?>

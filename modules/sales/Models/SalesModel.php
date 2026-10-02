@@ -5,8 +5,10 @@ require_once __DIR__ . '/../../../classes/BaseModel.php';
 
 class SalesModel extends BaseModel
 {
-    public function get_sales()
+    public function get_sales($limit = 50, $offset = 0)
     {
+        $limit = (int)$limit;
+        $offset = (int)$offset;
         $sql = "SELECT 
                     v.id_venta, 
                     v.fecha, 
@@ -18,7 +20,8 @@ class SalesModel extends BaseModel
                 FROM venta v
                 INNER JOIN detalle_venta dv ON v.id_venta = dv.id_venta
                 LEFT JOIN producto p ON dv.id_producto = p.id_producto
-                ORDER BY v.fecha DESC";
+                ORDER BY v.fecha DESC
+                LIMIT $limit OFFSET $offset";
         $result = $this->conn->query($sql);
         $sales = [];
         if ($result && $result->num_rows > 0) {
@@ -27,6 +30,18 @@ class SalesModel extends BaseModel
             }
         }
         return $sales;
+    }
+
+    public function get_sales_count()
+    {
+        $sql = "SELECT COUNT(*) as total
+                FROM venta v
+                INNER JOIN detalle_venta dv ON v.id_venta = dv.id_venta";
+        $res = $this->conn->query($sql);
+        if ($res && $row = $res->fetch_assoc()) {
+            return (int)$row['total'];
+        }
+        return 0;
     }
 
     public function find_sale_by_id($id)
@@ -61,7 +76,7 @@ class SalesModel extends BaseModel
                 FROM producto p
                 JOIN inventario i ON p.id_producto = i.id_producto
                 JOIN producto_detalle d ON p.id_producto = d.id_producto
-                WHERE i.cantidad > 0 AND p.is_active = 1
+                WHERE i.cantidad > 0 AND p.is_active = 1 AND p.id_producto != 13
                 ORDER BY p.nombre ASC";
         $result = $this->conn->query($sql);
         $products = [];
@@ -77,8 +92,9 @@ class SalesModel extends BaseModel
     {
         $sql = "SELECT DATE(fecha) as sale_date, SUM(total) as daily_total 
                 FROM venta 
+                WHERE estado != 'anulada'
                 GROUP BY DATE(fecha) 
-                ORDER BY sale_date ASC 
+                ORDER BY sale_date DESC 
                 LIMIT 30";
         $result = $this->conn->query($sql);
         $dates = [];
@@ -89,13 +105,14 @@ class SalesModel extends BaseModel
                 $totals[] = $row['daily_total'];
             }
         }
-        return ['dates' => $dates, 'totals' => $totals];
+        return ['dates' => array_reverse($dates), 'totals' => array_reverse($totals)];
     }
 
     public function get_sales_by_payment_methods()
     {
         $sql = "SELECT metodo_de_pago, SUM(total) as amount 
                 FROM venta 
+                WHERE estado != 'anulada'
                 GROUP BY metodo_de_pago";
         $result = $this->conn->query($sql);
         $methods = [];
@@ -248,9 +265,27 @@ class SalesModel extends BaseModel
                 $user_id = NULL; 
             }
 
+            $grouped_items = [];
+            foreach ($items as $item) {
+                $id = (int)$item['id'];
+                $cant = (int)$item['cantidad'];
+                
+                if ($cant <= 0) {
+                    throw new Exception("La cantidad debe ser mayor a cero.");
+                }
+                
+                if (isset($grouped_items[$id])) {
+                    $grouped_items[$id]['cantidad'] += $cant;
+                } else {
+                    $grouped_items[$id] = $item;
+                    $grouped_items[$id]['cantidad'] = $cant;
+                }
+            }
+            $items = array_values($grouped_items);
+
             foreach ($items as $item) {
                 $stmt = $this->conn->prepare(
-                    "SELECT precio, cantidad FROM inventario i
+                    "SELECT p.precio, i.cantidad, p.is_active FROM inventario i
                      JOIN producto p ON i.id_producto = p.id_producto
                      WHERE p.id_producto = ? FOR UPDATE"
                 );
@@ -260,6 +295,10 @@ class SalesModel extends BaseModel
                 if ($res->num_rows === 0) throw new Exception("Producto ID " . $item['id'] . " no encontrado");
                 $prod = $res->fetch_assoc();
                 $stmt->close();
+
+                if ((int)$prod['is_active'] === 0) {
+                    throw new Exception("El producto ID " . $item['id'] . " no está activo para la venta.");
+                }
 
                 if ($prod['cantidad'] < $item['cantidad']) {
                     throw new Exception("Stock insuficiente para el producto ID " . $item['id']);

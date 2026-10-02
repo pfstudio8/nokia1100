@@ -9,6 +9,9 @@ switch ($action) {
     case 'new_sale':
         $controller->new_sale();
         break;
+    case 'repairs_to_charge':
+        $controller->repairs_to_charge();
+        break;
     case 'invoice':
         $controller->invoice();
         break;

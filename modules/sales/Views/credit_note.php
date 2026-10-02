@@ -46,7 +46,7 @@
                 <div class="details-block">
                     <h3>Emitido A</h3>
                     <p><strong>Cliente:</strong> Consumidor Final</p>
-                    <p><strong>Condición IVA:</strong> Consumidor Final</p>
+                    <p><strong>Condición Venta:</strong> Consumidor Final</p>
                 </div>
                 <div class="details-block text-right">
                     <h3>Detalles de Emisión</h3>

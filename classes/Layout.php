@@ -1,6 +1,11 @@
 <?php
 class Layout
 {
+    private static function getAssetVersion($path) {
+        $fullPath = __DIR__ . '/..' . $path;
+        return file_exists($fullPath) ? filemtime($fullPath) : time();
+    }
+
     public static function renderHead($title = "NOKIA1100")
     {
         $currentUser = $_SESSION['username'] ?? '';
@@ -14,9 +19,9 @@ class Layout
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="' . BASE_URL . '/assets/css/style.css?v=' . time() . '">
-    <script src="' . BASE_URL . '/assets/js/tailwind_config.js?v=' . time() . '"></script>
-    <script src="' . BASE_URL . '/assets/js/session-cache.js?v=' . time() . '"></script>
+    <link rel="stylesheet" href="' . BASE_URL . '/assets/css/style.css?v=' . self::getAssetVersion('/assets/css/style.css') . '">
+    <script src="' . BASE_URL . '/assets/js/tailwind_config.js?v=' . self::getAssetVersion('/assets/js/tailwind_config.js') . '"></script>
+    <script src="' . BASE_URL . '/assets/js/session-cache.js?v=' . self::getAssetVersion('/assets/js/session-cache.js') . '"></script>
 </head>
 <body class="font-sans antialiased text-text-main selection:bg-primary/20 selection:text-primary">
     <div id="top-right-user" class="absolute top-4 right-6 z-50 hidden md:flex items-center gap-3 bg-surface/80 backdrop-blur-md border border-border px-4 py-2 rounded-xl shadow-lg opacity-0 transition-opacity duration-300">
@@ -178,7 +183,7 @@ class Layout
 
         $links = [
             ['id' => 'dashboard', 'url' => BASE_URL . '/modules/employee/dashboard.php', 'icon' => 'home', 'label' => 'Inicio'],
-            ['id' => 'venta', 'url' => BASE_URL . '/modules/sales/index.php?action=new_sale', 'icon' => 'point_of_sale', 'label' => 'Generar Venta'],
+            ['id' => 'venta', 'url' => BASE_URL . '/modules/sales/sales.php', 'icon' => 'payments', 'label' => 'Ventas'],
             ['id' => 'taller', 'url' => BASE_URL . '/modules/workshop/index.php', 'icon' => 'home_repair_service', 'label' => 'Taller'],
             ['id' => 'clientes', 'url' => BASE_URL . '/modules/clients/clients.php', 'icon' => 'contact_page', 'label' => 'Clientes'],
             ['id' => 'inventario', 'url' => BASE_URL . '/modules/inventory/inventory.php', 'icon' => 'inventory_2', 'label' => 'Consultar Stock'],
@@ -253,9 +258,9 @@ class Layout
     {
         echo '
 
-<script src="' . BASE_URL . '/assets/js/framer-toaster.js?v=' . time() . '"></script>
-<script src="' . BASE_URL . '/assets/js/export-helper.js?v=' . time() . '"></script>
-<script src="' . BASE_URL . '/assets/js/main.js?v=' . time() . '"></script>
+<script src="' . BASE_URL . '/assets/js/framer-toaster.js?v=' . self::getAssetVersion('/assets/js/framer-toaster.js') . '"></script>
+<script src="' . BASE_URL . '/assets/js/export-helper.js?v=' . self::getAssetVersion('/assets/js/export-helper.js') . '"></script>
+<script src="' . BASE_URL . '/assets/js/main.js?v=' . self::getAssetVersion('/assets/js/main.js') . '"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const toggleBtn = document.getElementById("sidebarToggle");

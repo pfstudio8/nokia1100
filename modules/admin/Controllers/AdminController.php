@@ -345,8 +345,9 @@ class AdminController extends BaseController
             $nombre = trim($_POST['nombre'] ?? '');
             $apellido = trim($_POST['apellido'] ?? '');
             $username = trim($_POST['username'] ?? '');
+            $dni = trim($_POST['dni'] ?? '');
 
-            if (empty($nombre) || empty($apellido) || empty($username)) {
+            if (empty($nombre) || empty($apellido) || empty($username) || empty($dni)) {
                 header("Location: index.php?action=profile&error=" . urlencode("Complete todos los campos obligatorios."));
                 exit;
             } else {
@@ -359,7 +360,7 @@ class AdminController extends BaseController
                         'nombre' => $nombre,
                         'apellido' => $apellido,
                         'email' => $current['persona_email'],
-                        'dni' => $current['dni'],
+                        'dni' => $dni,
                         'telefono' => $current['telefono'],
                         'direccion' => $current['direccion']
                     ];

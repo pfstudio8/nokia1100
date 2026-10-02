@@ -1,6 +1,8 @@
 .env
 .env.*
 !.env.example
-config/mail.local.php
+
+/vendor/
+composer.phar
 
 *.sql
