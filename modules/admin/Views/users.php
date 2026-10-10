@@ -1,6 +1,12 @@
 <?php
 // modules/admin/Views/users.php
 
+/**
+ * Variables inyectadas por AdminController::users() mediante render_view() / extract()
+ * @var array  $clientes Lista de usuarios
+ * @var string $filtro   Filtro activo: 'activos' | 'inactivos' | 'todos'
+ */
+
 Layout::renderHead('Administrar Usuarios - Nokia 1100');
 Layout::renderAdminSidebar('usuarios');
 ?>
@@ -90,13 +96,13 @@ Layout::renderAdminSidebar('usuarios');
                                         </td>
                                         <td>
                                             <?php if ($row['is_active']): ?>
-                                                <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap; justify-content: flex-end;">
+                                                <div style="display:flex; align-items:center; gap:1.25rem; flex-wrap:wrap; justify-content: flex-start;">
                                                     <!-- Cambio de rol -->
                                                     <form action="<?php echo BASE_URL; ?>/modules/admin/update_user_role.php"
                                                           method="POST" style="display:inline-flex; gap:.5rem; align-items:center; margin-bottom:0;">
                                                         <input type="hidden" name="id_usuario" value="<?php echo (int)$row['id_usuario']; ?>">
                                                         <div class="relative inline-block">
-                                                            <select name="rol" style="padding:.35rem 1.8rem .35rem .6rem; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text-main); font-size:.8rem; appearance: none; cursor: pointer; transition: border-color 0.2s;" onchange="this.form.submit()">
+                                                            <select name="rol" style="min-width: 110px; padding:.35rem 1.8rem .35rem .6rem; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text-main); font-size:.8rem; appearance: none; cursor: pointer; transition: border-color 0.2s;" onchange="this.form.submit()">
                                                                 <option value="empleado" <?php echo $row['rol']==='empleado'?'selected':''; ?>>Empleado</option>
                                                                 <option value="admin"    <?php echo $row['rol']==='admin'   ?'selected':''; ?>>Admin</option>
                                                             </select>
@@ -121,28 +127,33 @@ Layout::renderAdminSidebar('usuarios');
                                                      <!-- Editar datos personales -->
                                                      <a href="javascript:void(0)" 
                                                         onclick='openEditUserModal(<?php echo htmlspecialchars($user_data, ENT_QUOTES); ?>)'
-                                                        class="text-primary hover:underline text-sm font-medium mr-3 inline-flex items-center gap-1"
+                                                        class="text-primary hover:underline text-sm font-medium inline-flex items-center gap-1 transition-colors hover:text-primary/80"
                                                         style="color: var(--primary-color);"
                                                         title="Editar datos personales">
-                                                         <span class="material-symbols-outlined" style="font-size:1.05rem;">edit</span>
+                                                         <span class="material-symbols-outlined" style="font-size:1.1rem;">edit</span>
                                                          Editar
                                                      </a>
 
                                                      <!-- Módulos de Acceso -->
+                                                    <?php if ($row['rol'] !== 'admin'): ?>
                                                     <a href="javascript:void(0)" 
                                                        onclick="openModulePermissions(<?php echo $row['id_usuario']; ?>, '<?php echo htmlspecialchars($row['nombre'] . ' ' . $row['apellido'], ENT_QUOTES); ?>', '<?php echo $row['rol']; ?>', '<?php echo htmlspecialchars($row['modulos_permitidos'] ?? 'DEFAULT', ENT_QUOTES); ?>')"
-                                                       class="text-primary hover:underline text-sm font-medium mr-3 inline-flex items-center gap-1"
-                                                       style="color: var(--primary-color);"
+                                                       class="text-primary hover:underline text-sm font-medium inline-flex items-center gap-1 transition-colors hover:text-primary/80"
+                                                       style="color: var(--primary-color); width: 85px;"
                                                        title="Asignar módulos permitidos">
-                                                        <span class="material-symbols-outlined" style="font-size:1.05rem;">vpn_key</span>
+                                                        <span class="material-symbols-outlined" style="font-size:1.1rem;">vpn_key</span>
                                                         Módulos
                                                     </a>
+                                                    <?php else: ?>
+                                                    <div style="width: 85px;"></div>
+                                                    <?php endif; ?>
 
                                                     <!-- Baja lógica -->
-                                                    <a class="btn-delete text-red-500 font-medium hover:underline text-sm"
+                                                    <a class="btn-delete text-red-500 font-medium hover:underline text-sm inline-flex items-center gap-1 transition-colors hover:text-red-400"
                                                        href="delete_user.php?id=<?php echo $row['id_usuario']; ?>"
                                                        data-confirm="¿Desactivar a este usuario? Podrá restaurarse luego."
                                                        data-confirm-title="Baja Lógica">
+                                                        <span class="material-symbols-outlined" style="font-size:1.1rem;">block</span>
                                                         Desactivar
                                                     </a>
                                                 </div>
@@ -354,7 +365,8 @@ Layout::renderAdminSidebar('usuarios');
         </div>
 
         <form id="edit-user-form" action="edit_user.php" method="POST" class="space-y-3" style="display: flex; flex-direction: column; gap: 0.5rem;" novalidate>
-            <input type="hidden" id="edit-user-id" name="id_usuario">
+            <input type="hidden" id="edit-modal-id-usuario" name="id_usuario">
+            <input type="hidden" id="edit-modal-id-persona" name="id_persona">
             
             <!-- Datos Personales -->
             <div style="border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">

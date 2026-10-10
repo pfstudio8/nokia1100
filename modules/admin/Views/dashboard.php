@@ -56,7 +56,7 @@ Layout::renderAdminSidebar('dashboard');
                 </div>
             </div>
 
-            <div class="bg-card p-6 rounded-3xl flex flex-col justify-between cursor-pointer hover:border-error/40 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative overflow-hidden border border-border group" onclick="window.location.href='<?php echo BASE_URL; ?>/modules/inventory/inventory.php?filter=low_stock';">
+            <div class="bg-card p-6 rounded-3xl flex flex-col justify-between cursor-pointer hover:border-error/40 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative overflow-hidden border border-border group" onclick="window.location.href='<?php echo BASE_URL; ?>/modules/inventory/index.php?filter=low_stock';">
                 <div class="absolute -top-10 -right-10 w-32 h-32 bg-error/5 rounded-full blur-2xl transition-all group-hover:bg-error/10"></div>
                 <div class="flex justify-between items-start mb-6 relative z-10">
                     <div class="p-3 text-error rounded-xl border border-error/20 bg-error/5 shadow-inner">

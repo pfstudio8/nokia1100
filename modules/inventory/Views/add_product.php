@@ -48,7 +48,7 @@ Layout::renderAdminSidebar('inventario');
                         <input type="text" name="nombre" required placeholder="Ej: Funda Silicona iPhone 13" class="w-full p-3 bg-background border border-border rounded-lg text-text-main focus:outline-none focus:border-primary transition-colors">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wide">Código / SKU</label>
+                        <label class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wide">Código / SKU <span class="text-[11px] font-medium normal-case tracking-normal text-text-muted/80 ml-1.5">(Opcional)</span></label>
                         <input type="text" name="codigo" placeholder="Ej: SIL-IP13-001" class="w-full p-3 bg-background border border-border rounded-lg text-text-main focus:outline-none focus:border-primary transition-colors">
                     </div>
                 </div>
@@ -64,7 +64,7 @@ Layout::renderAdminSidebar('inventario');
                 </div>
 
                 <div class="md:col-span-2">
-                    <label class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wide">Descripción</label>
+                    <label class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wide">Descripción <span class="text-[11px] font-medium normal-case tracking-normal text-text-muted/80 ml-1.5">(Opcional)</span></label>
                     <textarea name="descripcion" rows="3" placeholder="Información adicional del producto..." class="w-full p-3 bg-background border border-border rounded-lg text-text-main focus:outline-none focus:border-primary transition-colors resize-none"></textarea>
                 </div>
 
@@ -99,4 +99,38 @@ Layout::renderAdminSidebar('inventario');
         </form>
     </div>
 </main>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const categorySelect = document.querySelector('select[name="categoria"]');
+    const nameInput = document.querySelector('input[name="nombre"]');
+    
+    // Mapeo de categorías a nombres genéricos sugeridos
+    const sugerencias = {
+        'Celulares': 'Celular',
+        'Fundas': 'Funda',
+        'Audio': 'Auriculares',
+        'Cargadores': 'Cargador',
+        'Perifericos': 'Periférico',
+        'Accesorios': 'Accesorio',
+        'Repuestos': 'Repuesto'
+    };
+    
+    categorySelect.addEventListener('change', function() {
+        const val = this.value;
+        const sugerencia = sugerencias[val];
+        
+        if (sugerencia) {
+            const currentVal = nameInput.value.trim();
+            // Comprobamos si el campo está vacío o si tiene alguna de las sugerencias base
+            // Esto evita borrarle el texto al usuario si ya había escrito algo muy específico como "Funda roja reforzada"
+            const isBaseText = currentVal === '' || Object.values(sugerencias).some(s => currentVal === s || currentVal === s + ' ');
+            
+            if (isBaseText) {
+                nameInput.value = sugerencia + ' ';
+            }
+        }
+    });
+});
+</script>
 <?php Layout::renderFooter(); ?>

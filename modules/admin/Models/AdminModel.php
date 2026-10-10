@@ -263,7 +263,11 @@ class AdminModel extends BaseModel
 
     public function update_user_role($id_usuario, $rol)
     {
-        $stmt = $this->conn->prepare("UPDATE usuario SET rol = ? WHERE id_usuario = ?");
+        // Al pasar a admin se limpian las restricciones de módulos (acceso total)
+        $sql = ($rol === 'admin')
+            ? "UPDATE usuario SET rol = ?, modulos_permitidos = NULL WHERE id_usuario = ?"
+            : "UPDATE usuario SET rol = ? WHERE id_usuario = ?";
+        $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("si", $rol, $id_usuario);
         $success = $stmt->execute();
         $stmt->close();
@@ -272,7 +276,8 @@ class AdminModel extends BaseModel
 
     public function update_user_modules($id_usuario, $modules_str)
     {
-        $stmt = $this->conn->prepare("UPDATE usuario SET modulos_permitidos = ? WHERE id_usuario = ?");
+        // Los permisos de un administrador no pueden modificarse
+        $stmt = $this->conn->prepare("UPDATE usuario SET modulos_permitidos = ? WHERE id_usuario = ? AND rol <> 'admin'");
         $stmt->bind_param("si", $modules_str, $id_usuario);
         $success = $stmt->execute();
         $stmt->close();

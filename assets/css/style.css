@@ -783,21 +783,25 @@ main a {
     transition: all 0.2s ease;
 }
 
-/* Custom Scrollbar for aesthetic UI */
-.custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+/* Global Custom Scrollbar for aesthetic UI */
+::-webkit-scrollbar, *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
+::-webkit-scrollbar-track, *::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 4px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: var(--border);
+::-webkit-scrollbar-thumb, *::-webkit-scrollbar-thumb {
+    background-color: rgba(255, 255, 255, 0.25);
     border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: var(--text-muted);
-}
+::-webkit-scrollbar-thumb:hover, *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--primary-color);
+}
+

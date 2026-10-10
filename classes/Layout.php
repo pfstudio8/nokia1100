@@ -1,7 +1,7 @@
 <?php
 class Layout
 {
-    private static function getAssetVersion($path) {
+    private static function getAssetVersion(string $path): int {
         $fullPath = __DIR__ . '/..' . $path;
         return file_exists($fullPath) ? filemtime($fullPath) : time();
     }
@@ -30,18 +30,23 @@ class Layout
     </div>';
     }
 
-    public static function getAllowedModules($userId)
+    public static function getAllowedModules(int $userId): ?array
     {
         global $conn;
         if (!isset($conn)) {
             return null;
         }
-        $stmt = $conn->prepare("SELECT modulos_permitidos FROM usuario WHERE id_usuario = ?");
+        $stmt = $conn->prepare("SELECT rol, modulos_permitidos FROM usuario WHERE id_usuario = ?");
         if ($stmt) {
             $stmt->bind_param("i", $userId);
             $stmt->execute();
             $res = $stmt->get_result();
             if ($row = $res->fetch_assoc()) {
+                // Los administradores SIEMPRE tienen acceso total: se ignora modulos_permitidos
+                if ($row['rol'] === 'admin') {
+                    $stmt->close();
+                    return null;
+                }
                 if ($row['modulos_permitidos'] !== null) {
                     return explode(',', $row['modulos_permitidos']);
                 }
@@ -51,7 +56,7 @@ class Layout
         return null;
     }
 
-    public static function checkAccess($moduleId)
+    public static function checkAccess(string $moduleId): void
     {
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
@@ -63,6 +68,11 @@ class Layout
         }
 
         $rol = $_SESSION['role'] ?? 'empleado';
+
+        // Los administradores tienen acceso a todos los módulos sin restricción
+        if ($rol === 'admin') {
+            return;
+        }
 
         // Restricción para rol Invitado (guest)
         if ($rol === 'guest') {
@@ -114,7 +124,7 @@ class Layout
             ['id' => 'usuarios', 'url' => BASE_URL . '/modules/admin/users.php', 'icon' => 'group', 'label' => 'Usuarios'],
             ['id' => 'taller', 'url' => BASE_URL . '/modules/workshop/index.php', 'icon' => 'home_repair_service', 'label' => 'Taller'],
             ['id' => 'clientes', 'url' => BASE_URL . '/modules/clients/clients.php', 'icon' => 'contact_page', 'label' => 'Clientes'],
-            ['id' => 'ventas', 'url' => BASE_URL . '/modules/sales/sales.php', 'icon' => 'payments', 'label' => 'Ventas'],
+            ['id' => 'ventas', 'url' => BASE_URL . '/modules/sales/index.php', 'icon' => 'payments', 'label' => 'Ventas'],
             ['id' => 'reportes', 'url' => BASE_URL . '/modules/reports/index.php', 'icon' => 'analytics', 'label' => 'Reportes'],
             ['id' => 'proveedores', 'url' => BASE_URL . '/modules/suppliers/suppliers.php', 'icon' => 'local_shipping', 'label' => 'Proveedores'],
             ['id' => 'auditoria', 'url' => BASE_URL . '/modules/admin/audit.php', 'icon' => 'security', 'label' => 'Auditoría'],
@@ -156,6 +166,10 @@ class Layout
     </nav>
     
     <div class="p-6 border-t border-border mt-auto">
+        <a href="' . BASE_URL . '/help.php" class="flex items-center gap-3 text-primary hover:text-primary/80 transition-colors mb-4 font-medium text-sm w-full">
+            <span class="material-symbols-outlined">help</span>
+            Ayuda
+        </a>
         <a href="' . BASE_URL . '/modules/auth/logout.php" class="flex items-center gap-3 text-red-500 hover:text-red-400 transition-colors mb-6 font-medium text-sm">
             <span class="material-symbols-outlined">logout</span>
             Cerrar Sesión
@@ -183,7 +197,7 @@ class Layout
 
         $links = [
             ['id' => 'dashboard', 'url' => BASE_URL . '/modules/employee/dashboard.php', 'icon' => 'home', 'label' => 'Inicio'],
-            ['id' => 'venta', 'url' => BASE_URL . '/modules/sales/sales.php', 'icon' => 'payments', 'label' => 'Ventas'],
+            ['id' => 'venta', 'url' => BASE_URL . '/modules/sales/index.php', 'icon' => 'payments', 'label' => 'Ventas'],
             ['id' => 'taller', 'url' => BASE_URL . '/modules/workshop/index.php', 'icon' => 'home_repair_service', 'label' => 'Taller'],
             ['id' => 'clientes', 'url' => BASE_URL . '/modules/clients/clients.php', 'icon' => 'contact_page', 'label' => 'Clientes'],
             ['id' => 'inventario', 'url' => BASE_URL . '/modules/inventory/inventory.php', 'icon' => 'inventory_2', 'label' => 'Consultar Stock'],
@@ -246,6 +260,10 @@ class Layout
         echo '
     </div>
     <div class="p-6 border-t border-border mt-auto space-y-4">
+        <a href="' . BASE_URL . '/help.php" class="flex items-center justify-center gap-2 w-full py-2.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors bg-primary/10 rounded-lg">
+            <span class="material-symbols-outlined">help</span>
+            Ayuda
+        </a>
         <a href="' . BASE_URL . '/modules/auth/logout.php" class="flex items-center justify-center gap-2 w-full py-2.5 text-sm font-medium text-red-500 hover:text-red-400 transition-colors">
             <span class="material-symbols-outlined">logout</span>
             Cerrar Sesión
@@ -261,6 +279,7 @@ class Layout
 <script src="' . BASE_URL . '/assets/js/framer-toaster.js?v=' . self::getAssetVersion('/assets/js/framer-toaster.js') . '"></script>
 <script src="' . BASE_URL . '/assets/js/export-helper.js?v=' . self::getAssetVersion('/assets/js/export-helper.js') . '"></script>
 <script src="' . BASE_URL . '/assets/js/main.js?v=' . self::getAssetVersion('/assets/js/main.js') . '"></script>
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const toggleBtn = document.getElementById("sidebarToggle");

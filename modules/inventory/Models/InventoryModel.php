@@ -8,9 +8,14 @@ class InventoryModel extends BaseModel
     public function get_inventory($search = '', $filter = '', $limit = 50, $offset = 0)
     {
         $where_parts = [];
+        $types = "";
+        $params = [];
+
         if ($search) {
-            $search_esc = $this->conn->real_escape_string($search);
-            $where_parts[] = "(p.nombre LIKE '%$search_esc%' OR d.marca LIKE '%$search_esc%' OR d.modelo LIKE '%$search_esc%')";
+            $search_wildcard = "%" . $search . "%";
+            $where_parts[] = "(p.nombre LIKE ? OR d.marca LIKE ? OR d.modelo LIKE ?)";
+            $types .= "sss";
+            array_push($params, $search_wildcard, $search_wildcard, $search_wildcard);
         }
         if ($filter === 'low_stock') {
             $where_parts[] = "i.cantidad <= d.stock_minimo";
@@ -27,24 +32,39 @@ class InventoryModel extends BaseModel
                 JOIN producto_detalle d ON p.id_producto = d.id_producto
                 $where_clause
                 ORDER BY p.nombre ASC
-                LIMIT $limit OFFSET $offset";
+                LIMIT ? OFFSET ?";
 
-        $result = $this->conn->query($sql);
+        $types .= "ii";
+        array_push($params, $limit, $offset);
+
+        $stmt = $this->conn->prepare($sql);
+        if ($types) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
         $items = [];
         if ($result && $result->num_rows > 0) {
             while ($row = $result->fetch_assoc()) {
                 $items[] = $row;
             }
         }
+        $stmt->close();
         return $items;
     }
 
     public function get_inventory_count($search = '', $filter = '')
     {
         $where_parts = [];
+        $types = "";
+        $params = [];
+
         if ($search) {
-            $search_esc = $this->conn->real_escape_string($search);
-            $where_parts[] = "(p.nombre LIKE '%$search_esc%' OR d.marca LIKE '%$search_esc%' OR d.modelo LIKE '%$search_esc%')";
+            $search_wildcard = "%" . $search . "%";
+            $where_parts[] = "(p.nombre LIKE ? OR d.marca LIKE ? OR d.modelo LIKE ?)";
+            $types .= "sss";
+            array_push($params, $search_wildcard, $search_wildcard, $search_wildcard);
         }
         if ($filter === 'low_stock') {
             $where_parts[] = "i.cantidad <= d.stock_minimo";
@@ -58,14 +78,22 @@ class InventoryModel extends BaseModel
                 JOIN producto_detalle d ON p.id_producto = d.id_producto
                 $where_clause";
 
-        $res = $this->conn->query($sql);
-        if ($res && $row = $res->fetch_assoc()) {
-            return (int)$row['total'];
+        $stmt = $this->conn->prepare($sql);
+        if ($types) {
+            $stmt->bind_param($types, ...$params);
         }
-        return 0;
+        $stmt->execute();
+        $res = $stmt->get_result();
+        
+        $total = 0;
+        if ($res && $row = $res->fetch_assoc()) {
+            $total = (int)$row['total'];
+        }
+        $stmt->close();
+        return $total;
     }
 
-    public function find_product_by_id($id_producto)
+    public function find_product_by_id(int $id_producto)
     {
         $stmt = $this->conn->prepare("
             SELECT p.nombre, p.precio, d.marca, d.modelo, i.cantidad 
@@ -81,20 +109,21 @@ class InventoryModel extends BaseModel
         return $res;
     }
 
-    public function check_product_sales_purchases($id_producto)
+    public function check_product_sales_purchases(int $id_producto)
     {
         $stmt = $this->conn->prepare("SELECT 
             (SELECT COUNT(*) FROM detalle_venta WHERE id_producto = ?) + 
             (SELECT COUNT(*) FROM detalle_compra WHERE id_producto = ?) AS total");
         $stmt->bind_param("ii", $id_producto, $id_producto);
         $stmt->execute();
+        $total = 0;
         $stmt->bind_result($total);
         $stmt->fetch();
         $stmt->close();
         return $total;
     }
 
-    public function create_product_transaction($product_data, $detail_data, $cantidad)
+    public function create_product_transaction(array $product_data, array $detail_data, int $cantidad)
     {
         $this->conn->begin_transaction();
         try {
@@ -137,7 +166,7 @@ class InventoryModel extends BaseModel
         }
     }
 
-    public function update_product_transaction($id_producto, $product_data, $detail_data, $cantidad)
+    public function update_product_transaction(int $id_producto, array $product_data, array $detail_data, int $cantidad)
     {
         $this->conn->begin_transaction();
         try {
@@ -167,7 +196,7 @@ class InventoryModel extends BaseModel
         }
     }
 
-    public function toggle_product_status($id_producto)
+    public function toggle_product_status(int $id_producto)
     {
         // Prepara la sentencia SQL para negar (toggle/invertir) el estado lógico de 'is_active' del producto
         $stmt = $this->conn->prepare("UPDATE producto SET is_active = NOT is_active WHERE id_producto = ?");
@@ -181,7 +210,7 @@ class InventoryModel extends BaseModel
         return $success;
     }
 
-    public function deactivate_product_and_delete_stock($id_producto)
+    public function deactivate_product_and_delete_stock(int $id_producto)
     {
         $this->conn->begin_transaction();
         try {
@@ -205,7 +234,7 @@ class InventoryModel extends BaseModel
         }
     }
 
-    public function delete_product_completely($id_producto)
+    public function delete_product_completely(int $id_producto)
     {
         $this->conn->begin_transaction();
         try {
@@ -235,7 +264,7 @@ class InventoryModel extends BaseModel
         }
     }
 
-    public function get_purchase_history($id_producto)
+    public function get_purchase_history(int $id_producto)
     {
         $id_producto = intval($id_producto);
         $sql = "SELECT c.fecha, pr.nombre as proveedor, dc.cantidad, dc.precio_compra, 
@@ -352,8 +381,13 @@ class InventoryModel extends BaseModel
                 JOIN producto p ON i.id_producto = p.id_producto
                 JOIN producto_detalle d ON p.id_producto = d.id_producto
                 WHERE p.is_active = 1 AND i.cantidad > 0
-                ORDER BY i.cantidad DESC LIMIT $limit";
-        $result = $this->conn->query($sql);
+                ORDER BY i.cantidad DESC LIMIT ?";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $limit);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
         $products = [];
         $values = [];
         if ($result) {
@@ -362,6 +396,7 @@ class InventoryModel extends BaseModel
                 $values[] = $row['stock_quantity'];
             }
         }
+        $stmt->close();
         return ['products' => $products, 'values' => $values];
     }
 }

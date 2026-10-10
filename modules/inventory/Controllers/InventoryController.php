@@ -307,6 +307,7 @@ class InventoryController extends BaseController
 
     public function ajax_create_product()
     {
+        $this->check_access('inventario');
         header('Content-Type: application/json');
         if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
             echo json_encode(['success' => false, 'message' => 'No autorizado']);
@@ -371,6 +372,7 @@ class InventoryController extends BaseController
 
     public function update_images()
     {
+        $this->check_access('inventario');
         try {
             $this->inventory_model->update_images_db();
             echo "Imágenes actualizadas correctamente.";

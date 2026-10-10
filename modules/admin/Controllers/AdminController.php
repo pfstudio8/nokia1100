@@ -278,6 +278,12 @@ class AdminController extends BaseController
             $this->redirect("users.php?error=" . urlencode("Usuario no válido"));
         }
 
+        // Los administradores tienen acceso total y sus permisos no pueden modificarse
+        $target = $this->admin_model->find_user_by_id($id_usuario);
+        if ($target && $target['rol'] === 'admin') {
+            $this->redirect("users.php?error=" . urlencode("Los permisos de un administrador no pueden modificarse: siempre tiene acceso total"));
+        }
+
         $modules_str = implode(',', $modulos);
 
         if ($this->admin_model->update_user_modules($id_usuario, $modules_str)) {

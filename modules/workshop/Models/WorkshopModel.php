@@ -8,44 +8,66 @@ class WorkshopModel extends BaseModel
     public function get_repairs($status = '', $search = '', $limit = 50, $offset = 0)
     {
         $where_parts = [];
+        $types = "";
+        $params = [];
+
         if ($status) {
-            $where_parts[] = "r.estado = '" . $this->conn->real_escape_string($status) . "'";
+            $where_parts[] = "r.estado = ?";
+            $types .= "s";
+            $params[] = $status;
         }
         if ($search) {
-            $escaped = $this->conn->real_escape_string($search);
-            $where_parts[] = "(r.codigo_orden LIKE '%$escaped%' OR c.nombre LIKE '%$escaped%' OR r.equipo_marca LIKE '%$escaped%' OR r.equipo_modelo LIKE '%$escaped%')";
+            $wildcard = "%" . $search . "%";
+            $where_parts[] = "(r.codigo_orden LIKE ? OR c.nombre LIKE ? OR r.equipo_marca LIKE ? OR r.equipo_modelo LIKE ?)";
+            $types .= "ssss";
+            array_push($params, $wildcard, $wildcard, $wildcard, $wildcard);
         }
 
         $where_clause = count($where_parts) > 0 ? " WHERE " . implode(" AND ", $where_parts) : "";
-        $limit = (int)$limit;
-        $offset = (int)$offset;
 
         $sql = "SELECT r.id_reparacion, r.codigo_orden, c.nombre AS cliente_nombre, r.equipo_marca, r.equipo_modelo, r.estado, r.fecha_ingreso, r.presupuesto, r.costo_total 
                 FROM reparacion r
                 LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
                 $where_clause 
                 ORDER BY r.fecha_ingreso DESC
-                LIMIT $limit OFFSET $offset";
+                LIMIT ? OFFSET ?";
 
-        $result = $this->conn->query($sql);
+        $types .= "ii";
+        array_push($params, (int)$limit, (int)$offset);
+
+        $stmt = $this->conn->prepare($sql);
+        if ($types) {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
         $repairs = [];
         if ($result && $result->num_rows > 0) {
             while ($row = $result->fetch_assoc()) {
                 $repairs[] = $row;
             }
         }
+        $stmt->close();
         return $repairs;
     }
 
     public function get_repairs_count($status = '', $search = '')
     {
         $where_parts = [];
+        $types = "";
+        $params = [];
+
         if ($status) {
-            $where_parts[] = "r.estado = '" . $this->conn->real_escape_string($status) . "'";
+            $where_parts[] = "r.estado = ?";
+            $types .= "s";
+            $params[] = $status;
         }
         if ($search) {
-            $escaped = $this->conn->real_escape_string($search);
-            $where_parts[] = "(r.codigo_orden LIKE '%$escaped%' OR c.nombre LIKE '%$escaped%' OR r.equipo_marca LIKE '%$escaped%' OR r.equipo_modelo LIKE '%$escaped%')";
+            $wildcard = "%" . $search . "%";
+            $where_parts[] = "(r.codigo_orden LIKE ? OR c.nombre LIKE ? OR r.equipo_marca LIKE ? OR r.equipo_modelo LIKE ?)";
+            $types .= "ssss";
+            array_push($params, $wildcard, $wildcard, $wildcard, $wildcard);
         }
 
         $where_clause = count($where_parts) > 0 ? " WHERE " . implode(" AND ", $where_parts) : "";
@@ -55,11 +77,19 @@ class WorkshopModel extends BaseModel
                 LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
                 $where_clause";
 
-        $res = $this->conn->query($sql);
-        if ($res && $row = $res->fetch_assoc()) {
-            return (int)$row['total'];
+        $stmt = $this->conn->prepare($sql);
+        if ($types) {
+            $stmt->bind_param($types, ...$params);
         }
-        return 0;
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $total = 0;
+        if ($result && $row = $result->fetch_assoc()) {
+            $total = (int)$row['total'];
+        }
+        $stmt->close();
+        return $total;
     }
 
     public function get_chargeable_repairs()
@@ -88,14 +118,20 @@ class WorkshopModel extends BaseModel
                 LEFT JOIN usuario u ON v.id_usuario = u.id_usuario
                 WHERE v.descripcion LIKE 'Cobro de Reparación #%'
                 ORDER BY v.fecha DESC
-                LIMIT $limit OFFSET $offset";
-        $result = $this->conn->query($sql);
+                LIMIT ? OFFSET ?";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("ii", $limit, $offset);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
         $history = [];
         if ($result && $result->num_rows > 0) {
             while ($row = $result->fetch_assoc()) {
                 $history[] = $row;
             }
         }
+        $stmt->close();
         return $history;
     }
 
@@ -111,43 +147,59 @@ class WorkshopModel extends BaseModel
         return 0;
     }
 
-    public function find_repair_by_id($id)
+    public function find_repair_by_id(int $id)
     {
         $id = intval($id);
         $sql = "SELECT r.*, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono, c.email AS cliente_email 
                 FROM reparacion r
                 LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
-                WHERE r.id_reparacion = $id";
-        $result = $this->conn->query($sql);
-        return $result ? $result->fetch_assoc() : null;
+                WHERE r.id_reparacion = ?";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $result = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $result;
     }
 
-    public function find_repair_by_code($code)
+    public function find_repair_by_code(string $code)
     {
-        $code = $this->conn->real_escape_string($code);
-        $sql = "SELECT codigo_orden, equipo_marca, equipo_modelo, estado FROM reparacion WHERE codigo_orden = '$code'";
-        $result = $this->conn->query($sql);
-        return ($result && $result->num_rows > 0) ? $result->fetch_assoc() : null;
+        $sql = "SELECT codigo_orden, equipo_marca, equipo_modelo, estado FROM reparacion WHERE codigo_orden = ?";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("s", $code);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $data = ($result && $result->num_rows > 0) ? $result->fetch_assoc() : null;
+        $stmt->close();
+        return $data;
     }
 
-    public function get_repair_repuestos($id_reparacion)
+    public function get_repair_repuestos(int $id_reparacion)
     {
         $id_reparacion = intval($id_reparacion);
         $sql = "SELECT rr.*, p.nombre 
                 FROM reparacion_repuesto rr 
                 JOIN producto p ON rr.id_producto = p.id_producto 
-                WHERE rr.id_reparacion = $id_reparacion";
-        $result = $this->conn->query($sql);
+                WHERE rr.id_reparacion = ?";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $id_reparacion);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
         $repuestos = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $repuestos[] = $row;
             }
         }
+        $stmt->close();
         return $repuestos;
     }
 
-    public function get_repair_historial($id_reparacion)
+    public function get_repair_historial(int $id_reparacion)
     {
         $id_reparacion = intval($id_reparacion);
         $sql = "SELECT h.*, u.nombre_usuario 
@@ -195,7 +247,7 @@ class WorkshopModel extends BaseModel
         return $clients;
     }
 
-    public function create_repair_order($id_cliente_existente, $client_name, $client_phone, $client_email, $brand, $model, $imei, $failure, $notes, $budget, $user_id)
+    public function create_repair_order(int $id_cliente_existente, string $client_name, string $client_phone, string $client_email, string $brand, string $model, string $imei, string $failure, string $notes, float $budget, int $user_id)
     {
         $id_cliente_existente = intval($id_cliente_existente);
         $client_name = $this->conn->real_escape_string($client_name);
@@ -244,63 +296,84 @@ class WorkshopModel extends BaseModel
         }
     }
 
-    public function update_repair_status_and_budget($id_reparacion, $status, $budget, $note, $user_id)
+    public function update_repair_status_and_budget(int $id_reparacion, string $status, float $budget, string $note, int $user_id)
     {
         $id_reparacion = intval($id_reparacion);
-        $status = $this->conn->real_escape_string($status);
-        $budget_val = !empty($budget) ? (float)$budget : "NULL";
-        $note = $this->conn->real_escape_string($note);
         $user_id = intval($user_id);
+        $budget_val = !empty($budget) ? (float)$budget : null;
 
-        // Get old status
-        $res_old = $this->conn->query("SELECT estado FROM reparacion WHERE id_reparacion = $id_reparacion");
+        $stmt_old = $this->conn->prepare("SELECT estado FROM reparacion WHERE id_reparacion = ?");
+        $stmt_old->bind_param("i", $id_reparacion);
+        $stmt_old->execute();
+        $res_old = $stmt_old->get_result();
         if (!$res_old || $res_old->num_rows === 0) {
+            $stmt_old->close();
             throw new Exception("Orden de reparación no encontrada");
         }
         $old_state = $res_old->fetch_assoc()['estado'];
+        $stmt_old->close();
 
-        $sql_update = "UPDATE reparacion SET estado = '$status', presupuesto = $budget_val";
+        $sql_update = "UPDATE reparacion SET estado = ?, presupuesto = ?";
         if ($status === 'Entregado' && $old_state !== 'Entregado') {
             $sql_update .= ", fecha_entrega = CURRENT_TIMESTAMP";
         }
-        $sql_update .= " WHERE id_reparacion = $id_reparacion";
+        $sql_update .= " WHERE id_reparacion = ?";
 
-        if ($this->conn->query($sql_update) === TRUE) {
+        $stmt_update = $this->conn->prepare($sql_update);
+        $stmt_update->bind_param("sdi", $status, $budget_val, $id_reparacion);
+        
+        if ($stmt_update->execute()) {
+            $stmt_update->close();
             if ($old_state !== $status || !empty($note)) {
-                $this->conn->query("INSERT INTO reparacion_historial (id_reparacion, estado_anterior, estado_nuevo, nota, id_usuario) 
-                                    VALUES ($id_reparacion, '$old_state', '$status', '$note', $user_id)");
+                $stmt_hist = $this->conn->prepare("INSERT INTO reparacion_historial (id_reparacion, estado_anterior, estado_nuevo, nota, id_usuario) VALUES (?, ?, ?, ?, ?)");
+                $stmt_hist->bind_param("isssi", $id_reparacion, $old_state, $status, $note, $user_id);
+                $stmt_hist->execute();
+                $stmt_hist->close();
             }
             return true;
         } else {
-            throw new Exception("Error al actualizar la orden: " . $this->conn->error);
+            $err = $stmt_update->error;
+            $stmt_update->close();
+            throw new Exception("Error al actualizar la orden: " . $err);
         }
     }
 
-    public function add_repuesto_to_repair($id_reparacion, $id_producto, $quantity = 1)
+    public function add_repuesto_to_repair(int $id_reparacion, int $id_producto, int $quantity = 1)
     {
         $id_reparacion = intval($id_reparacion);
         $id_producto = intval($id_producto);
         $quantity = intval($quantity);
 
-        // Verifica el stock disponible
-        $res_inv = $this->conn->query("SELECT cantidad FROM inventario WHERE id_producto = $id_producto");
+        $stmt_inv = $this->conn->prepare("SELECT cantidad FROM inventario WHERE id_producto = ?");
+        $stmt_inv->bind_param("i", $id_producto);
+        $stmt_inv->execute();
+        $res_inv = $stmt_inv->get_result();
         $row_inv = $res_inv ? $res_inv->fetch_assoc() : null;
+        $stmt_inv->close();
 
         if ($row_inv && $row_inv['cantidad'] >= $quantity) {
-            $res_prod = $this->conn->query("SELECT precio FROM producto WHERE id_producto = $id_producto");
-            $precio = $res_prod->fetch_assoc()['precio'];
+            $stmt_prod = $this->conn->prepare("SELECT precio FROM producto WHERE id_producto = ?");
+            $stmt_prod->bind_param("i", $id_producto);
+            $stmt_prod->execute();
+            $precio = $stmt_prod->get_result()->fetch_assoc()['precio'];
+            $stmt_prod->close();
 
             $this->conn->begin_transaction();
             try {
-                // Agrega el repuesto a la tabla de reparaciones
-                $this->conn->query("INSERT INTO reparacion_repuesto (id_reparacion, id_producto, cantidad, precio_unitario) 
-                                    VALUES ($id_reparacion, $id_producto, $quantity, $precio)");
+                $stmt_add = $this->conn->prepare("INSERT INTO reparacion_repuesto (id_reparacion, id_producto, cantidad, precio_unitario) VALUES (?, ?, ?, ?)");
+                $stmt_add->bind_param("iiid", $id_reparacion, $id_producto, $quantity, $precio);
+                $stmt_add->execute();
+                $stmt_add->close();
 
-                // Resta la cantidad del inventario
-                $this->conn->query("UPDATE inventario SET cantidad = cantidad - $quantity WHERE id_producto = $id_producto");
+                $stmt_upd = $this->conn->prepare("UPDATE inventario SET cantidad = cantidad - ? WHERE id_producto = ?");
+                $stmt_upd->bind_param("ii", $quantity, $id_producto);
+                $stmt_upd->execute();
+                $stmt_upd->close();
 
-                // Actualiza el costo total de la reparación
-                $this->conn->query("UPDATE reparacion SET costo_total = costo_total + ($precio * $quantity) WHERE id_reparacion = $id_reparacion");
+                $stmt_cost = $this->conn->prepare("UPDATE reparacion SET costo_total = costo_total + (? * ?) WHERE id_reparacion = ?");
+                $stmt_cost->bind_param("dii", $precio, $quantity, $id_reparacion);
+                $stmt_cost->execute();
+                $stmt_cost->close();
 
                 $this->conn->commit();
                 return true;
@@ -313,25 +386,35 @@ class WorkshopModel extends BaseModel
         }
     }
 
-    public function remove_repuesto_from_repair($id_reparacion_repuesto)
+    public function remove_repuesto_from_repair(int $id_reparacion_repuesto)
     {
         $id_reparacion_repuesto = intval($id_reparacion_repuesto);
 
-        $res = $this->conn->query("SELECT id_reparacion, id_producto, cantidad, precio_unitario FROM reparacion_repuesto WHERE id_reparacion_repuesto = $id_reparacion_repuesto");
+        $stmt = $this->conn->prepare("SELECT id_reparacion, id_producto, cantidad, precio_unitario FROM reparacion_repuesto WHERE id_reparacion_repuesto = ?");
+        $stmt->bind_param("i", $id_reparacion_repuesto);
+        $stmt->execute();
+        $res = $stmt->get_result();
         $row = $res ? $res->fetch_assoc() : null;
+        $stmt->close();
 
         if ($row) {
             $this->conn->begin_transaction();
             try {
-                // Eliminar el registro
-                $this->conn->query("DELETE FROM reparacion_repuesto WHERE id_reparacion_repuesto = $id_reparacion_repuesto");
+                $stmt_del = $this->conn->prepare("DELETE FROM reparacion_repuesto WHERE id_reparacion_repuesto = ?");
+                $stmt_del->bind_param("i", $id_reparacion_repuesto);
+                $stmt_del->execute();
+                $stmt_del->close();
 
-                // Restaurar inventario
-                $this->conn->query("UPDATE inventario SET cantidad = cantidad + " . $row['cantidad'] . " WHERE id_producto = " . $row['id_producto']);
+                $stmt_inv = $this->conn->prepare("UPDATE inventario SET cantidad = cantidad + ? WHERE id_producto = ?");
+                $stmt_inv->bind_param("ii", $row['cantidad'], $row['id_producto']);
+                $stmt_inv->execute();
+                $stmt_inv->close();
 
-                // Restar del costo total
                 $costo = $row['cantidad'] * $row['precio_unitario'];
-                $this->conn->query("UPDATE reparacion SET costo_total = costo_total - $costo WHERE id_reparacion = " . $row['id_reparacion']);
+                $stmt_cost = $this->conn->prepare("UPDATE reparacion SET costo_total = costo_total - ? WHERE id_reparacion = ?");
+                $stmt_cost->bind_param("di", $costo, $row['id_reparacion']);
+                $stmt_cost->execute();
+                $stmt_cost->close();
 
                 $this->conn->commit();
                 return true;
@@ -343,7 +426,7 @@ class WorkshopModel extends BaseModel
         return false;
     }
 
-    public function register_repair_payment($id_reparacion, $monto, $metodo_pago, $id_usuario)
+    public function register_repair_payment(int $id_reparacion, float $monto, string $metodo_pago, int $id_usuario)
     {
         $id_reparacion = intval($id_reparacion);
         $monto = floatval($monto);
@@ -383,17 +466,19 @@ class WorkshopModel extends BaseModel
         }
     }
 
-    public function add_repair_image($id_reparacion, $ruta_archivo, $tipo = 'Ingreso')
+    public function add_repair_image(int $id_reparacion, string $ruta_archivo, string $tipo = 'Ingreso')
     {
         $id_reparacion = intval($id_reparacion);
-        $ruta_archivo = $this->conn->real_escape_string($ruta_archivo);
-        $tipo = $this->conn->real_escape_string($tipo);
         
-        $sql = "INSERT INTO reparacion_imagen (id_reparacion, ruta_archivo, tipo) VALUES ($id_reparacion, '$ruta_archivo', '$tipo')";
-        return $this->conn->query($sql);
+        $sql = "INSERT INTO reparacion_imagen (id_reparacion, ruta_archivo, tipo) VALUES (?, ?, ?)";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("iss", $id_reparacion, $ruta_archivo, $tipo);
+        $res = $stmt->execute();
+        $stmt->close();
+        return $res;
     }
 
-    public function get_repair_images($id_reparacion)
+    public function get_repair_images(int $id_reparacion)
     {
         $id_reparacion = intval($id_reparacion);
         $sql = "SELECT id_imagen, ruta_archivo, tipo, fecha_subida FROM reparacion_imagen WHERE id_reparacion = $id_reparacion ORDER BY fecha_subida ASC";
@@ -407,7 +492,7 @@ class WorkshopModel extends BaseModel
         return $images;
     }
 
-    public function delete_repair_image($id_imagen, $id_reparacion)
+    public function delete_repair_image(int $id_imagen, int $id_reparacion)
     {
         $id_imagen = intval($id_imagen);
         $id_reparacion = intval($id_reparacion);

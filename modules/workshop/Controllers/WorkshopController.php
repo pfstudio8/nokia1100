@@ -6,7 +6,7 @@ require_once __DIR__ . '/../Models/WorkshopModel.php';
 
 class WorkshopController extends BaseController
 {
-    private $workshop_model;
+    private WorkshopModel $workshop_model;
 
     public function __construct()
     {
@@ -87,7 +87,7 @@ class WorkshopController extends BaseController
                     $_POST['equipo_imei'] ?? '',
                     $_POST['falla_declarada'] ?? '',
                     $_POST['observaciones'] ?? '',
-                    $_POST['presupuesto'] ?? '',
+                    isset($_POST['presupuesto']) && $_POST['presupuesto'] !== '' ? (float)$_POST['presupuesto'] : 0.0,
                     $_SESSION['user_id']
                 );
 
