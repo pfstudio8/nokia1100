@@ -7,31 +7,31 @@ class AdminModel extends BaseModel
 {
     // --- Métricas del Panel de Control ---
 
-    public function get_total_sales()
+    public function get_total_sales(): float
     {
         $res = $this->conn->query("SELECT SUM(total) as total_ventas FROM venta WHERE estado != 'anulada'");
         return ($res && $res->num_rows > 0) ? (float) $res->fetch_assoc()['total_ventas'] : 0.0;
     }
 
-    public function get_total_transactions()
+    public function get_total_transactions(): int
     {
         $res = $this->conn->query("SELECT COUNT(*) as total_transacciones FROM venta WHERE estado != 'anulada'");
         return ($res && $res->num_rows > 0) ? (int) $res->fetch_assoc()['total_transacciones'] : 0;
     }
 
-    public function get_total_users()
+    public function get_total_users(): int
     {
         $res = $this->conn->query("SELECT COUNT(*) as total_usuarios FROM usuario");
         return ($res && $res->num_rows > 0) ? (int) $res->fetch_assoc()['total_usuarios'] : 0;
     }
 
-    public function get_low_stock_count()
+    public function get_low_stock_count(): int
     {
         $res = $this->conn->query("SELECT COUNT(*) as bajo_stock FROM inventario i INNER JOIN producto p ON i.id_producto = p.id_producto WHERE i.cantidad <= 5 AND p.is_active = 1");
         return ($res && $res->num_rows > 0) ? (int) $res->fetch_assoc()['bajo_stock'] : 0;
     }
 
-    public function get_recent_sales($limit = 5)
+    public function get_recent_sales(int $limit = 5): array
     {
         $limit = (int) $limit;
         $stmt = $this->conn->prepare("SELECT id_venta, fecha, total, metodo_de_pago FROM venta WHERE estado != 'anulada' ORDER BY fecha DESC LIMIT ?");
@@ -50,7 +50,7 @@ class AdminModel extends BaseModel
 
     // --- Gestión de Usuarios ---
 
-    public function count_active_admins($exclude_id = null)
+    public function count_active_admins(?int $exclude_id = null): int
     {
         if ($exclude_id) {
             $stmt = $this->conn->prepare("SELECT COUNT(*) AS total FROM usuario WHERE rol = 'admin' AND is_active = 1 AND id_usuario != ?");
@@ -64,7 +64,7 @@ class AdminModel extends BaseModel
         return (int)$total;
     }
 
-    public function get_all_users($filter = 'activos')
+    public function get_all_users(string $filter = 'activos'): array
     {
         $where = match($filter) {
             'inactivos' => "WHERE u.is_active = 0",
@@ -89,7 +89,7 @@ class AdminModel extends BaseModel
         return $users;
     }
 
-    public function find_user_by_id($id_usuario)
+    public function find_user_by_id(int $id_usuario): ?array
     {
         $stmt = $this->conn->prepare("
             SELECT u.id_usuario, u.id_persona, u.nombre_usuario, u.rol, u.is_active,
@@ -105,7 +105,7 @@ class AdminModel extends BaseModel
         return $res;
     }
 
-    public function check_username_exists($username, $exclude_id = null)
+    public function check_username_exists(string $username, ?int $exclude_id = null): bool
     {
         if ($exclude_id) {
             $stmt = $this->conn->prepare("SELECT id_usuario FROM usuario WHERE nombre_usuario = ? AND id_usuario != ?");
@@ -121,7 +121,7 @@ class AdminModel extends BaseModel
         return $count > 0;
     }
 
-    public function check_email_exists($email, $exclude_id_persona = null)
+    public function check_email_exists(string $email, ?int $exclude_id_persona = null): bool
     {
         if ($exclude_id_persona) {
             $stmt = $this->conn->prepare("SELECT id_persona FROM persona WHERE email = ? AND id_persona != ?");
@@ -137,7 +137,7 @@ class AdminModel extends BaseModel
         return $count > 0;
     }
 
-    public function check_dni_exists($dni, $exclude_id_persona = null)
+    public function check_dni_exists(string $dni, ?int $exclude_id_persona = null): bool
     {
         if ($exclude_id_persona) {
             $stmt = $this->conn->prepare("SELECT id_persona FROM persona WHERE dni = ? AND id_persona != ?");
@@ -153,7 +153,7 @@ class AdminModel extends BaseModel
         return $count > 0;
     }
 
-    public function create_user_transaction($persona_data, $user_data)
+    public function create_user_transaction(array $persona_data, array $user_data): int
     {
         $this->conn->begin_transaction();
         try {
@@ -201,7 +201,7 @@ class AdminModel extends BaseModel
         }
     }
 
-    public function update_user_transaction($id_usuario, $id_persona, $persona_data, $user_data)
+    public function update_user_transaction(int $id_usuario, int $id_persona, array $persona_data, array $user_data): bool
     {
         $this->conn->begin_transaction();
         try {
@@ -253,15 +253,23 @@ class AdminModel extends BaseModel
         }
     }
 
-    public function toggle_user_status($id_usuario)
+    public function toggle_user_status(int $id_usuario): array
     {
         // Get current status
         $stmt = $this->conn->prepare("SELECT is_active FROM usuario WHERE id_usuario = ?");
         $stmt->bind_param("i", $id_usuario);
         $stmt->execute();
-        $is_active = $stmt->get_result()->fetch_assoc()['is_active'];
+        $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
 
+        if (!$row) {
+            return [
+                'success' => false,
+                'new_status' => 0
+            ];
+        }
+
+        $is_active = (int)$row['is_active'];
         $new_status = $is_active ? 0 : 1;
         $fecha_baja = $new_status ? null : date('Y-m-d H:i:s');
 
@@ -276,7 +284,7 @@ class AdminModel extends BaseModel
         ];
     }
 
-    public function update_user_role($id_usuario, $rol)
+    public function update_user_role(int $id_usuario, string $rol): bool
     {
         // Al pasar a admin se limpian las restricciones de módulos (acceso total).
         // Al pasar a empleado se asignan módulos estándar para evitar fuga de privilegios si tenía NULL.
@@ -293,7 +301,7 @@ class AdminModel extends BaseModel
         return $success;
     }
 
-    public function update_user_modules($id_usuario, $modules_str)
+    public function update_user_modules(int $id_usuario, ?string $modules_str): bool
     {
         // Los permisos de un administrador no pueden modificarse
         $stmt = $this->conn->prepare("UPDATE usuario SET modulos_permitidos = ? WHERE id_usuario = ? AND rol <> 'admin'");
@@ -305,7 +313,7 @@ class AdminModel extends BaseModel
 
     // --- Gestión de Perfil ---
 
-    public function get_user_profile($id_usuario)
+    public function get_user_profile(int $id_usuario): ?array
     {
         $stmt = $this->conn->prepare("
             SELECT u.id_usuario, u.id_persona, u.nombre_usuario, u.rol, u.email as user_email,
@@ -321,7 +329,7 @@ class AdminModel extends BaseModel
         return $res;
     }
 
-    public function update_profile_transaction($id_usuario, $id_persona, $persona_data, $password_data = null, $new_username = null)
+    public function update_profile_transaction(int $id_usuario, int $id_persona, array $persona_data, ?array $password_data = null, ?string $new_username = null): bool
     {
         $this->conn->begin_transaction();
         try {
@@ -378,7 +386,7 @@ class AdminModel extends BaseModel
     }
 
     // --- Auditoría ---
-    public function get_audit_logs($limit = 100, $modulo = '')
+    public function get_audit_logs(int $limit = 100, string $modulo = ''): array
     {
         $limit = (int) $limit;
         $sql = "SELECT a.*, u.nombre_usuario 
@@ -411,7 +419,7 @@ class AdminModel extends BaseModel
         return $logs;
     }
 
-    public function get_financial_stats()
+    public function get_financial_stats(): array
     {
         $sql = "
             SELECT 

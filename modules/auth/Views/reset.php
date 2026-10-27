@@ -1,3 +1,13 @@
+<?php
+/**
+ * @var bool $isValidToken
+ * @var string $token
+ * @var int $id_usuario
+ */
+$isValidToken = $isValidToken ?? false;
+$token = $token ?? '';
+$id_usuario = $id_usuario ?? 0;
+?>
 <!DOCTYPE html>
 <html lang="es">
 
