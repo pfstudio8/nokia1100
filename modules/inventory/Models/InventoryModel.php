@@ -2,23 +2,33 @@
 // modules/inventory/Models/InventoryModel.php
 
 require_once __DIR__ . '/../../../classes/BaseModel.php';
+require_once __DIR__ . '/../../../classes/ServiceProduct.php';
 
 class InventoryModel extends BaseModel
 {
-    public function get_inventory($search = '', $filter = '', $limit = 50, $offset = 0)
+    public function get_inventory($search = '', $filter = '', $limit = 50, $offset = 0, $categoria = '')
     {
         $where_parts = [];
         $types = "";
         $params = [];
 
+        // Excluir servicios no físicos (facturación interna del taller)
+        $where_parts[] = "(d.categoria IS NULL OR d.categoria != 'Servicios')";
+        $where_parts[] = ServiceProduct::excludeSql('p');
+
         if ($search) {
             $search_wildcard = "%" . $search . "%";
-            $where_parts[] = "(p.nombre LIKE ? OR d.marca LIKE ? OR d.modelo LIKE ?)";
-            $types .= "sss";
-            array_push($params, $search_wildcard, $search_wildcard, $search_wildcard);
+            $where_parts[] = "(p.nombre LIKE ? OR d.marca LIKE ? OR d.modelo LIKE ? OR d.categoria LIKE ? OR d.codigo LIKE ?)";
+            $types .= "sssss";
+            array_push($params, $search_wildcard, $search_wildcard, $search_wildcard, $search_wildcard, $search_wildcard);
         }
         if ($filter === 'low_stock') {
             $where_parts[] = "i.cantidad <= d.stock_minimo";
+        }
+        if (!empty($categoria)) {
+            $where_parts[] = "d.categoria = ?";
+            $types .= "s";
+            $params[] = $categoria;
         }
 
         $where_clause = count($where_parts) > 0 ? " WHERE " . implode(" AND ", $where_parts) : "";
@@ -26,7 +36,7 @@ class InventoryModel extends BaseModel
         $limit = (int)$limit;
         $offset = (int)$offset;
 
-        $sql = "SELECT p.id_producto, p.nombre, d.marca, d.modelo, i.cantidad, p.precio, p.is_active
+        $sql = "SELECT p.id_producto, p.nombre, d.marca, d.modelo, d.categoria, d.codigo, d.stock_minimo, i.cantidad, p.precio, p.is_active
                 FROM inventario i
                 JOIN producto p ON i.id_producto = p.id_producto
                 JOIN producto_detalle d ON p.id_producto = d.id_producto
@@ -54,20 +64,29 @@ class InventoryModel extends BaseModel
         return $items;
     }
 
-    public function get_inventory_count($search = '', $filter = '')
+    public function get_inventory_count($search = '', $filter = '', $categoria = '')
     {
         $where_parts = [];
         $types = "";
         $params = [];
 
+        // Excluir servicios no físicos (facturación interna del taller)
+        $where_parts[] = "(d.categoria IS NULL OR d.categoria != 'Servicios')";
+        $where_parts[] = ServiceProduct::excludeSql('p');
+
         if ($search) {
             $search_wildcard = "%" . $search . "%";
-            $where_parts[] = "(p.nombre LIKE ? OR d.marca LIKE ? OR d.modelo LIKE ?)";
-            $types .= "sss";
-            array_push($params, $search_wildcard, $search_wildcard, $search_wildcard);
+            $where_parts[] = "(p.nombre LIKE ? OR d.marca LIKE ? OR d.modelo LIKE ? OR d.categoria LIKE ? OR d.codigo LIKE ?)";
+            $types .= "sssss";
+            array_push($params, $search_wildcard, $search_wildcard, $search_wildcard, $search_wildcard, $search_wildcard);
         }
         if ($filter === 'low_stock') {
             $where_parts[] = "i.cantidad <= d.stock_minimo";
+        }
+        if (!empty($categoria)) {
+            $where_parts[] = "d.categoria = ?";
+            $types .= "s";
+            $params[] = $categoria;
         }
 
         $where_clause = count($where_parts) > 0 ? " WHERE " . implode(" AND ", $where_parts) : "";
@@ -93,10 +112,23 @@ class InventoryModel extends BaseModel
         return $total;
     }
 
+    public function get_all_categories()
+    {
+        $sql = "SELECT DISTINCT categoria FROM producto_detalle WHERE categoria IS NOT NULL AND categoria != '' AND categoria != 'Servicios' ORDER BY categoria ASC";
+        $result = $this->conn->query($sql);
+        $cats = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $cats[] = $row['categoria'];
+            }
+        }
+        return $cats;
+    }
+
     public function find_product_by_id(int $id_producto)
     {
         $stmt = $this->conn->prepare("
-            SELECT p.nombre, p.precio, d.marca, d.modelo, i.cantidad 
+            SELECT p.id_producto, p.nombre, p.precio, d.marca, d.modelo, d.categoria, d.codigo, d.stock_minimo, i.cantidad 
             FROM producto p
             JOIN producto_detalle d ON p.id_producto = d.id_producto
             JOIN inventario i ON p.id_producto = i.id_producto
@@ -113,8 +145,9 @@ class InventoryModel extends BaseModel
     {
         $stmt = $this->conn->prepare("SELECT 
             (SELECT COUNT(*) FROM detalle_venta WHERE id_producto = ?) + 
-            (SELECT COUNT(*) FROM detalle_compra WHERE id_producto = ?) AS total");
-        $stmt->bind_param("ii", $id_producto, $id_producto);
+            (SELECT COUNT(*) FROM detalle_compra WHERE id_producto = ?) +
+            (SELECT COUNT(*) FROM reparacion_repuesto WHERE id_producto = ?) AS total");
+        $stmt->bind_param("iii", $id_producto, $id_producto, $id_producto);
         $stmt->execute();
         $total = 0;
         $stmt->bind_result($total);
@@ -176,8 +209,14 @@ class InventoryModel extends BaseModel
                 throw new Exception("Error al actualizar producto");
             $stmt->close();
 
-            $stmt = $this->conn->prepare("UPDATE producto_detalle SET marca = ?, modelo = ? WHERE id_producto = ?");
-            $stmt->bind_param("ssi", $detail_data['marca'], $detail_data['modelo'], $id_producto);
+            $categoria = $detail_data['categoria'] ?? null;
+            if ($categoria !== null) {
+                $stmt = $this->conn->prepare("UPDATE producto_detalle SET marca = ?, modelo = ?, categoria = ? WHERE id_producto = ?");
+                $stmt->bind_param("sssi", $detail_data['marca'], $detail_data['modelo'], $categoria, $id_producto);
+            } else {
+                $stmt = $this->conn->prepare("UPDATE producto_detalle SET marca = ?, modelo = ? WHERE id_producto = ?");
+                $stmt->bind_param("ssi", $detail_data['marca'], $detail_data['modelo'], $id_producto);
+            }
             if (!$stmt->execute())
                 throw new Exception("Error al actualizar detalles");
             $stmt->close();
@@ -210,28 +249,22 @@ class InventoryModel extends BaseModel
         return $success;
     }
 
+    public function deactivate_product(int $id_producto)
+    {
+        $stmt = $this->conn->prepare("UPDATE producto SET is_active = 0 WHERE id_producto = ?");
+        $stmt->bind_param("i", $id_producto);
+        $success = $stmt->execute();
+        $stmt->close();
+        if (!$success) {
+            throw new Exception("Error al desactivar el producto");
+        }
+        return true;
+    }
+
+    // Alias retrocompatible para no romper llamadas externas existentes (sin borrar inventario físico)
     public function deactivate_product_and_delete_stock(int $id_producto)
     {
-        $this->conn->begin_transaction();
-        try {
-            $stmt = $this->conn->prepare("UPDATE producto SET is_active = 0 WHERE id_producto = ?");
-            $stmt->bind_param("i", $id_producto);
-            if (!$stmt->execute())
-                throw new Exception("Error al desactivar el producto");
-            $stmt->close();
-
-            $stmt = $this->conn->prepare("DELETE FROM inventario WHERE id_producto = ?");
-            $stmt->bind_param("i", $id_producto);
-            if (!$stmt->execute())
-                throw new Exception("Error al eliminar stock");
-            $stmt->close();
-
-            $this->conn->commit();
-            return true;
-        } catch (Exception $e) {
-            $this->conn->rollback();
-            throw $e;
-        }
+        return $this->deactivate_product($id_producto);
     }
 
     public function delete_product_completely(int $id_producto)
@@ -400,6 +433,5 @@ class InventoryModel extends BaseModel
         return ['products' => $products, 'values' => $values];
     }
 }
-?>
 
 

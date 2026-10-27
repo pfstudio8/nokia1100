@@ -22,7 +22,10 @@ async function receivePurchase(id) {
         fetch('index.php?action=receive_purchase', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id_compra: id })
+            body: JSON.stringify({ 
+                id_compra: id,
+                csrf_token: window.CSRF_TOKEN || ''
+            })
         })
         .then(res => res.json())
         .then(data => {
@@ -53,7 +56,10 @@ async function cancelPurchase(id) {
         fetch('index.php?action=cancel_purchase', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id_compra: id })
+            body: JSON.stringify({ 
+                id_compra: id,
+                csrf_token: window.CSRF_TOKEN || ''
+            })
         })
         .then(res => res.json())
         .then(data => {

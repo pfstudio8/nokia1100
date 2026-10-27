@@ -6,7 +6,7 @@ require_once __DIR__ . '/../Models/EmployeeModel.php';
 
 class EmployeeController extends BaseController
 {
-    private $employee_model;
+    private EmployeeModel $employee_model;
 
     public function __construct()
     {
@@ -38,12 +38,16 @@ class EmployeeController extends BaseController
         
         $productos = $this->employee_model->get_featured_products(4);
 
+        require_once __DIR__ . '/../../workshop/Models/WorkshopModel.php';
+        $workshop_model = new WorkshopModel();
+        $ready_to_charge = $workshop_model->get_ready_to_charge_count();
+
         $this->render_view(__DIR__ . '/../Views/dashboard.php', [
             'total_hoy' => $total_hoy,
             'trans_hoy' => $trans_hoy,
             'ventas_recientes' => $ventas_recientes,
-            'productos' => $productos
+            'productos' => $productos,
+            'ready_to_charge' => $ready_to_charge
         ]);
     }
 }
-?>

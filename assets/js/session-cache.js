@@ -1,8 +1,6 @@
-/**
- * session-cache.js - Nokia 1100 System
- * Maneja el caché de la sesión usando localStorage para mostrar
- * el nombre del usuario en la parte superior derecha.
- */
+// session-cache.js - Nokia 1100 System
+// Maneja el caché de la sesión usando localStorage para mostrar
+// el nombre del usuario en la parte superior derecha.
 
 document.addEventListener('DOMContentLoaded', () => {
     // Si la sesión de PHP dice que estamos logueados, guardamos en localStorage

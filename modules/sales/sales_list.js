@@ -17,12 +17,16 @@ window.confirmRollback = async function(id_venta) {
     }
 
     if (isConfirmed) {
-        fetch('/nokia1100/api/rollback_sale.php', {
+        const apiUrl = (window.BASE_URL ? window.BASE_URL : '/nokia1100') + '/api/rollback_sale.php';
+        fetch(apiUrl, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ id_venta: id_venta })
+            body: JSON.stringify({ 
+                id_venta: id_venta,
+                csrf_token: window.CSRF_TOKEN || ''
+            })
         })
         .then(response => response.json())
         .then(data => {

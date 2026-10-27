@@ -1,8 +1,25 @@
+*.sql
+database/
+*.bak
+*.dump
+*.log
+
+# Entornos y claves
 .env
 .env.*
 !.env.example
 
+# Dependencias
 /vendor/
 composer.phar
 
-*.sql
+# Fotos y subidas de usuarios (evitar subir fotos de clientes a GitHub)
+/assets/img/reparaciones/*
+!/assets/img/reparaciones/.htaccess
+
+# Archivos de sistema y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+

@@ -1,6 +1,16 @@
 <?php
 // modules/workshop/Views/view.php
 
+// Variables inyectadas por WorkshopController::view()
+$repair = $repair ?? [];
+$repuestos = $repuestos ?? [];
+$historial = $historial ?? [];
+$productos_opt = $productos_opt ?? [];
+$images = $images ?? [];
+$id_reparacion = $id_reparacion ?? 0;
+$error = $error ?? '';
+$success = $success ?? '';
+
 Layout::renderHead('Detalle de Orden - Nokia 1100');
 
 if ($_SESSION['role'] === 'admin') {
@@ -10,63 +20,187 @@ if ($_SESSION['role'] === 'admin') {
 }
 ?>
 
-<main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen">
+<main class="md:ml-64 p-6 md:p-10 pt-24 md:pt-14 pb-16 min-h-screen">
     <div class="max-w-6xl mx-auto">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <?php // Encabezado de la Orden ?>
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pt-2">
             <div class="flex items-center gap-4">
-                <a href="index.php" class="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-text-muted hover:text-text-main transition-colors">
+                <a href="index.php" class="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-text-muted hover:text-text-main transition-colors shadow-sm" title="Volver al listado">
                     <span class="material-symbols-outlined">arrow_back</span>
                 </a>
                 <div>
-                    <h2 class="text-3xl font-display font-medium text-text-main">Orden #<?php echo htmlspecialchars($repair['codigo_orden']); ?></h2>
-                    <p class="text-text-muted mt-1 text-sm">Registrada el <?php echo date('d/m/Y H:i', strtotime($repair['fecha_ingreso'])); ?></p>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <h2 class="text-2xl md:text-3xl font-display font-semibold text-text-main tracking-tight leading-tight">
+                            Orden #<?php echo htmlspecialchars($repair['codigo_orden']); ?>
+                        </h2>
+                        <?php 
+                        $badgeClasses = [
+                            'Recibido' => 'bg-blue-500/10 text-blue-400 border-blue-500/30',
+                            'En diagnóstico' => 'bg-amber-500/10 text-amber-400 border-amber-500/30',
+                            'En reparación' => 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30',
+                            'Listo' => 'bg-primary/20 text-primary border-primary/40 shadow-sm shadow-primary/10',
+                            'Entregado' => 'bg-green-500/10 text-green-400 border-green-500/30',
+                            'Cancelado' => 'bg-red-500/10 text-red-400 border-red-500/30',
+                        ];
+                        $st = $repair['estado'];
+                        $bClass = $badgeClasses[$st] ?? 'bg-surface text-text-muted border-border';
+                        ?>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider <?php echo $bClass; ?>">
+                            <span class="w-1.5 h-1.5 rounded-full <?php echo ($st === 'Listo' || $st === 'Entregado') ? 'bg-primary' : 'bg-current'; ?>"></span>
+                            <?php echo htmlspecialchars($st); ?>
+                        </span>
+                    </div>
+                    <p class="text-text-muted mt-1 text-xs flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[15px]">event</span>
+                        Ingresada el <?php echo date('d/m/Y H:i', strtotime($repair['fecha_ingreso'])); ?> hs
+                    </p>
                 </div>
             </div>
             
             <div class="flex items-center gap-3">
-                <a href="print_receipt.php?id=<?php echo $id_reparacion; ?>" target="_blank" class="bg-surface hover:bg-surface-hover border border-border px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2">
-                    <span class="material-symbols-outlined text-[18px]">print</span> Comprobante
+                <a href="index.php?action=print_receipt&id=<?php echo $id_reparacion; ?>" target="_blank" class="bg-surface hover:bg-surface-hover border border-border px-4 py-2.5 rounded-xl font-medium text-xs text-text-main transition-all flex items-center gap-2 shadow-sm">
+                    <span class="material-symbols-outlined text-[18px]">print</span> Comprobante Ingreso
                 </a>
             </div>
         </div>
 
+        <?php // Barra de acción según el estado ?>
+        <?php if ($repair['estado'] === 'Listo'): ?>
+            <div class="glass-card rounded-xl px-4 py-2.5 mb-5 border border-primary/30 bg-primary/5 flex items-center justify-between gap-3 flex-wrap text-xs">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-bold uppercase tracking-wider text-primary text-[11px]">Equipo Listo</span>
+                    <span class="text-text-muted">•</span>
+                    <span class="text-text-muted">
+                        Total a Cobrar: <strong class="text-primary font-semibold text-sm">$<?php echo number_format(floatval($repair['presupuesto']) + floatval($repair['costo_total']), 2); ?></strong>
+                        <span class="text-[11px] text-text-muted">($<?php echo number_format($repair['presupuesto'], 2); ?> m.o.<?php if (floatval($repair['costo_total']) > 0) echo ' + $' . number_format($repair['costo_total'], 2) . ' rep.'; ?>)</span>
+                    </span>
+                </div>
 
+                <button type="button" onclick="openSendToCashierModal()" class="px-3.5 py-1.5 rounded-lg bg-primary hover:bg-primary-hover text-background font-semibold text-xs tracking-wide transition-all flex items-center gap-1.5 cursor-pointer shadow-sm">
+                    <span class="material-symbols-outlined text-[16px]">send</span>
+                    Mandar a Ventas
+                </button>
+            </div>
+        <?php elseif ($repair['estado'] === 'Entregado'): ?>
+            <div class="glass-card rounded-2xl p-4 sm:p-5 mb-6 border border-green-500/30 bg-green-500/5 shadow-sm">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-10 h-10 rounded-xl bg-green-500/15 text-green-400 border border-green-500/30 flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[22px]">verified</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-green-400">
+                                Cobrado y Entregado
+                            </span>
+                            <span class="text-text-muted text-xs">•</span>
+                            <span class="text-xs text-text-muted">
+                                Total abonado: <strong class="text-green-400 font-semibold text-sm">$<?php echo number_format(floatval($repair['presupuesto']) + floatval($repair['costo_total']), 2); ?></strong>
+                            </span>
+                            <?php if (!empty($repair['fecha_entrega'])): ?>
+                                <span class="text-xs text-text-muted">• <?php echo date('d/m/Y H:i', strtotime($repair['fecha_entrega'])); ?> hs</span>
+                            <?php endif; ?>
+                        </div>
+                        <p class="text-xs text-text-muted mt-0.5">La reparación fue cobrada en Caja y el dispositivo fue entregado al cliente.</p>
+                    </div>
+                </div>
+            </div>
+        <?php elseif ($repair['estado'] !== 'Cancelado'): ?>
+            <div class="glass-card rounded-2xl p-4 sm:p-5 mb-6 border border-amber-500/25 bg-amber-500/5 shadow-sm">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+                            <span class="material-symbols-outlined text-[22px]">engineering</span>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-amber-400">
+                                    En Taller (<?php echo htmlspecialchars($repair['estado']); ?>)
+                                </span>
+                                <span class="text-text-muted text-xs">•</span>
+                                <span class="text-xs text-text-muted">
+                                    Mano de obra estimada: <strong class="text-text-main">$<?php echo number_format($repair['presupuesto'], 2); ?></strong>
+                                    <?php if (floatval($repair['costo_total']) > 0): ?>
+                                        + Repuestos: <strong class="text-text-main">$<?php echo number_format($repair['costo_total'], 2); ?></strong>
+                                    <?php endif; ?>
+                                </span>
+                            </div>
+                            <p class="text-xs text-text-muted mt-0.5">Al terminar el trabajo, cambiá el estado a <strong>"Listo"</strong> para habilitar el cobro en Caja.</p>
+                        </div>
+                    </div>
+                    <div class="shrink-0">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-surface border border-border text-text-muted text-[11px] font-medium">
+                            <span class="material-symbols-outlined text-[15px] text-amber-400">lock</span>
+                            Requiere "Listo" para cobrar
+                        </span>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             <?php // Columnas izquierdas (Información) ?>
             <div class="lg:col-span-2 space-y-6">
                 <?php // Información de cliente y dispositivo ?>
-                <div class="glass-card rounded-2xl p-6">
-                    <h3 class="text-lg font-display font-medium text-primary mb-4 border-b border-border/50 pb-2">Información General</h3>
+                <div class="glass-card rounded-2xl p-6 border border-border/70 shadow-sm">
+                    <div class="flex items-center justify-between border-b border-border/50 pb-3 mb-5">
+                        <h3 class="text-lg font-display font-semibold text-text-main flex items-center gap-2">
+                            <span class="material-symbols-outlined text-primary text-xl">devices</span>
+                            Información del Dispositivo y Cliente
+                        </h3>
+                    </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <p class="text-xs text-text-muted uppercase tracking-wider font-semibold mb-1">Cliente</p>
-                            <p class="font-medium text-text-main"><?php echo htmlspecialchars($repair['cliente_nombre']); ?></p>
-                            <p class="text-sm text-text-muted"><?php echo htmlspecialchars($repair['cliente_telefono']); ?></p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                        <div class="p-4 rounded-xl bg-surface/60 border border-border/60">
+                            <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                                <span class="material-symbols-outlined text-[16px] text-primary">person</span>
+                                Cliente
+                            </span>
+                            <p class="text-base font-semibold text-text-main"><?php echo htmlspecialchars($repair['cliente_nombre']); ?></p>
+                            <?php if (!empty($repair['cliente_telefono'])): ?>
+                                <p class="text-xs text-text-muted mt-1.5 flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-[15px] text-text-muted">call</span>
+                                    <span><?php echo htmlspecialchars($repair['cliente_telefono']); ?></span>
+                                </p>
+                            <?php endif; ?>
                         </div>
-                        <div>
-                            <p class="text-xs text-text-muted uppercase tracking-wider font-semibold mb-1">Equipo</p>
-                            <p class="font-medium text-text-main"><?php echo htmlspecialchars($repair['equipo_marca'] . ' ' . $repair['equipo_modelo']); ?></p>
-                            <p class="text-sm text-text-muted">IMEI/Serie: <?php echo htmlspecialchars($repair['equipo_imei']); ?></p>
+
+                        <div class="p-4 rounded-xl bg-surface/60 border border-border/60">
+                            <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider flex items-center gap-1.5 mb-2">
+                                <span class="material-symbols-outlined text-[16px] text-primary">smartphone</span>
+                                Equipo
+                            </span>
+                            <p class="text-base font-semibold text-text-main"><?php echo htmlspecialchars($repair['equipo_marca'] . ' ' . $repair['equipo_modelo']); ?></p>
+                            <p class="text-xs text-text-muted mt-2">
+                                <span class="font-mono text-text-main font-medium bg-background/80 px-2 py-1 rounded border border-border/50 text-[11px]">
+                                    IMEI / Serie: <?php echo htmlspecialchars($repair['equipo_imei'] ?: 'No registrado'); ?>
+                                </span>
+                            </p>
                         </div>
                     </div>
                     
-                    <div class="mt-6">
-                        <p class="text-xs text-text-muted uppercase tracking-wider font-semibold mb-1">Falla Declarada</p>
-                        <div class="bg-surface border border-border p-3 rounded-xl text-sm whitespace-pre-wrap"><?php echo htmlspecialchars($repair['falla_declarada']); ?></div>
+                    <div class="space-y-3">
+                        <div class="p-4 rounded-xl bg-amber-500/5 border border-amber-500/25 flex items-start gap-3">
+                            <span class="material-symbols-outlined text-amber-400 text-[20px] shrink-0 mt-0.5">report_problem</span>
+                            <div class="flex-1">
+                                <span class="text-[11px] font-bold text-amber-400 uppercase tracking-wider block mb-1">Falla Declarada por el Cliente</span>
+                                <p class="text-sm text-text-main whitespace-pre-wrap leading-relaxed"><?php echo htmlspecialchars($repair['falla_declarada']); ?></p>
+                            </div>
+                        </div>
+                        
+                        <?php if($repair['observaciones']): ?>
+                        <div class="p-4 rounded-xl bg-surface/40 border border-border/60 flex items-start gap-3">
+                            <span class="material-symbols-outlined text-text-muted text-[20px] shrink-0 mt-0.5">notes</span>
+                            <div class="flex-1">
+                                <span class="text-[11px] font-bold text-text-muted uppercase tracking-wider block mb-1">Observaciones Físicas de Recepción</span>
+                                <p class="text-sm text-text-main whitespace-pre-wrap leading-relaxed"><?php echo htmlspecialchars($repair['observaciones']); ?></p>
+                            </div>
+                        </div>
+                        <?php endif; ?>
                     </div>
-                    
-                    <?php if($repair['observaciones']): ?>
-                    <div class="mt-4">
-                        <p class="text-xs text-text-muted uppercase tracking-wider font-semibold mb-1">Observaciones Físicas</p>
-                        <div class="bg-surface border border-border p-3 rounded-xl text-sm whitespace-pre-wrap"><?php echo htmlspecialchars($repair['observaciones']); ?></div>
-                    </div>
-                    <?php endif; ?>
                 </div>
 
-                <!-- FOTOS -->
+                <?php // FOTOS ?>
                 <div class="glass-card rounded-2xl p-6">
                     <div class="flex justify-between items-center border-b border-border/50 pb-2 mb-4">
                         <h3 class="text-lg font-display font-medium text-text-main flex items-center gap-2">
@@ -76,11 +210,12 @@ if ($_SESSION['role'] === 'admin') {
 
                     <form method="POST" action="" enctype="multipart/form-data" class="mb-6 space-y-4" id="image_upload_form">
                         <input type="hidden" name="action" value="add_image">
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                         
                         <div class="bg-surface/30 border border-border rounded-xl p-1 shadow-sm">
                             <div class="flex flex-col md:flex-row bg-background rounded-lg overflow-hidden border border-border/50">
                                 
-                                <!-- Sección Tipo de Foto -->
+                                <?php // Sección Tipo de Foto ?>
                                 <div class="w-full md:w-1/3 bg-surface/40 p-5 flex flex-col justify-center border-b md:border-b-0 md:border-r border-border/50 relative overflow-hidden">
                                     <div class="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
                                     <div class="relative z-10">
@@ -100,7 +235,7 @@ if ($_SESSION['role'] === 'admin') {
                                     </div>
                                 </div>
                                 
-                                <!-- Sección Subir Foto -->
+                                <?php // Sección Subir Foto ?>
                                 <div class="w-full md:w-2/3 p-5 bg-background relative group transition-colors hover:bg-surface/30">
                                     <input type="file" name="foto" id="foto_upload" required accept="image/*" class="hidden">
                                     <label for="foto_upload" class="cursor-pointer flex flex-col sm:flex-row items-center justify-center gap-4 w-full h-full min-h-[120px] bg-transparent border-2 border-dashed border-border hover:border-primary/70 px-4 py-6 rounded-xl text-sm transition-all text-text-muted group-hover:text-primary">
@@ -117,7 +252,7 @@ if ($_SESSION['role'] === 'admin') {
                             </div>
                         </div>
                         
-                        <!-- Contenedor de vista previa -->
+                        <?php // Contenedor de vista previa ?>
                         <div id="image_preview_container" class="hidden flex flex-col sm:flex-row items-center gap-5 bg-surface/80 border border-border p-5 rounded-xl shadow-sm">
                             <div class="w-28 h-28 sm:w-36 sm:h-36 rounded-lg overflow-hidden border border-border shrink-0 bg-background flex items-center justify-center shadow-inner relative group/preview">
                                 <img id="image_preview" src="" alt="Vista previa" class="w-full h-full object-cover">
@@ -279,6 +414,7 @@ if ($_SESSION['role'] === 'admin') {
                                 <form method="POST" action="" class="absolute top-2 right-2">
                                     <input type="hidden" name="action" value="delete_image">
                                     <input type="hidden" name="id_imagen" value="<?php echo $img['id_imagen']; ?>">
+                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                     <button type="submit" data-confirm="¿Seguro que deseas eliminar esta foto?" data-confirm-title="Eliminar Foto" data-destructive="true" class="w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-110">
                                         <span class="material-symbols-outlined text-[16px] pointer-events-none">close</span>
                                     </button>
@@ -292,7 +428,7 @@ if ($_SESSION['role'] === 'admin') {
                     </div>
                 </div>
 
-                <!-- REPUESTOS -->
+                <?php // REPUESTOS ?>
                 <div class="glass-card rounded-2xl p-6" id="repuestos_container">
                     <div class="flex justify-between items-center border-b border-border/50 pb-2 mb-4">
                         <h3 class="text-lg font-display font-medium text-text-main flex items-center gap-2">
@@ -300,16 +436,24 @@ if ($_SESSION['role'] === 'admin') {
                         </h3>
                     </div>
                     
-                    <form method="POST" action="" class="flex gap-2 mb-6 ajax-repuesto-form">
-                        <input type="hidden" name="action" value="add_repuesto">
-                        <select name="id_producto" required class="flex-1 bg-surface border border-border px-3 py-2 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
-                            <option value="">Seleccionar repuesto del inventario...</option>
-                            <?php foreach($productos_opt as $po): ?>
-                                <option value="<?php echo $po['id_producto']; ?>"><?php echo htmlspecialchars($po['nombre']); ?> - $<?php echo number_format($po['precio'],2); ?> (Stock: <?php echo $po['cantidad']; ?>)</option>
-                            <?php endforeach; ?>
-                        </select>
-                        <button type="submit" class="bg-surface hover:bg-surface-hover border border-border px-4 py-2 rounded-lg text-sm font-medium transition-colors text-text-main whitespace-nowrap">Asignar Pieza</button>
-                    </form>
+                    <?php if($repair['estado'] === 'Entregado'): ?>
+                        <div class="bg-surface/50 border border-border/50 text-text-muted text-xs p-3 rounded-lg mb-6 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-green-500">lock</span>
+                            <span>Esta orden ya fue entregada y cobrada. La asignación de repuestos está bloqueada.</span>
+                        </div>
+                    <?php else: ?>
+                        <form method="POST" action="" class="flex gap-2 mb-6 ajax-repuesto-form">
+                            <input type="hidden" name="action" value="add_repuesto">
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                            <select name="id_producto" required class="flex-1 bg-surface border border-border px-3 py-2 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
+                                <option value="">Seleccionar repuesto del inventario...</option>
+                                <?php foreach($productos_opt as $po): ?>
+                                    <option value="<?php echo $po['id_producto']; ?>"><?php echo htmlspecialchars($po['nombre']); ?> - $<?php echo number_format($po['precio'],2); ?> (Stock: <?php echo $po['cantidad']; ?>)</option>
+                                <?php endforeach; ?>
+                            </select>
+                            <button type="submit" class="bg-surface hover:bg-surface-hover border border-border px-4 py-2 rounded-lg text-sm font-medium transition-colors text-text-main whitespace-nowrap">Asignar Pieza</button>
+                        </form>
+                    <?php endif; ?>
                     
                     <div class="table-container rounded-xl border border-border overflow-x-auto">
                         <table class="w-full text-left text-sm">
@@ -329,13 +473,20 @@ if ($_SESSION['role'] === 'admin') {
                                         <td class="p-3 text-center"><?php echo $rep['cantidad']; ?></td>
                                         <td class="p-3 text-right">$<?php echo number_format($rep['precio_unitario'], 2); ?></td>
                                         <td class="p-3 text-center">
-                                            <form method="POST" action="" class="inline-block ajax-repuesto-form">
-                                                <input type="hidden" name="action" value="remove_repuesto">
-                                                <input type="hidden" name="id_reparacion_repuesto" value="<?php echo $rep['id_reparacion_repuesto']; ?>">
-                                                <button type="submit" class="text-red-400 hover:text-red-500 hover:bg-red-500/10 p-1.5 rounded-lg transition-colors">
-                                                    <span class="material-symbols-outlined text-[16px] pointer-events-none">delete</span>
-                                                </button>
-                                            </form>
+                                            <?php if($repair['estado'] !== 'Entregado'): ?>
+                                                <form method="POST" action="" class="inline-block ajax-repuesto-form">
+                                                    <input type="hidden" name="action" value="remove_repuesto">
+                                                    <input type="hidden" name="id_reparacion_repuesto" value="<?php echo $rep['id_reparacion_repuesto']; ?>">
+                                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <button type="submit" class="text-red-400 hover:text-red-500 hover:bg-red-500/10 p-1.5 rounded-lg transition-colors">
+                                                        <span class="material-symbols-outlined text-[16px] pointer-events-none">delete</span>
+                                                    </button>
+                                                </form>
+                                            <?php else: ?>
+                                                <span class="text-text-muted text-xs inline-flex items-center gap-1" title="Orden entregada">
+                                                    <span class="material-symbols-outlined text-[16px] text-text-muted">lock</span>
+                                                </span>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                     <?php endforeach; ?>
@@ -447,16 +598,17 @@ if ($_SESSION['role'] === 'admin') {
             <div class="space-y-6">
                 
                 <?php // Cambio de estado y presupuesto ?>
-                <form method="POST" action="" class="glass-card rounded-2xl p-6">
+                <form method="POST" action="" class="glass-card rounded-2xl p-6 border border-border/70 shadow-sm">
                     <input type="hidden" name="action" value="update_status">
-                    <h3 class="text-lg font-display font-medium text-text-main mb-4 border-b border-border/50 pb-2 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-xl">update</span> Actualizar Orden
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                    <h3 class="text-lg font-display font-semibold text-text-main mb-4 border-b border-border/50 pb-2.5 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-primary text-xl">tune</span> Control de la Orden
                     </h3>
                     
                     <div class="space-y-4">
                         <div>
-                            <label class="block text-xs font-medium text-text-muted mb-1">Estado de Reparación</label>
-                            <select name="estado" class="w-full bg-surface border border-border px-3 py-2.5 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">Estado de Reparación</label>
+                            <select name="estado" id="estado_select" class="w-full bg-surface border border-border px-3.5 py-2.5 rounded-xl text-sm font-medium text-text-main focus:outline-none focus:border-primary transition-colors cursor-pointer">
                                 <?php 
                                 $estados = ['Recibido', 'En diagnóstico', 'En reparación', 'Listo', 'Cancelado'];
                                 foreach ($estados as $est) {
@@ -468,19 +620,42 @@ if ($_SESSION['role'] === 'admin') {
                                 }
                                 ?>
                             </select>
+                            <?php if ($repair['estado'] === 'Listo'): ?>
+                                <p class="text-[11px] text-primary flex items-center gap-1 mt-1.5 font-medium">
+                                    <span class="material-symbols-outlined text-[15px]">check_circle</span>
+                                    Estado Listo activo: habilitado para mandar a Ventas.
+                                </p>
+                            <?php else: ?>
+                                <p class="text-[11px] text-text-muted flex items-center gap-1 mt-1.5">
+                                    <span class="material-symbols-outlined text-[15px]">info</span>
+                                    Al terminar el trabajo, cambiá a "Listo" para cobrar.
+                                </p>
+                            <?php endif; ?>
                         </div>
                         
                         <div>
-                            <label class="block text-xs font-medium text-text-muted mb-1">Presupuesto / Precio Final ($)</label>
-                            <input type="number" step="0.01" name="presupuesto" id="presupuesto_input" value="<?php echo $repair['presupuesto']; ?>" class="w-full bg-surface border border-border px-3 py-2.5 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">Presupuesto / Mano de Obra ($)</label>
+                            <div class="relative">
+                                <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted text-sm font-bold">$</span>
+                                <input type="number" step="0.01" min="0" name="presupuesto" id="presupuesto_input" value="<?php echo $repair['presupuesto']; ?>" class="w-full bg-surface border border-border pl-8 pr-3.5 py-2.5 rounded-xl text-sm font-medium text-text-main focus:outline-none focus:border-primary transition-colors">
+                            </div>
+                            <p class="text-[11px] text-text-muted mt-1.5">Mano de obra o servicio base. Se conservará al mandar a caja.</p>
                         </div>
                         
                         <div>
-                            <label class="block text-xs font-medium text-text-muted mb-1">Nota Interna (Para el historial)</label>
-                            <textarea name="nota_historial" rows="2" placeholder="Opcional..." class="w-full bg-surface border border-border px-3 py-2 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary"></textarea>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">Nota Interna (Historial)</label>
+                            <textarea name="nota_historial" rows="2" placeholder="Opcional: detalles del trabajo técnico..." class="w-full bg-surface border border-border px-3.5 py-2 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors"></textarea>
                         </div>
 
-                        <button type="submit" class="w-full bg-primary text-background rounded-lg py-2.5 text-sm font-medium hover:bg-primary-hover transition-colors mt-2">Guardar Cambios</button>
+                        <button type="submit" class="w-full bg-primary hover:bg-primary-hover text-background font-bold rounded-xl py-2.5 text-sm transition-all flex items-center justify-center gap-2 shadow-md shadow-primary/20 cursor-pointer">
+                            <span class="material-symbols-outlined text-[18px]">save</span> Guardar Cambios
+                        </button>
+
+                        <?php if ($repair['estado'] === 'Listo'): ?>
+                            <button type="button" onclick="openSendToCashierModal()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-background font-bold rounded-xl py-2.5 text-sm transition-all flex items-center justify-center gap-2 shadow-md shadow-emerald-500/20 cursor-pointer">
+                                <span class="material-symbols-outlined text-[18px]">send</span> Mandar a Ventas para Cobro
+                            </button>
+                        <?php endif; ?>
                     </div>
                 </form>
 
@@ -500,7 +675,7 @@ if ($_SESSION['role'] === 'admin') {
                         ?>
                         <div class="relative group">
                             <?php // Icono ?>
-                            <div class="absolute -left-[31px] top-1.5 w-3.5 h-3.5 rounded-full border-2 transition-colors duration-300 <?php echo $isFirst ? 'border-primary bg-background shadow-[0_0_10px_rgba(33,184,189,0.5)]' : 'border-text-muted/50 bg-background group-hover:border-primary/50'; ?>"></div>
+                            <div class="absolute -left-[31px] top-1.5 w-3.5 h-3.5 rounded-full border-2 transition-colors duration-300 <?php echo $isFirst ? 'border-primary bg-background shadow-[0_0_10px_rgba(14,165,160,0.5)]' : 'border-text-muted/50 bg-background group-hover:border-primary/50'; ?>"></div>
                             
                             <?php // Contenido ?>
                             <div class="bg-surface/40 border border-border/60 p-3.5 rounded-xl hover:bg-surface transition-colors duration-300 hover:border-border">
@@ -534,5 +709,288 @@ if ($_SESSION['role'] === 'admin') {
 
     </div>
 </main>
+
+<?php // Modal: Enviar a Caja ?>
+<div id="modal-send-to-cashier" class="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-surface border border-border/80 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+        <div class="p-6 border-b border-border/50 flex justify-between items-center bg-surface-hover/30">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-primary/20 text-primary flex items-center justify-center">
+                    <span class="material-symbols-outlined text-[24px]">point_of_sale</span>
+                </div>
+                <div>
+                    <h3 class="text-lg font-display font-semibold text-text-main">Mandar a Ventas para Cobro</h3>
+                    <p class="text-xs text-text-muted">Orden #<?php echo htmlspecialchars($repair['codigo_orden']); ?> - <?php echo htmlspecialchars($repair['equipo_marca'] . ' ' . $repair['equipo_modelo']); ?></p>
+                </div>
+            </div>
+            <button type="button" onclick="closeSendToCashierModal()" class="w-8 h-8 rounded-lg bg-surface border border-border text-text-muted hover:text-text-main flex items-center justify-center transition-colors">
+                <span class="material-symbols-outlined text-[18px]">close</span>
+            </button>
+        </div>
+
+        <form method="POST" action="" class="p-6 space-y-4">
+            <input type="hidden" name="action" value="send_to_cashier">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+
+            <div class="bg-background/60 p-4 rounded-xl border border-border/60 space-y-2">
+                <div class="flex justify-between text-xs text-text-muted">
+                    <span>Mano de Obra / Servicio Técnico:</span>
+                    <span class="font-medium text-text-main" id="preview_mano_obra">$<?php echo number_format($repair['presupuesto'], 2); ?></span>
+                </div>
+                <div class="flex justify-between text-xs text-text-muted">
+                    <span>Repuestos Utilizados (<?php echo count($repuestos); ?> pieza/s):</span>
+                    <span class="font-medium text-text-main">$<?php echo number_format($repair['costo_total'], 2); ?></span>
+                </div>
+                <div class="border-t border-border/40 pt-2 flex justify-between text-sm font-semibold text-text-main">
+                    <span>Total a Cobrar al Cliente:</span>
+                    <span class="text-primary text-base font-display" id="preview_total_cobrar">$<?php echo number_format(floatval($repair['presupuesto']) + floatval($repair['costo_total']), 2); ?></span>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">Presupuesto / Mano de Obra Base ($)</label>
+                <input type="number" step="0.01" min="0" name="presupuesto" id="cashier_presupuesto" value="<?php echo $repair['presupuesto']; ?>" required oninput="recalcCashierTotal(<?php echo floatval($repair['costo_total']); ?>)" class="w-full bg-surface border border-border px-3 py-2.5 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
+                <span class="text-[11px] text-text-muted mt-0.5 block">Se conserva el presupuesto fijado previamente en la orden. Podés editarlo aquí si lo deseas antes de enviarlo.</span>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">Informe de Resolución / Trabajo Realizado (Opcional)</label>
+                <textarea name="nota_resolucion" rows="2" placeholder="Ej: Se instaló módulo nuevo original y se limpió pin de carga. Equipo probado al 100%." class="w-full bg-surface border border-border px-3 py-2 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary"></textarea>
+            </div>
+
+            <div class="pt-2 flex justify-end gap-3 border-t border-border/40">
+                <button type="button" onclick="closeSendToCashierModal()" class="px-4 py-2.5 rounded-lg border border-border text-xs font-medium text-text-muted hover:text-text-main transition-colors">
+                    Cancelar
+                </button>
+                <button type="submit" class="px-5 py-2.5 rounded-lg bg-primary hover:bg-primary-hover text-background font-semibold text-xs transition-colors flex items-center gap-1.5 shadow-lg shadow-primary/20">
+                    <span class="material-symbols-outlined text-[16px]">send</span>
+                    Confirmar y Enviar a Ventas
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openSendToCashierModal() {
+    // Sincronizar con el presupuesto ingresado en el input debajo del estado
+    const mainInput = document.getElementById('presupuesto_input');
+    const cashierInput = document.getElementById('cashier_presupuesto');
+    const costoRepuestos = <?php echo floatval($repair['costo_total'] ?? 0); ?>;
+    
+    if (mainInput && cashierInput && mainInput.value.trim() !== '') {
+        const parsedVal = parseFloat(mainInput.value.toString().replace(',', '.'));
+        if (!isNaN(parsedVal) && parsedVal >= 0) {
+            cashierInput.value = parsedVal.toFixed(2);
+        }
+    }
+    
+    recalcCashierTotal(costoRepuestos);
+    const modal = document.getElementById('modal-send-to-cashier');
+    if (modal) modal.classList.remove('hidden');
+}
+
+function closeSendToCashierModal() {
+    const modal = document.getElementById('modal-send-to-cashier');
+    if (modal) modal.classList.add('hidden');
+}
+
+function recalcCashierTotal(costoRepuestos) {
+    const input = document.getElementById('cashier_presupuesto');
+    const manoObraEl = document.getElementById('preview_mano_obra');
+    const totalEl = document.getElementById('preview_total_cobrar');
+    if (!input) return;
+    const val = parseFloat(input.value.toString().replace(',', '.')) || 0;
+    const total = val + (parseFloat(costoRepuestos) || 0);
+    if (manoObraEl) manoObraEl.textContent = '$' + val.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (totalEl) totalEl.textContent = '$' + total.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Sonido nítido e inmediato al poner la reparación en "Listo"
+function playInstantReadySound() {
+    try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') {
+            ctx.resume();
+        }
+        const notes = [
+            { freq: 659.25, time: 0, dur: 0.12 },
+            { freq: 880.00, time: 0.10, dur: 0.28 }
+        ];
+        notes.forEach(function(n) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(n.freq, ctx.currentTime + n.time);
+            gain.gain.setValueAtTime(0.001, ctx.currentTime + n.time);
+            gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + n.time + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + n.time + n.dur);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(ctx.currentTime + n.time);
+            osc.stop(ctx.currentTime + n.time + n.dur);
+        });
+    } catch(e) {}
+}
+
+function broadcastOrderReady() {
+    try {
+        localStorage.setItem('nokia1100_order_ready_ping', Date.now().toString());
+        if (window.BroadcastChannel) {
+            const bc = new BroadcastChannel('nokia1100_repairs');
+            bc.postMessage({ type: 'order_ready', timestamp: Date.now() });
+        }
+    } catch(e) {}
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const estadoSelect = document.getElementById('estado_select');
+
+    // Solo suena al enviar el formulario con "Guardar Cambios" si está seleccionado "Listo"
+    const formControl = estadoSelect ? estadoSelect.closest('form') : null;
+    if (formControl) {
+        formControl.addEventListener('submit', function() {
+            if (estadoSelect && estadoSelect.value === 'Listo') {
+                playInstantReadySound();
+                broadcastOrderReady();
+            }
+        });
+    }
+
+    <?php if (isset($_GET['success']) && ($repair['estado'] === 'Listo' || strpos($_GET['success'], 'Listo') !== false)): ?>
+    playInstantReadySound();
+    broadcastOrderReady();
+    <?php endif; ?>
+});
+</script>
+
+<?php if ($repair['estado'] !== 'Entregado'): ?>
+<!-- Modal de Notificación en Tiempo Real: Cobrado y Entregado -->
+<div id="modal-realtime-delivered" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-md hidden transition-all duration-300">
+    <div class="glass-card max-w-md w-full rounded-2xl border-2 border-emerald-500/50 shadow-2xl shadow-emerald-500/25 p-6 relative overflow-hidden">
+        <div class="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none"></div>
+        <div class="text-center">
+            <div class="w-16 h-16 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
+                <span class="material-symbols-outlined text-[36px]">point_of_sale</span>
+            </div>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 mb-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                ¡Aviso en Tiempo Real!
+            </span>
+            <h3 class="text-2xl font-display font-bold text-text-main mb-2">
+                ¡Equipo Cobrado y Entregado!
+            </h3>
+            <p class="text-sm text-text-muted mb-4">
+                El cajero acaba de registrar el cobro y entregar la orden <strong class="text-text-main font-semibold">#<?php echo htmlspecialchars($repair['codigo_orden']); ?></strong> al cliente en caja.
+            </p>
+            <div class="bg-surface/80 rounded-xl p-3 border border-border/60 text-xs text-text-muted mb-5 text-left space-y-1.5">
+                <div class="flex justify-between">
+                    <span>Equipo:</span>
+                    <strong class="text-text-main"><?php echo htmlspecialchars($repair['equipo_marca'] . ' ' . $repair['equipo_modelo']); ?></strong>
+                </div>
+                <div class="flex justify-between">
+                    <span>Cliente:</span>
+                    <strong class="text-text-main"><?php echo htmlspecialchars($repair['cliente_nombre']); ?></strong>
+                </div>
+                <div class="flex justify-between">
+                    <span>Estado en sistema:</span>
+                    <strong class="text-emerald-400 font-semibold">Entregado</strong>
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button type="button" onclick="window.location.reload();" class="w-full py-3 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-background font-bold text-sm shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">refresh</span>
+                    Actualizar Ficha Ahora
+                </button>
+            </div>
+            <p class="text-[11px] text-text-muted mt-3" id="realtime-countdown-txt">Recargando automáticamente en 5s...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Monitoreo en tiempo real de cobro y entrega en caja
+(function() {
+    const repairId = <?php echo (int)$id_reparacion; ?>;
+    let pollInterval = null;
+    let isDeliveredNotified = false;
+
+    function playDeliveryChime() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const notes = [
+                { freq: 523.25, time: 0, dur: 0.15 },
+                { freq: 659.25, time: 0.12, dur: 0.18 },
+                { freq: 783.99, time: 0.25, dur: 0.35 }
+            ];
+            notes.forEach(function(n) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(n.freq, ctx.currentTime + n.time);
+                gain.gain.setValueAtTime(0.001, ctx.currentTime + n.time);
+                gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + n.time + 0.03);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + n.time + n.dur);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(ctx.currentTime + n.time);
+                osc.stop(ctx.currentTime + n.time + n.dur);
+            });
+        } catch (e) {
+            // Audio no soportado o bloqueado
+        }
+    }
+
+    function checkStatus() {
+        if (isDeliveredNotified) return;
+        if (document.hidden) return;
+
+        fetch('index.php?action=check_status&id=' + repairId, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(res) { return res.json(); })
+        .then(function(data) {
+            if (data && data.success && data.is_delivered) {
+                isDeliveredNotified = true;
+                if (pollInterval) clearInterval(pollInterval);
+
+                // Sonido de aviso
+                playDeliveryChime();
+
+                // Mostrar modal
+                const modal = document.getElementById('modal-realtime-delivered');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                }
+
+                // Cuenta regresiva para auto-recarga
+                let seconds = 5;
+                const countEl = document.getElementById('realtime-countdown-txt');
+                const timer = setInterval(function() {
+                    seconds--;
+                    if (countEl) {
+                        countEl.textContent = 'Recargando automáticamente en ' + seconds + 's...';
+                    }
+                    if (seconds <= 0) {
+                        clearInterval(timer);
+                        window.location.reload();
+                    }
+                }, 1000);
+            }
+        })
+        .catch(function(err) {
+            // Silencioso ante fallos temporales de red
+        });
+    }
+
+    // Polling cada 10 segundos
+    pollInterval = setInterval(checkStatus, 10000);
+})();
+</script>
+<?php endif; ?>
 
 <?php Layout::renderFooter(); ?>

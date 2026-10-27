@@ -3,9 +3,9 @@
 (function () {
     const computedStyle = getComputedStyle(document.body);
     const textMain = computedStyle.getPropertyValue('--tw-text-opacity') ? `rgba(250, 250, 250, 1)` : '#FAFAFA';
-    const primary = '#4FE0E5';
+    const primary = '#0EA5A0';
     const border = 'rgba(255, 255, 255, 0.1)';
-    const textMuted = '#A1A1AA';
+    const textMuted = '#9CA3AF';
 
     // Obtiene los datos pasados desde la vista
     const dates = window.salesData?.dates || [];
@@ -24,8 +24,8 @@
         const ctx = salesChartElement.getContext('2d');
         
         const gradientLine = ctx.createLinearGradient(0, 0, 0, 400);
-        gradientLine.addColorStop(0, 'rgba(79, 224, 229, 0.4)');
-        gradientLine.addColorStop(1, 'rgba(79, 224, 229, 0.0)');
+        gradientLine.addColorStop(0, 'rgba(14, 165, 160, 0.4)');
+        gradientLine.addColorStop(1, 'rgba(14, 165, 160, 0.0)');
 
         salesChart = new Chart(ctx, {
             type: 'line',
@@ -37,7 +37,7 @@
                     backgroundColor: gradientLine,
                     borderColor: primary,
                     borderWidth: 3,
-                    pointBackgroundColor: '#111113',
+                    pointBackgroundColor: '#1F2937',
                     pointBorderColor: primary,
                     pointBorderWidth: 2,
                     pointRadius: 4,
@@ -56,10 +56,10 @@
                         labels: { color: textMain, font: { family: 'Inter', size: 13 } }
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(17, 17, 19, 0.9)',
+                        backgroundColor: '#1F2937',
                         titleColor: textMain,
                         bodyColor: primary,
-                        borderColor: border,
+                        borderColor: '#374151',
                         borderWidth: 1,
                         padding: 12,
                         displayColors: false,
@@ -96,13 +96,13 @@
                 datasets: [{
                     data: methodAmounts,
                     backgroundColor: [
-                        'rgba(79, 224, 229, 0.9)',
-                        'rgba(244, 114, 182, 0.9)',
+                        'rgba(14, 165, 160, 0.9)',
+                        'rgba(94, 234, 212, 0.9)',
                         'rgba(129, 140, 248, 0.9)',
                         'rgba(251, 191, 36, 0.9)',
-                        'rgba(52, 211, 153, 0.9)'
+                        'rgba(74, 222, 128, 0.9)'
                     ],
-                    borderColor: '#18181B', // Darker border matching background
+                    borderColor: '#181E26', // Darker border matching background
                     borderWidth: 6,
                     hoverOffset: 8,
                     borderRadius: 5
@@ -122,10 +122,10 @@
                         }
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(17, 17, 19, 0.9)',
+                        backgroundColor: '#1F2937',
                         titleColor: textMain,
                         bodyColor: '#fff',
-                        borderColor: border,
+                        borderColor: '#374151',
                         borderWidth: 1,
                         padding: 12,
                         callbacks: {
@@ -157,17 +157,17 @@
                     label: 'Unidades',
                     data: topQuantities,
                     backgroundColor: [
-                        'rgba(79, 224, 229, 0.9)',
+                        'rgba(14, 165, 160, 0.9)',
+                        'rgba(94, 234, 212, 0.9)',
                         'rgba(129, 140, 248, 0.9)',
-                        'rgba(244, 114, 182, 0.9)',
-                        'rgba(52, 211, 153, 0.9)',
+                        'rgba(74, 222, 128, 0.9)',
                         'rgba(251, 191, 36, 0.9)'
                     ],
                     hoverBackgroundColor: [
-                        'rgba(79, 224, 229, 1)',
+                        'rgba(14, 165, 160, 1)',
+                        'rgba(94, 234, 212, 1)',
                         'rgba(129, 140, 248, 1)',
-                        'rgba(244, 114, 182, 1)',
-                        'rgba(52, 211, 153, 1)',
+                        'rgba(74, 222, 128, 1)',
                         'rgba(251, 191, 36, 1)'
                     ],
                     borderWidth: 2,
@@ -185,12 +185,12 @@
                         display: false
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(17, 17, 19, 0.95)',
+                        backgroundColor: '#1F2937',
                         titleColor: textMuted,
                         bodyColor: '#fff',
                         titleFont: { family: 'Inter', size: 12 },
                         bodyFont: { family: 'Inter', size: 14, weight: 'bold' },
-                        borderColor: border,
+                        borderColor: '#374151',
                         borderWidth: 1,
                         padding: 16,
                         cornerRadius: 12,
@@ -230,169 +230,200 @@
         });
     }
 
-    const btnExportPdf = document.getElementById('btnExportPdf');
-    let pdfExportTimeout = null;
-    let isPdfExporting = false;
-    let originalHtmlPdf = '';
-
-    if (btnExportPdf) {
-        btnExportPdf.addEventListener('click', async () => {
-            if (isPdfExporting) {
-                clearTimeout(pdfExportTimeout);
-                isPdfExporting = false;
-                btnExportPdf.innerHTML = originalHtmlPdf;
-                btnExportPdf.classList.remove('bg-red-500/20', 'border-red-500');
-                if (typeof showToast === 'function') showToast('Exportación PDF cancelada', 'info');
-                return;
+    // Función exportar PDF
+    const triggerPdfExport = async () => {
+        try {
+            if (!window.jspdf) {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
             }
 
-            originalHtmlPdf = btnExportPdf.innerHTML;
-            isPdfExporting = true;
-            btnExportPdf.innerHTML = '<span class="material-symbols-outlined text-[16px] spin" style="animation: spin 1s linear infinite;">autorenew</span> Cancelar...';
-            btnExportPdf.classList.add('bg-red-500/20', 'border-red-500');
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
 
-            if (typeof showToast === 'function') showToast('Iniciando exportación... Clic de nuevo para cancelar', 'info');
-
-            pdfExportTimeout = setTimeout(async () => {
-                btnExportPdf.disabled = true;
-                btnExportPdf.innerHTML = '<span class="material-symbols-outlined text-[16px] spin" style="animation: spin 1s linear infinite;">autorenew</span> Generando...';
-                
-                try {
-                    if (typeof showToast === 'function') showToast('Generando PDF de gráficos...', 'info');
-
-                    if (!window.jspdf) {
-                        await new Promise((resolve) => {
-                            const script = document.createElement('script');
-                            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-                            script.onload = resolve;
-                            document.head.appendChild(script);
-                        });
-                    }
-
-                    const { jsPDF } = window.jspdf;
-                    const doc = new jsPDF('p', 'mm', 'a4');
-
-                    doc.setFillColor(17, 17, 19); 
-                    doc.rect(0, 0, 210, 30, 'F');
-                    doc.setTextColor(33, 184, 189); 
-                    doc.setFontSize(18);
-                    doc.text("SISTEMA NOKIA 1100", 15, 14);
-                    doc.setTextColor(250, 250, 250); 
-                    doc.setFontSize(12);
-                    doc.text("REPORTE DE ESTADÍSTICAS", 15, 22);
-                    
-                    let yPos = 40;
-
-                    const addCanvasToPdf = (canvas, title, height) => {
-                        if (yPos + height + 10 > 280) {
-                            doc.addPage();
-                            yPos = 20;
-                        }
-                        doc.setTextColor(10, 10, 10);
-                        doc.setFontSize(12);
-                        doc.text(title, 15, yPos);
-                        yPos += 5;
-                        
-                        doc.setFillColor(24, 24, 27);
-                        doc.rect(15, yPos, 180, height, 'F');
-                        
-                        const imgData = canvas.toDataURL('image/png', 1.0);
-                        doc.addImage(imgData, 'PNG', 15, yPos, 180, height);
-                        yPos += height + 15;
-                    };
-
-                    if (salesChartElement) addCanvasToPdf(salesChartElement, "Ventas por Día", 60);
-                    if (methodsChartElement) addCanvasToPdf(methodsChartElement, "Métodos de Pago", 70);
-                    if (topProductsChartElement) addCanvasToPdf(topProductsChartElement, "Top 5 Productos Más Vendidos", 70);
-
-                    doc.save('nokia1100_graficos.pdf');
-
-                    if (typeof showToast === 'function') showToast('PDF exportado exitosamente', 'success');
-                } catch (err) {
-                    console.error(err);
-                    if (typeof showToast === 'function') showToast('Error al generar PDF', 'error');
-                } finally {
-                    isPdfExporting = false;
-                    btnExportPdf.innerHTML = originalHtmlPdf;
-                    btnExportPdf.disabled = false;
-                    btnExportPdf.classList.remove('bg-red-500/20', 'border-red-500');
-                }
-            }, 2000); // 2 second delay to cancel
-        });
-    }
-
-    const btnExportXls = document.getElementById('btnExportXls');
-    let xlsExportTimeout = null;
-    let isXlsExporting = false;
-    let originalHtmlXls = '';
-
-    if (btnExportXls) {
-        btnExportXls.addEventListener('click', async () => {
-            if (isXlsExporting) {
-                clearTimeout(xlsExportTimeout);
-                isXlsExporting = false;
-                btnExportXls.innerHTML = originalHtmlXls;
-                btnExportXls.classList.remove('bg-green-500/20', 'border-green-500');
-                if (typeof showToast === 'function') showToast('Exportación Excel cancelada', 'info');
-                return;
-            }
-
-            originalHtmlXls = btnExportXls.innerHTML;
-            isXlsExporting = true;
-            btnExportXls.innerHTML = '<span class="material-symbols-outlined text-[16px] spin" style="animation: spin 1s linear infinite;">autorenew</span> Cancelar...';
-            btnExportXls.classList.add('bg-green-500/20', 'border-green-500');
+            doc.setFillColor(24, 30, 38); 
+            doc.rect(0, 0, 210, 30, 'F');
+            doc.setTextColor(14, 165, 160); 
+            doc.setFontSize(18);
+            doc.text("SISTEMA NOKIA 1100", 15, 14);
+            doc.setTextColor(250, 250, 250); 
+            doc.setFontSize(12);
+            doc.text("REPORTE DE ESTADÍSTICAS", 15, 22);
             
-            if (typeof showToast === 'function') showToast('Iniciando exportación... Clic de nuevo para cancelar', 'info');
+            let yPos = 40;
 
-            xlsExportTimeout = setTimeout(async () => {
-                btnExportXls.disabled = true;
-                btnExportXls.innerHTML = '<span class="material-symbols-outlined text-[16px] spin" style="animation: spin 1s linear infinite;">autorenew</span> Generando...';
-                
-                try {
-                    if (typeof showToast === 'function') showToast('Generando archivo Excel...', 'info');
-
-                    if (typeof XLSX === 'undefined') {
-                        await new Promise((resolve) => {
-                            const script = document.createElement('script');
-                            script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
-                            script.onload = resolve;
-                            document.head.appendChild(script);
-                        });
-                    }
-
-                    const wb = XLSX.utils.book_new();
-
-                    let dataVentas = [['Fecha', 'Total ($)']];
-                    for(let i=0; i<dates.length; i++){
-                        dataVentas.push([dates[i], totals[i]]);
-                    }
-                    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dataVentas), "Ventas por Día");
-
-                    let dataMetodos = [['Método de Pago', 'Total ($)']];
-                    for(let i=0; i<methods.length; i++){
-                        dataMetodos.push([methods[i], methodAmounts[i]]);
-                    }
-                    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dataMetodos), "Métodos de Pago");
-
-                    let dataTop = [['Producto', 'Unidades Vendidas']];
-                    for(let i=0; i<topNames.length; i++){
-                        dataTop.push([topNames[i], topQuantities[i]]);
-                    }
-                    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dataTop), "Top Productos");
-
-                    XLSX.writeFile(wb, 'nokia1100_metricas.xlsx');
-
-                    if (typeof showToast === 'function') showToast('Excel exportado exitosamente', 'success');
-                } catch (err) {
-                    console.error(err);
-                    if (typeof showToast === 'function') showToast('Error al exportar a Excel', 'error');
-                } finally {
-                    isXlsExporting = false;
-                    btnExportXls.innerHTML = originalHtmlXls;
-                    btnExportXls.disabled = false;
-                    btnExportXls.classList.remove('bg-green-500/20', 'border-green-500');
+            const addCanvasToPdf = (canvas, title, height) => {
+                if (yPos + height + 10 > 280) {
+                    doc.addPage();
+                    yPos = 20;
                 }
-            }, 2000); // 2 second delay to cancel
+                doc.setTextColor(10, 10, 10);
+                doc.setFontSize(12);
+                doc.text(title, 15, yPos);
+                yPos += 5;
+                
+                doc.setFillColor(31, 41, 55);
+                doc.rect(15, yPos, 180, height, 'F');
+                
+                const imgData = canvas.toDataURL('image/png', 1.0);
+                doc.addImage(imgData, 'PNG', 15, yPos, 180, height);
+                yPos += height + 15;
+            };
+
+            if (salesChartElement) addCanvasToPdf(salesChartElement, "Ventas por Día", 60);
+            if (methodsChartElement) addCanvasToPdf(methodsChartElement, "Métodos de Pago", 70);
+            if (topProductsChartElement) addCanvasToPdf(topProductsChartElement, "Top 5 Productos Más Vendidos", 70);
+
+            doc.save('nokia1100_graficos.pdf');
+
+            if (typeof showToast === 'function') showToast('PDF generado exitosamente', 'success');
+        } catch (err) {
+            console.error('Error al generar PDF:', err);
+            if (typeof showToast === 'function') showToast('Error al generar PDF', 'error');
+        }
+    };
+
+    // Función exportar Excel
+    const triggerXlsExport = async () => {
+        try {
+            if (typeof XLSX === 'undefined') {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+            }
+
+            const wb = XLSX.utils.book_new();
+
+            let dataVentas = [['Fecha', 'Total ($)']];
+            for (let i = 0; i < dates.length; i++) {
+                dataVentas.push([dates[i], totals[i]]);
+            }
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dataVentas), "Ventas por Día");
+
+            let dataMetodos = [['Método de Pago', 'Total ($)']];
+            for (let i = 0; i < methods.length; i++) {
+                dataMetodos.push([methods[i], methodAmounts[i]]);
+            }
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dataMetodos), "Métodos de Pago");
+
+            let dataTop = [['Producto', 'Unidades Vendidas']];
+            for (let i = 0; i < topNames.length; i++) {
+                dataTop.push([topNames[i], topQuantities[i]]);
+            }
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(dataTop), "Top Productos");
+
+            XLSX.writeFile(wb, 'nokia1100_metricas.xlsx');
+
+            if (typeof showToast === 'function') showToast('Excel exportado exitosamente', 'success');
+        } catch (err) {
+            console.error('Error al exportar a Excel:', err);
+            if (typeof showToast === 'function') showToast('Error al exportar a Excel', 'error');
+        }
+    };
+
+    // Helper para delay cancelable de 1.5s
+    const setupCancellableExport = (btn, exportFn) => {
+        if (!btn) return;
+
+        btn.addEventListener('click', async () => {
+            // 1. Segundo clic durante los 1.5s: cancelar
+            if (btn._exportTimerId) {
+                clearTimeout(btn._exportTimerId);
+                btn._exportTimerId = null;
+
+                if (typeof btn._cancelResolve === 'function') {
+                    btn._cancelResolve(false);
+                    btn._cancelResolve = null;
+                }
+
+                if (btn._initToast && typeof btn._initToast.dismiss === 'function') {
+                    btn._initToast.dismiss();
+                    btn._initToast = null;
+                }
+
+                btn.innerHTML = '<span class="material-symbols-outlined text-[16px]">cancel</span> Cancelado';
+                btn.style.pointerEvents = 'none';
+
+                if (typeof showToast === 'function') {
+                    showToast('Exportación cancelada', 'baja');
+                }
+
+                setTimeout(() => {
+                    if (btn && btn._originalHtml) {
+                        btn.innerHTML = btn._originalHtml;
+                    }
+                    if (btn) {
+                        btn.style.pointerEvents = 'auto';
+                        delete btn._originalHtml;
+                        delete btn._exportTimerId;
+                        delete btn._cancelResolve;
+                        delete btn._isProcessingFile;
+                        delete btn._initToast;
+                    }
+                }, 1000);
+
+                return;
+            }
+
+            if (btn._isProcessingFile) return;
+
+            // 2. Primer clic: guardar estado e iniciar espera de 1.5s
+            btn._originalHtml = btn.innerHTML;
+            btn.innerHTML = '<span class="material-symbols-outlined text-[16px] spin" style="animation: spin 1s linear infinite;">autorenew</span> Cancelar...';
+
+            if (typeof showToast === 'function') {
+                btn._initToast = showToast('Iniciando exportación...', 'info');
+            }
+
+            const shouldProceed = await new Promise((resolve) => {
+                btn._cancelResolve = resolve;
+                btn._exportTimerId = setTimeout(() => {
+                    btn._exportTimerId = null;
+                    btn._cancelResolve = null;
+                    resolve(true);
+                }, 1500);
+            });
+
+            if (!shouldProceed) return;
+
+            // 3. Ejecutar exportación
+            btn._isProcessingFile = true;
+            btn.style.pointerEvents = 'none';
+            btn.innerHTML = '<span class="material-symbols-outlined text-[16px] spin" style="animation: spin 1s linear infinite;">autorenew</span> Generando...';
+
+            try {
+                await exportFn();
+                if (btn && btn._initToast && typeof btn._initToast.dismiss === 'function') {
+                    btn._initToast.dismiss();
+                    btn._initToast = null;
+                }
+            } finally {
+                if (btn && btn._originalHtml) {
+                    btn.innerHTML = btn._originalHtml;
+                }
+                if (btn) {
+                    btn.style.pointerEvents = 'auto';
+                    delete btn._originalHtml;
+                    delete btn._exportTimerId;
+                    delete btn._cancelResolve;
+                    delete btn._isProcessingFile;
+                    delete btn._initToast;
+                }
+            }
         });
-    }
+    };
+
+    const btnExportPdf = document.getElementById('btnExportPdf');
+    const btnExportXls = document.getElementById('btnExportXls');
+    if (btnExportPdf) setupCancellableExport(btnExportPdf, triggerPdfExport);
+    if (btnExportXls) setupCancellableExport(btnExportXls, triggerXlsExport);
 })();

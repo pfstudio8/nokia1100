@@ -87,7 +87,7 @@ class AuthModel extends BaseModel
             $token = isset($user_data['token_verificacion']) ? $user_data['token_verificacion'] : null;
             $expira = isset($user_data['token_expira']) ? $user_data['token_expira'] : null;
             
-            $modulos_permitidos = ($rol === 'admin') ? null : 'dashboard,venta,inventario,taller,clientes';
+            $modulos_permitidos = ($rol === 'admin') ? null : 'dashboard,venta,inventario,clientes';
 
             // Insertar datos de usuario
             $stmt = $this->conn->prepare(
@@ -162,21 +162,11 @@ class AuthModel extends BaseModel
 
     public function update_password($id_usuario, $hashed_password)
     {
-        $stmt = $this->conn->prepare("UPDATE usuario SET contrasena = ?, token_verificacion = NULL, token_expira = NULL WHERE id_usuario = ?");
+        $stmt = $this->conn->prepare("UPDATE usuario SET contrasena = ?, token_verificacion = NULL, token_expira = NULL, session_token = NULL WHERE id_usuario = ?");
         $stmt->bind_param("si", $hashed_password, $id_usuario);
         $success = $stmt->execute();
         $stmt->close();
         return $success;
-    }
-
-    public function get_last_user_token()
-    {
-        $sql = "SELECT id_usuario, email, token_verificacion FROM usuario ORDER BY id_usuario DESC LIMIT 1";
-        $result = $this->conn->query($sql);
-        if ($result && $result->num_rows > 0) {
-            return $result->fetch_assoc();
-        }
-        return null;
     }
 
     public function update_session_token($id_usuario, $token)
@@ -188,4 +178,3 @@ class AuthModel extends BaseModel
         return $success;
     }
 }
-?>

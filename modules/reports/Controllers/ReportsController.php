@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // modules/reports/Controllers/ReportsController.php
 
 require_once __DIR__ . '/../../../classes/BaseController.php';
@@ -9,10 +9,10 @@ require_once __DIR__ . '/../../workshop/Models/WorkshopModel.php';
 
 class ReportsController extends BaseController
 {
-    private $admin_model;
-    private $inventory_model;
-    private $sales_model;
-    private $workshop_model;
+    private AdminModel $admin_model;
+    private InventoryModel $inventory_model;
+    private SalesModel $sales_model;
+    private WorkshopModel $workshop_model;
 
     public function __construct()
     {
@@ -69,4 +69,3 @@ class ReportsController extends BaseController
         ]);
     }
 }
-?>

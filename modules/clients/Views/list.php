@@ -1,6 +1,14 @@
 <?php
 // modules/clients/Views/list.php
 
+/**
+ * Variables inyectadas por ClientsController::clients()
+ * @var array $clientes
+ * @var string $search
+ */
+$clientes = $clientes ?? [];
+$search = $search ?? '';
+
 Layout::renderHead('Clientes - Nokia 1100');
 
 if ($_SESSION['role'] === 'admin') {
@@ -21,12 +29,10 @@ if ($_SESSION['role'] === 'admin') {
 
             <div class="flex items-center gap-3 flex-wrap">
                 <!-- Botones de Exportación -->
-                <button type="button" onclick="exportTableToExcel('clients-table', 'clientes', this)"
-                    class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5">
+                <button type="button" onclick="exportTableToExcel('clients-table', 'clientes', this)" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5 cursor-pointer">
                     <span class="material-symbols-outlined text-[16px]">download</span> Excel
                 </button>
-                <button type="button" onclick="exportTableToPDF('clients-table', 'Listado de Clientes', 'clientes', this)"
-                    class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5">
+                <button type="button" onclick="exportTableToPDF('clients-table', 'Listado de Clientes', 'clientes', this)" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer">
                     <span class="material-symbols-outlined text-[16px]">download</span> PDF
                 </button>
 
@@ -95,12 +101,14 @@ if ($_SESSION['role'] === 'admin') {
                                             title="Editar Cliente">
                                             <span class="material-symbols-outlined text-[16px]">edit</span>
                                         </a>
-                                        <a href="javascript:void(0)"
-                                            onclick="confirmDelete(<?php echo $c['id_cliente']; ?>, '<?php echo htmlspecialchars($c['nombre'], ENT_QUOTES); ?>')"
-                                            class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface border border-border text-red-400 hover:bg-red-500 hover:text-white transition-colors"
-                                            title="Eliminar Cliente">
+                                        <button type="button"
+                                            class="js-delete-client w-8 h-8 rounded-lg flex items-center justify-center bg-surface border border-border text-red-400 hover:bg-red-500 hover:text-white transition-colors"
+                                            data-id="<?php echo (int)$c['id_cliente']; ?>"
+                                            data-nombre="<?php echo htmlspecialchars($c['nombre'], ENT_QUOTES, 'UTF-8'); ?>"
+                                            data-csrf="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>"
+                                            title="Eliminar Cliente" aria-label="Eliminar Cliente">
                                             <span class="material-symbols-outlined text-[16px]">delete</span>
-                                        </a>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -117,7 +125,7 @@ if ($_SESSION['role'] === 'admin') {
     </div>
 </main>
 
-<!-- Modal de Registro de Cliente -->
+<?php // Modal de Registro de Cliente ?>
 <div id="add-client-modal"
     class="fixed inset-0 bg-background/80 backdrop-blur-[8px] z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
     <div class="glass-card max-w-md w-full m-4 shadow-2xl relative border border-border/80 transform scale-95 transition-all duration-300 premium-modal-card"
@@ -138,6 +146,7 @@ if ($_SESSION['role'] === 'admin') {
 
         <form method="POST" action="" class="space-y-4 flex flex-col gap-4">
             <input type="hidden" name="action" value="add">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
 
             <div class="premium-input-container">
                 <label for="modal-nombre">Nombre Completo <span class="text-red-400">*</span></label>
@@ -171,7 +180,7 @@ if ($_SESSION['role'] === 'admin') {
                 <button type="button" onclick="closeAddClientModal()" class="btn-back"
                     style="width: auto; margin: 0;">Cancelar</button>
                 <button type="submit" class="btn-primary"
-                    style="width: auto; margin: 0; background: var(--primary-color); color: #0A0A0B;">
+                    style="width: auto; margin: 0; background: var(--primary-color); color: #ffffff;">
                     Guardar Cliente
                 </button>
             </div>

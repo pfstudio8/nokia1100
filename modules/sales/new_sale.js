@@ -1,6 +1,13 @@
 // assets/js/pages/new_sale.js
 let cart = [];
 
+// Escapa texto para insertarlo de forma segura en HTML (previene XSS)
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+}
+
 // Cargar carrito desde localStorage al iniciar
 try {
     const cachedCart = localStorage.getItem('nokia_sales_cart');
@@ -13,6 +20,17 @@ try {
 
 document.addEventListener('DOMContentLoaded', () => {
     updateCartTable();
+
+    // Auto-seleccionar producto si viene por parámetro de URL (ej. desde Catálogo Rápido)
+    const urlParams = new URLSearchParams(window.location.search);
+    const prodId = urlParams.get('product_id');
+    if (prodId) {
+        const select = document.getElementById('id_producto');
+        if (select) {
+            select.value = prodId;
+            select.dispatchEvent(new Event('change'));
+        }
+    }
 });
 
 async function addToCart() {
@@ -31,7 +49,8 @@ async function addToCart() {
 
     // Validación de stock en tiempo real mediante API
     try {
-        const response = await fetch(`../../api/check_stock.php?id_producto=${id}`);
+        const stockUrl = (window.BASE_URL ? window.BASE_URL : '../..') + `/api/check_stock.php?id_producto=${id}`;
+        const response = await fetch(stockUrl);
         if (!response.ok) {
             showToast('Error al consultar stock del artículo en tiempo real', 'error');
             return;
@@ -67,6 +86,9 @@ function updateCartTable() {
     tbody.innerHTML = '';
     let total = 0;
 
+    // Persistir carrito en localStorage siempre (evita bug de resurrección al borrar el último elemento)
+    localStorage.setItem('nokia_sales_cart', JSON.stringify(cart));
+
     if (cart.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" class="p-8 text-center text-text-muted text-sm border-none">El carrito está vacío</td></tr>';
         totalEl.textContent = '$0.00';
@@ -79,7 +101,7 @@ function updateCartTable() {
         const row = document.createElement('tr');
         row.className = 'hover:bg-surface/30 transition-colors';
         row.innerHTML = `
-            <td class="p-4 text-sm font-medium text-text-main">${item.nombre}</td>
+            <td class="p-4 text-sm font-medium text-text-main">${escapeHtml(item.nombre)}</td>
             <td class="p-4 text-sm text-right text-text-muted">$${item.precio.toFixed(2)}</td>
             <td class="p-4 text-sm text-center"><span class="bg-surface border border-border px-3 py-1 rounded-full text-text-muted">${item.cantidad}</span></td>
             <td class="p-4 text-sm text-right font-medium text-text-main">$${subtotal.toFixed(2)}</td>
@@ -91,8 +113,6 @@ function updateCartTable() {
         tbody.appendChild(row);
     });
     totalEl.textContent = '$' + total.toFixed(2);
-    // Persistir carrito en localStorage
-    localStorage.setItem('nokia_sales_cart', JSON.stringify(cart));
 }
 
 let currentTotal = 0;
@@ -250,7 +270,12 @@ async function submitSaleFromModal() {
         const response = await fetch('new_sale.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ items: cart, metodo_pago: metodoPago, descripcion: descripcion })
+            body: JSON.stringify({ 
+                items: cart, 
+                metodo_pago: metodoPago, 
+                descripcion: descripcion,
+                csrf_token: window.CSRF_TOKEN || ''
+            })
         });
         
         const data = await response.json();

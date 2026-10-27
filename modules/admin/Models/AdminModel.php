@@ -9,13 +9,13 @@ class AdminModel extends BaseModel
 
     public function get_total_sales()
     {
-        $res = $this->conn->query("SELECT SUM(total) as total_ventas FROM venta");
+        $res = $this->conn->query("SELECT SUM(total) as total_ventas FROM venta WHERE estado != 'anulada'");
         return ($res && $res->num_rows > 0) ? (float) $res->fetch_assoc()['total_ventas'] : 0.0;
     }
 
     public function get_total_transactions()
     {
-        $res = $this->conn->query("SELECT COUNT(*) as total_transacciones FROM venta");
+        $res = $this->conn->query("SELECT COUNT(*) as total_transacciones FROM venta WHERE estado != 'anulada'");
         return ($res && $res->num_rows > 0) ? (int) $res->fetch_assoc()['total_transacciones'] : 0;
     }
 
@@ -34,13 +34,17 @@ class AdminModel extends BaseModel
     public function get_recent_sales($limit = 5)
     {
         $limit = (int) $limit;
-        $result = $this->conn->query("SELECT id_venta, fecha, total, metodo_de_pago FROM venta ORDER BY fecha DESC LIMIT $limit");
+        $stmt = $this->conn->prepare("SELECT id_venta, fecha, total, metodo_de_pago FROM venta WHERE estado != 'anulada' ORDER BY fecha DESC LIMIT ?");
+        $stmt->bind_param("i", $limit);
+        $stmt->execute();
+        $result = $stmt->get_result();
         $sales = [];
         if ($result && $result->num_rows > 0) {
             while ($row = $result->fetch_assoc()) {
                 $sales[] = $row;
             }
         }
+        $stmt->close();
         return $sales;
     }
 
@@ -169,7 +173,7 @@ class AdminModel extends BaseModel
             $id_persona = $this->conn->insert_id;
             $stmt->close();
 
-            $modulos_permitidos = ($user_data['rol'] === 'admin') ? null : 'dashboard,venta,inventario,taller,clientes';
+            $modulos_permitidos = ($user_data['rol'] === 'admin') ? null : 'dashboard,venta,inventario,clientes';
             $stmt = $this->conn->prepare(
                 "INSERT INTO usuario (id_persona, nombre_usuario, contrasena, rol, email, verificado, is_active, token_verificacion, token_expira, modulos_permitidos) 
                  VALUES (?, ?, ?, ?, ?, 1, 1, NULL, NULL, ?)"
@@ -217,12 +221,23 @@ class AdminModel extends BaseModel
             }
             $stmt->close();
 
+            $default_modulos = 'dashboard,venta,inventario,clientes';
             if (!empty($user_data['hashed_password'])) {
-                $stmt = $this->conn->prepare("UPDATE usuario SET nombre_usuario = ?, email = ?, rol = ?, contrasena = ? WHERE id_usuario = ?");
-                $stmt->bind_param("ssssi", $user_data['username'], $user_data['email'], $user_data['rol'], $user_data['hashed_password'], $id_usuario);
+                if ($user_data['rol'] === 'admin') {
+                    $stmt = $this->conn->prepare("UPDATE usuario SET nombre_usuario = ?, email = ?, rol = ?, contrasena = ?, modulos_permitidos = NULL WHERE id_usuario = ?");
+                    $stmt->bind_param("ssssi", $user_data['username'], $user_data['email'], $user_data['rol'], $user_data['hashed_password'], $id_usuario);
+                } else {
+                    $stmt = $this->conn->prepare("UPDATE usuario SET nombre_usuario = ?, email = ?, rol = ?, contrasena = ?, modulos_permitidos = COALESCE(modulos_permitidos, ?) WHERE id_usuario = ?");
+                    $stmt->bind_param("sssssi", $user_data['username'], $user_data['email'], $user_data['rol'], $user_data['hashed_password'], $default_modulos, $id_usuario);
+                }
             } else {
-                $stmt = $this->conn->prepare("UPDATE usuario SET nombre_usuario = ?, email = ?, rol = ? WHERE id_usuario = ?");
-                $stmt->bind_param("sssi", $user_data['username'], $user_data['email'], $user_data['rol'], $id_usuario);
+                if ($user_data['rol'] === 'admin') {
+                    $stmt = $this->conn->prepare("UPDATE usuario SET nombre_usuario = ?, email = ?, rol = ?, modulos_permitidos = NULL WHERE id_usuario = ?");
+                    $stmt->bind_param("sssi", $user_data['username'], $user_data['email'], $user_data['rol'], $id_usuario);
+                } else {
+                    $stmt = $this->conn->prepare("UPDATE usuario SET nombre_usuario = ?, email = ?, rol = ?, modulos_permitidos = COALESCE(modulos_permitidos, ?) WHERE id_usuario = ?");
+                    $stmt->bind_param("ssssi", $user_data['username'], $user_data['email'], $user_data['rol'], $default_modulos, $id_usuario);
+                }
             }
 
             if (!$stmt->execute()) {
@@ -263,12 +278,16 @@ class AdminModel extends BaseModel
 
     public function update_user_role($id_usuario, $rol)
     {
-        // Al pasar a admin se limpian las restricciones de módulos (acceso total)
-        $sql = ($rol === 'admin')
-            ? "UPDATE usuario SET rol = ?, modulos_permitidos = NULL WHERE id_usuario = ?"
-            : "UPDATE usuario SET rol = ? WHERE id_usuario = ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("si", $rol, $id_usuario);
+        // Al pasar a admin se limpian las restricciones de módulos (acceso total).
+        // Al pasar a empleado se asignan módulos estándar para evitar fuga de privilegios si tenía NULL.
+        if ($rol === 'admin') {
+            $stmt = $this->conn->prepare("UPDATE usuario SET rol = ?, modulos_permitidos = NULL WHERE id_usuario = ?");
+            $stmt->bind_param("si", $rol, $id_usuario);
+        } else {
+            $default_modules = 'dashboard,venta,inventario,clientes';
+            $stmt = $this->conn->prepare("UPDATE usuario SET rol = ?, modulos_permitidos = COALESCE(modulos_permitidos, ?) WHERE id_usuario = ?");
+            $stmt->bind_param("ssi", $rol, $default_modules, $id_usuario);
+        }
         $success = $stmt->execute();
         $stmt->close();
         return $success;
@@ -302,7 +321,7 @@ class AdminModel extends BaseModel
         return $res;
     }
 
-    public function update_profile_transaction($id_usuario, $id_persona, $persona_data, $password_data = null)
+    public function update_profile_transaction($id_usuario, $id_persona, $persona_data, $password_data = null, $new_username = null)
     {
         $this->conn->begin_transaction();
         try {
@@ -322,16 +341,31 @@ class AdminModel extends BaseModel
             }
             $stmt->close();
 
-            if ($password_data) {
-                $stmt = $this->conn->prepare("UPDATE usuario SET contrasena = ?, email = ? WHERE id_usuario = ?");
-                $stmt->bind_param("ssi", $password_data['hashed_password'], $persona_data['email'], $id_usuario);
-            } else {
-                $stmt = $this->conn->prepare("UPDATE usuario SET email = ? WHERE id_usuario = ?");
-                $stmt->bind_param("si", $persona_data['email'], $id_usuario);
+            $sql_user = "UPDATE usuario SET email = ?";
+            $types = "s";
+            $params = [$persona_data['email']];
+
+            if (!empty($new_username)) {
+                $sql_user .= ", nombre_usuario = ?";
+                $types .= "s";
+                $params[] = $new_username;
             }
 
+            if ($password_data) {
+                $sql_user .= ", contrasena = ?";
+                $types .= "s";
+                $params[] = $password_data['hashed_password'];
+            }
+
+            $sql_user .= " WHERE id_usuario = ?";
+            $types .= "i";
+            $params[] = (int)$id_usuario;
+
+            $stmt = $this->conn->prepare($sql_user);
+            $stmt->bind_param($types, ...$params);
+
             if (!$stmt->execute()) {
-                throw new Exception("Error al actualizar cuenta");
+                throw new Exception("Error al actualizar cuenta de usuario");
             }
             $stmt->close();
 
@@ -391,11 +425,13 @@ class AdminModel extends BaseModel
             LEFT JOIN (
                 SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(total) AS total_ventas
                 FROM venta
+                WHERE estado != 'anulada'
                 GROUP BY DATE_FORMAT(fecha, '%Y-%m')
             ) v ON m.mes = v.mes
             LEFT JOIN (
                 SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(total) AS total_compras
                 FROM compra
+                WHERE estado = 'Recibido'
                 GROUP BY DATE_FORMAT(fecha, '%Y-%m')
             ) c ON m.mes = c.mes
             ORDER BY m.mes ASC;
@@ -414,4 +450,3 @@ class AdminModel extends BaseModel
         return ['labels' => $labels, 'ingresos' => $ingresos, 'gastos' => $gastos];
     }
 }
-?>

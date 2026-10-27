@@ -3,7 +3,7 @@
 require_once __DIR__ . '/Controllers/AuthController.php';
 $controller = new AuthController();
 
-$action = $_GET['action'] ?? 'login';
+$action = $_POST['action'] ?? ($_GET['action'] ?? 'login');
 
 switch ($action) {
     case 'logout':
@@ -26,8 +26,9 @@ switch ($action) {
         $controller->guestLogin();
         break;
     case 'login':
-    default:
         $controller->login();
         break;
+    default:
+        http_response_code(404);
+        exit('Acción no encontrada');
 }
-?>

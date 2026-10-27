@@ -6,13 +6,13 @@ Layout::renderAdminSidebar('perfil');
 ?>
 <main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen flex items-start justify-center mt-10">
     <div class="glass-card w-full max-w-3xl border border-border/50 shadow-2xl shadow-black/50 p-8 md:p-12 relative overflow-hidden">
-        <!-- Abstract background decorations -->
+        <?php // Abstract background decorations ?>
         <div class="absolute -top-32 -right-32 w-64 h-64 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
         <div class="absolute -bottom-32 -left-32 w-80 h-80 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
         
         <div class="dashboard-header mb-10 relative z-10">
             <div class="flex flex-col items-center text-center">
-                <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-primary/20 to-primary/5 text-primary flex items-center justify-center font-display text-4xl font-bold border border-primary/30 shadow-[0_0_40px_rgba(33,184,189,0.15)] mb-5">
+                <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-primary/20 to-primary/5 text-primary flex items-center justify-center font-display text-4xl font-bold border border-primary/30 shadow-[0_0_40px_rgba(14,165,160,0.15)] mb-5">
                     <?php echo strtoupper(substr($current_data['nombre_usuario'], 0, 1)); ?>
                 </div>
                 <div>
@@ -25,6 +25,7 @@ Layout::renderAdminSidebar('perfil');
 
 
         <form id="profileForm" method="POST" action="" class="space-y-8 mt-6">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             <h3 class="text-xs uppercase font-bold tracking-widest text-text-muted border-b border-border/40 pb-2 mb-6">Datos Personales</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="group">

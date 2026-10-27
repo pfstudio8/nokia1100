@@ -41,4 +41,3 @@ if (!defined('SMTP_PORT')) define('SMTP_PORT', $port);
 function cargarPHPMailer() {
     return class_exists('PHPMailer\\PHPMailer\\PHPMailer');
 }
-?>

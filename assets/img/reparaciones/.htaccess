@@ -1,0 +1,15 @@
+# Carpeta de subidas de usuarios: nunca ejecutar scripts aqui.
+<FilesMatch "(?i)\.(php[0-9]?|phtml|phar|pl|py|cgi|sh|html?|svg|js)$">
+    Require all denied
+</FilesMatch>
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set Content-Security-Policy "default-src 'none'; img-src 'self'; style-src 'none'; sandbox"
+</IfModule>
+Options -Indexes -ExecCGI

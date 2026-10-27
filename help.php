@@ -1,4 +1,5 @@
 <?php
+// help.php - Nokia 1100 Ayuda Rápida & Manual de Uso
 session_start();
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/classes/Layout.php';
@@ -8,9 +9,87 @@ if (!isset($_SESSION['user_id'])) {
     exit();
 }
 
-Layout::renderHead('NOKIA1100 | Ayuda Rápida');
+// 1. Inicializar variables con datos por defecto
+$realProducts = [];
+$realRepairs = [];
+$realSales = [];
+$totalProds = 0;
 
-// Elegir qué sidebar renderizar según el rol del usuario
+if (isset($conn)) {
+    $resCount = $conn->query("SELECT COUNT(*) as c FROM producto WHERE is_active = 1");
+    if ($resCount) {
+        $totalProds = (int)$resCount->fetch_assoc()['c'];
+    }
+
+    $queryProds = "SELECT p.id_producto, p.nombre, p.precio, COALESCE(i.cantidad, 0) as cantidad 
+                   FROM producto p 
+                   LEFT JOIN inventario i ON p.id_producto = i.id_producto 
+                   WHERE p.is_active = 1 
+                   ORDER BY i.cantidad DESC 
+                   LIMIT 4";
+    $resProds = $conn->query($queryProds);
+    if ($resProds) {
+        while ($row = $resProds->fetch_assoc()) {
+            $realProducts[] = $row;
+        }
+    }
+
+    // 2. Consultar órdenes reales de taller
+    $queryReps = "SELECT r.id_reparacion, r.codigo_orden, r.equipo_marca, r.equipo_modelo, r.estado, r.presupuesto, r.falla_declarada, COALESCE(c.nombre, 'Consumidor Final') as cliente
+                  FROM reparacion r
+                  LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
+                  ORDER BY r.id_reparacion DESC
+                  LIMIT 3";
+    $resReps = $conn->query($queryReps);
+    if ($resReps) {
+        while ($row = $resReps->fetch_assoc()) {
+            $realRepairs[] = $row;
+        }
+    }
+
+    // 3. Consultar ventas recientes
+    $querySales = "SELECT id_venta, fecha, total, metodo_de_pago, estado 
+                   FROM venta 
+                   WHERE estado != 'anulada' 
+                   ORDER BY fecha DESC 
+                   LIMIT 3";
+    $resSales = $conn->query($querySales);
+    if ($resSales) {
+        while ($row = $resSales->fetch_assoc()) {
+            $realSales[] = $row;
+        }
+    }
+}
+
+// Fallbacks de demostración si la base estuviera vacía en alguna tabla
+if (empty($realProducts)) {
+    $realProducts = [
+        ['id_producto' => 1, 'nombre' => 'Módulo Display iPhone 11 Incell', 'precio' => 38500, 'cantidad' => 14],
+        ['id_producto' => 2, 'nombre' => 'Batería Original Moto G30', 'precio' => 14200, 'cantidad' => 2],
+        ['id_producto' => 3, 'nombre' => 'Pin de Carga Tipo-C Universal (x10)', 'precio' => 4800, 'cantidad' => 0],
+    ];
+    $totalProds = 3;
+}
+
+if (empty($realRepairs)) {
+    $realRepairs = [
+        ['codigo_orden' => '26106974', 'equipo_marca' => 'Apple', 'equipo_modelo' => 'iPhone 14', 'cliente' => 'Juan Pérez', 'estado' => 'Listo', 'falla_declarada' => 'Cambio de módulo', 'presupuesto' => 300000],
+        ['codigo_orden' => '26104177', 'equipo_marca' => 'Motorola', 'equipo_modelo' => 'Moto G52', 'cliente' => 'Mariana Ruiz', 'estado' => 'En reparación', 'falla_declarada' => 'Pin de carga sulfatado', 'presupuesto' => 25000],
+        ['codigo_orden' => '26101189', 'equipo_marca' => 'Samsung', 'equipo_modelo' => 'Galaxy A32', 'cliente' => 'Carlos Sosa', 'estado' => 'Recibido', 'falla_declarada' => 'No enciende tras golpe', 'presupuesto' => null],
+    ];
+}
+
+if (empty($realSales)) {
+    $realSales = [
+        ['id_venta' => 101, 'fecha' => date('Y-m-d H:i:s'), 'total' => 38500, 'metodo_de_pago' => 'Efectivo', 'estado' => 'completada'],
+        ['id_venta' => 100, 'fecha' => date('Y-m-d H:i:s', strtotime('-2 hours')), 'total' => 14200, 'metodo_de_pago' => 'Transferencia', 'estado' => 'completada'],
+        ['id_venta' => 99, 'fecha' => date('Y-m-d H:i:s', strtotime('-5 hours')), 'total' => 25000, 'metodo_de_pago' => 'Tarjeta', 'estado' => 'completada'],
+    ];
+}
+
+Layout::renderHead('NOKIA1100 | Ayuda Rápida & Manual de Uso');
+
+// Renderizar el sidebar según el rol del usuario
 if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
     Layout::renderAdminSidebar('ayuda');
 } else {
@@ -18,804 +97,906 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
 }
 ?>
 
-<main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 pb-32 min-h-screen flex flex-col bg-background relative">
-    <!-- Decoración de fondo suave -->
-    <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[300px] bg-primary/5 rounded-full blur-[100px] pointer-events-none -z-10"></div>
-
-    <div class="max-w-4xl mx-auto w-full relative z-10">
-        <!-- HEADER -->
-        <div class="mb-12">
-            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-bold uppercase tracking-widest mb-4">
-                <span class="material-symbols-outlined text-[16px]">menu_book</span>
-                Manual de Uso
-            </div>
-            <h1 class="text-3xl md:text-5xl font-display font-bold text-text-main tracking-tight flex items-center gap-3">
-                Ayuda Rápida
-            </h1>
-            <p class="text-text-muted mt-3 text-lg max-w-2xl">Guía paso a paso para utilizar las funciones principales del sistema y sacar el máximo provecho a la plataforma.</p>
-        </div>
+<main class="flex-1 md:ml-64 p-6 md:p-8 pt-20 md:pt-8 min-h-screen bg-background text-text-main selection:bg-primary/20 selection:text-primary">
+    <div class="max-w-7xl mx-auto w-full space-y-8">
         
-        <div class="space-y-8">
-            <!-- PASO 1 -->
-            <section class="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group">
-                <div class="absolute -top-20 -right-20 w-48 h-48 bg-primary/5 rounded-full blur-3xl transition-all group-hover:bg-primary/10"></div>
-                <div class="relative z-10">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-display font-bold text-xl border border-primary/20 shadow-inner">1</div>
-                        <h2 class="text-2xl md:text-3xl font-display font-bold text-text-main">Inventario y Stock</h2>
-                    </div>
-                    <div class="md:ml-16 text-text-main leading-relaxed space-y-5">
-                        <p class="text-text-muted text-base">El módulo de inventario permite administrar todos los productos y repuestos disponibles en el local.</p>
-                        <ul class="space-y-3">
-                            <li class="flex items-start gap-3">
-                                <span class="material-symbols-outlined text-primary text-[20px] mt-0.5">check_circle</span>
-                                <div><strong class="text-text-main">Consulta:</strong> En la vista principal puedes ver la disponibilidad de todos los repuestos y usar la barra de búsqueda para filtrar rápidamente.</div>
-                            </li>
-                            <li class="flex items-start gap-3">
-                                <span class="material-symbols-outlined text-primary text-[20px] mt-0.5">edit_square</span>
-                                <div><strong class="text-text-main">Actualizar Stock:</strong> Haz clic en el botón de "Editar" en cualquier producto para actualizar las cantidades, costo y precio de venta de acuerdo a los nuevos ingresos.</div>
-                            </li>
-                        </ul>
-
-                        <!-- Tutorial: Agregar Producto (Movie Card Style Carousel) -->
-                        <div class="mt-10 mb-8" id="tutorial-carousel">
-                            <h3 class="text-xl font-display font-bold text-text-main mb-6 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-primary">library_add</span>
-                                ¿Cómo agregar un producto paso a paso?
-                            </h3>
-                            
-                            <div class="overflow-hidden relative rounded-xl shadow-[0_25px_50px_rgba(0,0,0,0.6)] border border-border">
-                                <div class="flex transition-transform duration-500 ease-in-out" id="carousel-track">
-                                    <!-- Step 1 -->
-                                    <div class="w-full shrink-0">
-                                        <div class="flex flex-col md:flex-row bg-[#1e1b26] relative group">
-                                            <div class="relative w-full md:w-[50%] min-h-[250px] md:min-h-[350px] overflow-hidden bg-[#15131b]">
-                                                <div class="absolute inset-4 bg-contain bg-center bg-no-repeat transition-transform duration-700 hover:scale-105" style="background-image: url('<?php echo BASE_URL; ?>/assets/images/help/step1.png');"></div>
-                                            </div>
-                                            <div class="relative w-full md:w-[50%] p-6 md:p-10 z-10 flex flex-col justify-center">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <h4 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3 font-display">
-                                                        <span class="text-primary opacity-80 text-lg">01</span> Entrar al panel
-                                                    </h4>
-                                                    <span class="bg-primary text-white px-2 py-1 rounded text-xs font-bold tracking-wider shadow-sm">PASO 1</span>
-                                                </div>
-                                                <div class="flex gap-2 mb-4">
-                                                    <span class="bg-primary/10 border border-primary/30 px-3 py-1 rounded-full text-[11px] font-medium text-[#d7d7d7]">Inventario</span>
-                                                    <span class="bg-primary/10 border border-primary/30 px-3 py-1 rounded-full text-[11px] font-medium text-[#d7d7d7]">Acción</span>
-                                                </div>
-                                                <p class="text-[13px] leading-relaxed text-[#b4b4b4] text-justify mb-5">
-                                                    Dirígete al módulo de Inventario desde el menú lateral. Una vez allí, busca el botón destacado con el símbolo de <strong class="text-white">"+ Añadir"</strong> ubicado en la esquina superior derecha. Esto abrirá el formulario de registro de nuevos ítems.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Step 2 -->
-                                    <div class="w-full shrink-0">
-                                        <div class="flex flex-col md:flex-row bg-[#1e1b26] relative group">
-                                            <div class="relative w-full md:w-[50%] min-h-[250px] md:min-h-[350px] overflow-hidden bg-[#15131b]">
-                                                <div class="absolute inset-4 bg-contain bg-center bg-no-repeat transition-transform duration-700 hover:scale-105" style="background-image: url('<?php echo BASE_URL; ?>/assets/images/help/step2.png');"></div>
-                                            </div>
-                                            <div class="relative w-full md:w-[50%] p-6 md:p-10 z-10 flex flex-col justify-center">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <h4 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3 font-display">
-                                                        <span class="text-primary opacity-80 text-lg">02</span> Elegir categoría
-                                                    </h4>
-                                                    <span class="bg-primary text-white px-2 py-1 rounded text-xs font-bold tracking-wider shadow-sm">PASO 2</span>
-                                                </div>
-                                                <div class="flex gap-2 mb-4">
-                                                    <span class="bg-primary/10 border border-primary/30 px-3 py-1 rounded-full text-[11px] font-medium text-[#d7d7d7]">Clasificación</span>
-                                                </div>
-                                                <p class="text-[13px] leading-relaxed text-[#b4b4b4] text-justify mb-5">
-                                                    Lo primero que debes hacer en el formulario es <strong class="text-white">seleccionar una categoría</strong>. El sistema es inteligente y rellenará de forma automática el "Nombre del producto" dependiendo de lo que elijas, ahorrándote tiempo de tipeo.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Step 3 -->
-                                    <div class="w-full shrink-0">
-                                        <div class="flex flex-col md:flex-row bg-[#1e1b26] relative group">
-                                            <div class="relative w-full md:w-[50%] min-h-[250px] md:min-h-[350px] overflow-hidden bg-[#15131b]">
-                                                <div class="absolute inset-4 bg-contain bg-center bg-no-repeat transition-transform duration-700 hover:scale-105" style="background-image: url('<?php echo BASE_URL; ?>/assets/images/help/step3.png');"></div>
-                                            </div>
-                                            <div class="relative w-full md:w-[50%] p-6 md:p-10 z-10 flex flex-col justify-center">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <h4 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3 font-display">
-                                                        <span class="text-primary opacity-80 text-lg">03</span> Completar y Guardar
-                                                    </h4>
-                                                    <span class="bg-primary text-white px-2 py-1 rounded text-xs font-bold tracking-wider shadow-sm">PASO 3</span>
-                                                </div>
-                                                <div class="flex gap-2 mb-4">
-                                                    <span class="bg-primary/10 border border-primary/30 px-3 py-1 rounded-full text-[11px] font-medium text-[#d7d7d7]">Detalles</span>
-                                                    <span class="bg-primary/10 border border-primary/30 px-3 py-1 rounded-full text-[11px] font-medium text-[#d7d7d7]">Finalizar</span>
-                                                </div>
-                                                <p class="text-[13px] leading-relaxed text-[#b4b4b4] text-justify mb-5">
-                                                    Rellena los campos obligatorios como la <strong class="text-white">Marca, Modelo, Precio y Stock Inicial</strong>. Recuerda que los campos marcados como "(Opcional)" puedes dejarlos vacíos. Una vez terminado, presiona <strong class="text-white">"Registrar Producto"</strong> al final de la página.
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Carousel Controls -->
-                            <div class="flex justify-between items-center mt-6">
-                                <button type="button" onclick="prevSlide()" id="btn-prev" class="bg-surface border border-border text-text-main px-4 py-2.5 rounded-xl flex items-center gap-2 hover:bg-surface-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-bold">
-                                    <span class="material-symbols-outlined text-[18px]">arrow_back</span> Anterior
-                                </button>
-                                <div class="flex gap-2">
-                                    <div class="w-2 h-2 rounded-full bg-primary indicator transition-colors"></div>
-                                    <div class="w-2 h-2 rounded-full bg-border indicator transition-colors"></div>
-                                    <div class="w-2 h-2 rounded-full bg-border indicator transition-colors"></div>
-                                </div>
-                                <button type="button" onclick="nextSlide()" id="btn-next" class="bg-primary text-white px-4 py-2.5 rounded-xl flex items-center gap-2 hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-bold shadow-md shadow-primary/20">
-                                    Siguiente <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-                                </button>
-                            </div>
-                        </div>
-
-
-                    </div>
-                </div>
-            </section>
+        <?php // HERO HEADER: Ayuda Rápida ?>
+        <div class="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-b from-card to-surface p-6 md:p-10 shadow-lg">
+            <div class="absolute -right-20 -top-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute right-40 bottom-0 w-64 h-64 bg-secondary/10 rounded-full blur-2xl pointer-events-none"></div>
             
-            <!-- PASO 2 -->
-            <section class="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group">
-                <div class="absolute -top-20 -right-20 w-48 h-48 bg-secondary/5 rounded-full blur-3xl transition-all group-hover:bg-secondary/10"></div>
-                <div class="relative z-10">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="w-12 h-12 rounded-2xl bg-secondary/10 text-secondary flex items-center justify-center font-display font-bold text-xl border border-secondary/20 shadow-inner">2</div>
-                        <h2 class="text-2xl md:text-3xl font-display font-bold text-text-main">Clientes</h2>
+            <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                <div class="space-y-3 max-w-3xl">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-bold uppercase tracking-wider">
+                        <span class="material-symbols-outlined text-[16px]">menu_book</span>
+                        <span>Manual de Uso &amp; Soporte Técnico</span>
                     </div>
-                    <div class="md:ml-16 text-text-main leading-relaxed space-y-5">
-                        <p class="text-text-muted text-base">Es fundamental registrar la información de tus clientes para agilizar el ingreso de reparaciones o procesos de facturación de ventas.</p>
-                        <ul class="space-y-3">
-                            <li class="flex items-start gap-3">
-                                <span class="material-symbols-outlined text-secondary text-[20px] mt-0.5">person_add</span>
-                                <div><strong class="text-text-main">Alta de Cliente:</strong> Ingresa al módulo de Clientes, haz clic en "Nuevo Cliente" y completa sus datos básicos (Nombre, Teléfono, Correo).</div>
-                            </li>
-                            <li class="flex items-start gap-3">
-                                <span class="material-symbols-outlined text-secondary text-[20px] mt-0.5">quick_reference_all</span>
-                                <div><strong class="text-text-main">Uso en otros módulos:</strong> Al cargar una nueva orden de reparación o una venta, podrás seleccionar rápidamente a un cliente previamente guardado, ahorrando mucho tiempo.</div>
-                            </li>
-                            <li class="flex items-start gap-3">
-                                <span class="material-symbols-outlined text-secondary text-[20px] mt-0.5">history</span>
-                                <div><strong class="text-text-main">Historial:</strong> Todos los movimientos, compras y reparaciones vinculadas a este cliente se asociarán automáticamente a su perfil para futuras consultas.</div>
-                            </li>
-                        </ul>
-
-                        <!-- Tutorial: Agregar Cliente (Movie Card Style Carousel) -->
-                        <div class="mt-10 mb-8" id="tutorial-carousel-2">
-                            <h3 class="text-xl font-display font-bold text-text-main mb-6 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-secondary">person_add</span>
-                                ¿Cómo registrar un cliente paso a paso?
-                            </h3>
-                            
-                            <div class="overflow-hidden relative rounded-xl shadow-[0_25px_50px_rgba(0,0,0,0.6)] border border-border">
-                                <div class="flex transition-transform duration-500 ease-in-out" id="carousel-track-2">
-                                    <!-- Step 1 -->
-                                    <div class="w-full shrink-0">
-                                        <div class="flex flex-col md:flex-row bg-[#1e1b26] relative group">
-                                            <div class="relative w-full md:w-[50%] min-h-[250px] md:min-h-[350px] overflow-hidden bg-[#15131b]">
-                                                <div class="absolute inset-4 bg-contain bg-no-repeat transition-transform duration-700 hover:scale-105" style="background-image: url('<?php echo BASE_URL; ?>/assets/images/help/client1.png'); background-position: center;"></div>
-                                            </div>
-                                            <div class="relative w-full md:w-[50%] p-6 md:p-10 z-10 flex flex-col justify-center">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <h4 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3 font-display">
-                                                        <span class="text-secondary opacity-80 text-lg">01</span> Entrar a Clientes
-                                                    </h4>
-                                                    <span class="bg-secondary text-white text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Paso 1</span>
-                                                </div>
-                                                <div class="flex gap-2 mb-6 mt-3">
-                                                    <span class="px-3 py-1 rounded-full border border-white/10 text-xs font-medium text-white/60">Navegación</span>
-                                                </div>
-                                                <p class="text-white/80 leading-relaxed text-lg mb-6">Dirígete al módulo de Clientes desde el menú lateral. Haz clic en el botón <strong class="text-white">"+ Nuevo Cliente"</strong> ubicado en la esquina superior derecha.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Step 2 -->
-                                    <div class="w-full shrink-0">
-                                        <div class="flex flex-col md:flex-row bg-[#1e1b26] relative group">
-                                            <div class="relative w-full md:w-[50%] min-h-[250px] md:min-h-[350px] overflow-hidden bg-[#15131b]">
-                                                <div class="absolute inset-4 bg-contain bg-no-repeat transition-transform duration-700 hover:scale-105" style="background-image: url('<?php echo BASE_URL; ?>/assets/images/help/client2.png'); background-position: center;"></div>
-                                            </div>
-                                            <div class="relative w-full md:w-[50%] p-6 md:p-10 z-10 flex flex-col justify-center">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <h4 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3 font-display">
-                                                        <span class="text-secondary opacity-80 text-lg">02</span> Rellenar y Guardar
-                                                    </h4>
-                                                    <span class="bg-secondary text-white text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Paso 2</span>
-                                                </div>
-                                                <div class="flex gap-2 mb-6 mt-3">
-                                                    <span class="px-3 py-1 rounded-full border border-white/10 text-xs font-medium text-white/60">Formulario</span>
-                                                </div>
-                                                <p class="text-white/80 leading-relaxed text-lg mb-6">Completa los datos del cliente. El sistema requiere al menos un nombre para identificarlo. Cuando termines, haz clic en <strong class="text-white">"Guardar Cliente"</strong>.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Carousel Controls -->
-                                <div class="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center z-20">
-                                    <button type="button" onclick="prevSlide2()" id="btn-prev-2" class="bg-white/10 text-white backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-2 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-bold border border-white/10">
-                                        <span class="material-symbols-outlined text-[18px]">arrow_back</span> Anterior
-                                    </button>
-                                    <div class="flex gap-2">
-                                        <div class="w-4 h-2 rounded-full bg-secondary indicator-2 transition-colors"></div>
-                                        <div class="w-2 h-2 rounded-full bg-border indicator-2 transition-colors"></div>
-                                    </div>
-                                    <button type="button" onclick="nextSlide2()" id="btn-next-2" class="bg-secondary text-white px-4 py-2.5 rounded-xl flex items-center gap-2 hover:bg-secondary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-bold shadow-md shadow-secondary/20">
-                                        Siguiente <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    <h1 class="text-3xl md:text-5xl font-display font-bold text-text-main tracking-tight">
+                        Ayuda Rápida
+                    </h1>
+                    <p class="text-sm md:text-base text-text-muted max-w-2xl leading-relaxed">
+                        Guía interactiva paso a paso para dominar las funciones centrales del sistema NOKIA 1100, acelerar el control de stock y optimizar la administración de tu taller.
+                    </p>
                 </div>
-            </section>
+            </div>
+        </div>
+
+        <?php // MODULES FILTER TABS ?>
+        <div class="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none" id="help-tabs-bar">
+            <?php // Tab 1: Inventario ?>
+            <button onclick="switchTab('inventario')" id="tab-btn-inventario" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-primary/10 border border-primary/40 text-primary shadow-[0_0_12px_rgba(14,165,160,0.15)] font-display" type="button">
+                <span class="material-symbols-outlined text-[18px]">inventory_2</span>
+                <span>1. Inventario y Stock</span>
+            </button>
+            <?php // Tab 2: Taller ?>
+            <button onclick="switchTab('taller')" id="tab-btn-taller" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-border/80 font-display" type="button">
+                <span class="material-symbols-outlined text-[18px]">home_repair_service</span>
+                <span>2. Taller y Reparaciones</span>
+            </button>
+            <?php // Tab 3: Ventas ?>
+            <button onclick="switchTab('ventas')" id="tab-btn-ventas" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-border/80 font-display" type="button">
+                <span class="material-symbols-outlined text-[18px]">point_of_sale</span>
+                <span>3. Ventas y Cobros</span>
+            </button>
+            <?php // Tab 4: Clientes ?>
+            <button onclick="switchTab('clientes')" id="tab-btn-clientes" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-border/80 font-display" type="button">
+                <span class="material-symbols-outlined text-[18px]">group</span>
+                <span>4. Clientes y Cuentas</span>
+            </button>
+            <?php // Tab 5: Proveedores ?>
+            <button onclick="switchTab('proveedores')" id="tab-btn-proveedores" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-border/80 font-display" type="button">
+                <span class="material-symbols-outlined text-[18px]">local_shipping</span>
+                <span>5. Proveedores y Reportes</span>
+            </button>
+        </div>
+
+        <?php // MAIN WORKSPACE 2-COLUMN GRID ?>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
             
-            <!-- PASO 3 -->
-            <section class="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group">
-                <div class="absolute -top-20 -right-20 w-48 h-48 bg-[#0EA5A0]/5 rounded-full blur-3xl transition-all group-hover:bg-[#0EA5A0]/10"></div>
-                <div class="relative z-10">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="w-12 h-12 rounded-2xl bg-[#0EA5A0]/10 text-[#0EA5A0] flex items-center justify-center font-display font-bold text-xl border border-[#0EA5A0]/20 shadow-inner">3</div>
-                        <h2 class="text-2xl md:text-3xl font-display font-bold text-text-main">Taller de Reparaciones</h2>
-                    </div>
-                    <div class="md:ml-16 text-text-main leading-relaxed space-y-5">
-                        <p class="text-text-muted text-base">Este es el corazón del servicio técnico. Aquí harás el seguimiento de cada dispositivo ingresado al local.</p>
-                        <ul class="space-y-3">
-                            <li class="flex items-start gap-3">
-                                <span class="material-symbols-outlined text-[#0EA5A0] text-[20px] mt-0.5">build</span>
-                                <div><strong class="text-text-main">Nueva Orden:</strong> Haz clic en "Nueva Reparación". Selecciona el cliente, ingresa el modelo del dispositivo, IMEI/Serial (si aplica) y la falla reportada de forma clara.</div>
-                            </li>
-                            <li class="flex items-start gap-3">
-                                <span class="material-symbols-outlined text-[#0EA5A0] text-[20px] mt-0.5">sync</span>
+            <?php // LEFT PRIMARY GUIDE CONTAINER (8 Cols) ?>
+            <section class="lg:col-span-8 space-y-6">
+
+                <?php // ==================== PESTAÑA 1: INVENTARIO ==================== ?>
+                <div id="tab-pane-inventario" class="help-pane space-y-6 block">
+                    <article class="rounded-3xl border border-border bg-card overflow-hidden shadow-lg transition-all">
+                        <?php // Step Header Bar ?>
+                        <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl shadow-[0_0_16px_rgba(14,165,160,0.15)]">
+                                    01
+                                </div>
                                 <div>
-                                    <strong class="text-text-main">Gestión de Estados:</strong> Cambia el estado a medida que avanza el trabajo:
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
-                                        <div class="flex items-center gap-2 bg-surface p-2 rounded-lg border border-border"><span class="w-2 h-2 rounded-full bg-yellow-500"></span><span class="text-xs font-medium">Pendiente: En espera de revisión.</span></div>
-                                        <div class="flex items-center gap-2 bg-surface p-2 rounded-lg border border-border"><span class="w-2 h-2 rounded-full bg-blue-500"></span><span class="text-xs font-medium">En Proceso: Técnico trabajando.</span></div>
-                                        <div class="flex items-center gap-2 bg-surface p-2 rounded-lg border border-border"><span class="w-2 h-2 rounded-full bg-[#0EA5A0]"></span><span class="text-xs font-medium">Listo: Esperando retiro.</span></div>
-                                        <div class="flex items-center gap-2 bg-surface p-2 rounded-lg border border-border"><span class="w-2 h-2 rounded-full bg-primary"></span><span class="text-xs font-medium">Entregado: Dispositivo abonado.</span></div>
-                                    </div>
-                                </div>
-                        </ul>
-
-                        <!-- Tutorial: Taller (Movie Card Style Carousel) -->
-                        <div class="mt-10 mb-8" id="tutorial-carousel-3">
-                            <h3 class="text-xl font-display font-bold text-text-main mb-6 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-[#0EA5A0]">build_circle</span>
-                                ¿Cómo gestionar una reparación?
-                            </h3>
-                            
-                            <div class="overflow-hidden relative rounded-xl shadow-[0_25px_50px_rgba(0,0,0,0.6)] border border-border">
-                                <div class="flex transition-transform duration-500 ease-in-out" id="carousel-track-3">
-                                    
-                                    <!-- Step 1: Estado -->
-                                    <div class="w-full shrink-0">
-                                        <div class="flex flex-col md:flex-row bg-[#1e1b26] relative group">
-                                            <div class="relative w-full md:w-[50%] min-h-[250px] md:min-h-[350px] overflow-hidden bg-[#15131b]">
-                                                <div class="absolute inset-4 bg-contain bg-center bg-no-repeat transition-transform duration-700 hover:scale-105" style="background-image: url('<?php echo BASE_URL; ?>/assets/images/help/workshop1.png');"></div>
-                                            </div>
-                                            <div class="relative w-full md:w-[50%] p-6 md:p-10 z-10 flex flex-col justify-center">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <h4 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3 font-display">
-                                                        <span class="text-[#0EA5A0] opacity-80 text-lg">01</span> Actualizar Estado
-                                                    </h4>
-                                                    <span class="bg-[#0EA5A0] text-white text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Paso 1</span>
-                                                </div>
-                                                <div class="flex gap-2 mb-6 mt-3">
-                                                    <span class="px-3 py-1 rounded-full border border-white/10 text-xs font-medium text-white/60">Seguimiento</span>
-                                                </div>
-                                                <p class="text-white/80 leading-relaxed text-lg mb-6">Mantén al cliente informado cambiando el estado del equipo: desde <strong class="text-white">Recibido</strong> hasta <strong class="text-white">Listo</strong>.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Step 2: Presupuesto -->
-                                    <div class="w-full shrink-0">
-                                        <div class="flex flex-col md:flex-row bg-[#1e1b26] relative group">
-                                            <div class="relative w-full md:w-[50%] min-h-[250px] md:min-h-[350px] overflow-hidden bg-[#15131b]">
-                                                <div class="absolute inset-4 bg-contain bg-center bg-no-repeat transition-transform duration-700 hover:scale-105" style="background-image: url('<?php echo BASE_URL; ?>/assets/images/help/workshop2.png');"></div>
-                                            </div>
-                                            <div class="relative w-full md:w-[50%] p-6 md:p-10 z-10 flex flex-col justify-center">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <h4 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3 font-display">
-                                                        <span class="text-[#0EA5A0] opacity-80 text-lg">02</span> Fijar Presupuesto
-                                                    </h4>
-                                                    <span class="bg-[#0EA5A0] text-white text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Paso 2</span>
-                                                </div>
-                                                <div class="flex gap-2 mb-6 mt-3">
-                                                    <span class="px-3 py-1 rounded-full border border-white/10 text-xs font-medium text-white/60">Costos</span>
-                                                </div>
-                                                <p class="text-white/80 leading-relaxed text-lg mb-6">Una vez diagnosticado el problema, ingresa el valor total que se le cobrará al cliente por la reparación.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Step 3: Fotos -->
-                                    <div class="w-full shrink-0">
-                                        <div class="flex flex-col md:flex-row bg-[#1e1b26] relative group">
-                                            <div class="relative w-full md:w-[50%] min-h-[250px] md:min-h-[350px] overflow-hidden bg-[#15131b]">
-                                                <div class="absolute inset-4 bg-contain bg-center bg-no-repeat transition-transform duration-700 hover:scale-105" style="background-image: url('<?php echo BASE_URL; ?>/assets/images/help/workshop3.png');"></div>
-                                            </div>
-                                            <div class="relative w-full md:w-[50%] p-6 md:p-10 z-10 flex flex-col justify-center">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <h4 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3 font-display">
-                                                        <span class="text-[#0EA5A0] opacity-80 text-lg">03</span> Evidencia Visual
-                                                    </h4>
-                                                    <span class="bg-[#0EA5A0] text-white text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Paso 3</span>
-                                                </div>
-                                                <div class="flex gap-2 mb-6 mt-3">
-                                                    <span class="px-3 py-1 rounded-full border border-white/10 text-xs font-medium text-white/60">Imágenes</span>
-                                                </div>
-                                                <p class="text-white/80 leading-relaxed text-lg mb-6">Sube fotos del dispositivo para registrar su estado al ingresar (roturas previas, pantalla, etc).</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Step 4: Repuestos -->
-                                    <div class="w-full shrink-0">
-                                        <div class="flex flex-col md:flex-row bg-[#1e1b26] relative group">
-                                            <div class="relative w-full md:w-[50%] min-h-[250px] md:min-h-[350px] overflow-hidden bg-[#15131b]">
-                                                <div class="absolute inset-4 bg-contain bg-center bg-no-repeat transition-transform duration-700 hover:scale-105" style="background-image: url('<?php echo BASE_URL; ?>/assets/images/help/workshop4.png');"></div>
-                                            </div>
-                                            <div class="relative w-full md:w-[50%] p-6 md:p-10 z-10 flex flex-col justify-center">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <h4 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3 font-display">
-                                                        <span class="text-[#0EA5A0] opacity-80 text-lg">04</span> Asignar Piezas
-                                                    </h4>
-                                                    <span class="bg-[#0EA5A0] text-white text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Paso 4</span>
-                                                </div>
-                                                <div class="flex gap-2 mb-6 mt-3">
-                                                    <span class="px-3 py-1 rounded-full border border-white/10 text-xs font-medium text-white/60">Inventario</span>
-                                                </div>
-                                                <p class="text-white/80 leading-relaxed text-lg mb-6">Selecciona los repuestos utilizados en la reparación. El sistema descontará estas unidades del inventario automáticamente.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                </div>
-                                
-                                <!-- Carousel Controls -->
-                                <div class="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center z-20">
-                                    <button type="button" onclick="prevSlide3()" id="btn-prev-3" class="bg-white/10 text-white backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-2 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-bold border border-white/10">
-                                        <span class="material-symbols-outlined text-[18px]">arrow_back</span> Anterior
-                                    </button>
-                                    <div class="flex gap-2">
-                                        <div class="w-4 h-2 rounded-full bg-[#0EA5A0] indicator-3 transition-colors"></div>
-                                        <div class="w-2 h-2 rounded-full bg-border indicator-3 transition-colors"></div>
-                                        <div class="w-2 h-2 rounded-full bg-border indicator-3 transition-colors"></div>
-                                        <div class="w-2 h-2 rounded-full bg-border indicator-3 transition-colors"></div>
-                                    </div>
-                                    <button type="button" onclick="nextSlide3()" id="btn-next-3" class="bg-[#0EA5A0] text-white px-4 py-2.5 rounded-xl flex items-center gap-2 hover:bg-[#0EA5A0]/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-bold shadow-md shadow-[#0EA5A0]/20">
-                                        Siguiente <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-                                    </button>
+                                    <h2 class="text-xl md:text-2xl font-display font-bold text-text-main tracking-tight">
+                                        Inventario y Stock
+                                    </h2>
+                                    <p class="text-xs md:text-sm text-text-muted">
+                                        Control de existencias, precios de venta, repuestos y alertas por bajo stock.
+                                    </p>
                                 </div>
                             </div>
                         </div>
 
-                    </div>
-                </div>
-            </section>
-            
-            <!-- PASO 4 -->
-            <section class="bg-card border border-border rounded-3xl p-6 md:p-8 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 relative overflow-hidden group">
-                <div class="absolute -top-20 -right-20 w-48 h-48 bg-primary/5 rounded-full blur-3xl transition-all group-hover:bg-primary/10"></div>
-                <div class="relative z-10">
-                    <div class="flex items-center gap-4 mb-6">
-                        <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-display font-bold text-xl border border-primary/20 shadow-inner">4</div>
-                        <h2 class="text-2xl md:text-3xl font-display font-bold text-text-main">Ventas y Cobros</h2>
-                    </div>
-                    <div class="md:ml-16 text-text-main leading-relaxed space-y-5">
-                        <p class="text-text-muted text-base">Utiliza el módulo de ventas para gestionar los ingresos monetarios del negocio y entregar comprobantes válidos a los clientes.</p>
-                        <ul class="space-y-3">
-                            <li class="flex items-start gap-3">
-                                <span class="material-symbols-outlined text-primary text-[20px] mt-0.5">point_of_sale</span>
-                                <div><strong class="text-text-main">Cobro de Reparaciones:</strong> Desde la caja, puedes asociar la venta a una orden de reparación pendiente. El monto total se calculará de forma automática basado en el costo del servicio técnico y los repuestos empleados.</div>
-                            </li>
-                            <li class="flex items-start gap-3">
-                                <span class="material-symbols-outlined text-primary text-[20px] mt-0.5">shopping_cart_checkout</span>
-                                <div><strong class="text-text-main">Venta Directa:</strong> Si vendes un accesorio suelto (como una funda o cargador), búscalo para agregarlo al "carrito" de la venta y finaliza la operación ingresando el método de pago (Efectivo, Tarjeta, Transferencia).</div>
-                            </li>
-                            <li class="flex items-start gap-3">
-                                <span class="material-symbols-outlined text-primary text-[20px] mt-0.5">receipt_long</span>
-                                <div><strong class="text-text-main">Comprobantes:</strong> Una vez finalizada cualquier venta, el sistema generará una factura o ticket que puedes imprimir al instante o enviarlo de forma digital.</div>
-                            </li>                        </ul>
-
-                                                                        <!-- Tutorial: Ventas (Movie Card Style Carousel) -->
-                        <div class="mt-10 mb-8" id="tutorial-carousel-4">
-                            <h3 class="text-xl font-display font-bold text-text-main mb-6 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-primary">point_of_sale</span>
-                                ¿Cómo realizar ventas y cobros?
-                            </h3>
-                            
-                            <div class="overflow-hidden relative rounded-xl shadow-[0_25px_50px_rgba(0,0,0,0.6)] border border-border">
-                                <div class="flex transition-transform duration-500 ease-in-out" id="carousel-track-4">
-                                    
-                                    <!-- Step 1: Nueva Venta -->
-                                    <div class="w-full shrink-0">
-                                        <div class="flex flex-col md:flex-row bg-[#1e1b26] relative group">
-                                            <div class="relative w-full md:w-[50%] min-h-[250px] md:min-h-[350px] overflow-hidden bg-[#15131b]">
-                                                <div class="absolute inset-4 bg-contain bg-center bg-no-repeat transition-transform duration-700 hover:scale-105" style="background-image: url('<?php echo BASE_URL; ?>/assets/images/help/sale1.png');"></div>
-                                            </div>
-                                            <div class="relative w-full md:w-[50%] p-6 md:p-10 z-10 flex flex-col justify-center">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <h4 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3 font-display">
-                                                        <span class="text-primary opacity-80 text-lg">01</span> Iniciar Venta
-                                                    </h4>
-                                                    <span class="bg-primary text-white text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Paso 1</span>
-                                                </div>
-                                                <div class="flex gap-2 mb-6 mt-3">
-                                                    <span class="px-3 py-1 rounded-full border border-white/10 text-xs font-medium text-white/60">Caja</span>
-                                                </div>
-                                                <p class="text-white/80 leading-relaxed text-lg mb-6">Para vender productos sueltos, haz clic en <strong class="text-white">Nueva Venta</strong> desde el módulo de Caja.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Step 2: Agregar Productos -->
-                                    <div class="w-full shrink-0">
-                                        <div class="flex flex-col md:flex-row bg-[#1e1b26] relative group">
-                                            <div class="relative w-full md:w-[50%] min-h-[250px] md:min-h-[350px] overflow-hidden bg-[#15131b]">
-                                                <div class="absolute inset-4 bg-contain bg-center bg-no-repeat transition-transform duration-700 hover:scale-105" style="background-image: url('<?php echo BASE_URL; ?>/assets/images/help/sale2.png');"></div>
-                                            </div>
-                                            <div class="relative w-full md:w-[50%] p-6 md:p-10 z-10 flex flex-col justify-center">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <h4 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3 font-display">
-                                                        <span class="text-primary opacity-80 text-lg">02</span> Agregar Productos
-                                                    </h4>
-                                                    <span class="bg-primary text-white text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Paso 2</span>
-                                                </div>
-                                                <div class="flex gap-2 mb-6 mt-3">
-                                                    <span class="px-3 py-1 rounded-full border border-white/10 text-xs font-medium text-white/60">Carrito</span>
-                                                </div>
-                                                <p class="text-white/80 leading-relaxed text-lg mb-6">Busca el producto, indica la cantidad y súmalo al ticket.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Step 3: Finalizar Venta (antes era el 5) -->
-                                    <div class="w-full shrink-0">
-                                        <div class="flex flex-col md:flex-row bg-[#1e1b26] relative group">
-                                            <div class="relative w-full md:w-[50%] min-h-[250px] md:min-h-[350px] overflow-hidden bg-[#15131b]">
-                                                <div class="absolute inset-4 bg-contain bg-center bg-no-repeat transition-transform duration-700 hover:scale-105" style="background-image: url('<?php echo BASE_URL; ?>/assets/images/help/sale3.png');"></div>
-                                            </div>
-                                            <div class="relative w-full md:w-[50%] p-6 md:p-10 z-10 flex flex-col justify-center">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <h4 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3 font-display">
-                                                        <span class="text-primary opacity-80 text-lg">03</span> Finalizar Venta
-                                                    </h4>
-                                                    <span class="bg-primary text-white text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Paso 3</span>
-                                                </div>
-                                                <div class="flex gap-2 mb-6 mt-3">
-                                                    <span class="px-3 py-1 rounded-full border border-white/10 text-xs font-medium text-white/60">Liquidación</span>
-                                                </div>
-                                                <p class="text-white/80 leading-relaxed text-lg mb-6">Selecciona el <strong class="text-white">Método de Pago</strong> y confirma la operación para generar el ticket final.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Step 4: TRANSICIÓN a Reparaciones -->
-                                    <div class="w-full shrink-0">
-                                        <div class="flex flex-col bg-gradient-to-br from-[#1e1b26] to-[#0a192f] relative group min-h-[250px] md:min-h-[350px] items-center justify-center p-10 text-center">
-                                            <div class="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(0,229,255,0.2)]">
-                                                <span class="material-symbols-outlined text-[40px] text-primary">build_circle</span>
-                                            </div>
-                                            <h4 class="text-3xl font-display font-bold text-white mb-4">Cobro de Reparaciones</h4>
-                                            <p class="text-white/70 max-w-lg text-lg">El proceso cambia levemente si lo que necesitas cobrar es una orden proveniente del Taller de Reparaciones. Veamos cómo se hace en los siguientes pasos.</p>
-                                        </div>
-                                    </div>
-
-                                    <!-- Step 5: Cobrar Reparacion -->
-                                    <div class="w-full shrink-0">
-                                        <div class="flex flex-col md:flex-row bg-[#1e1b26] relative group">
-                                            <div class="relative w-full md:w-[50%] min-h-[250px] md:min-h-[350px] overflow-hidden bg-[#242b3b] flex flex-col items-center justify-center">
-                                                <div class="w-full h-24 bg-contain bg-top bg-no-repeat mt-12" style="background-image: url('<?php echo BASE_URL; ?>/assets/images/help/repair_btn.png');"></div>
-                                                
-                                                <div class="relative flex flex-col items-center mt-2">
-                                                    <svg class="w-16 h-16 drop-shadow-[0_0_8px_rgba(0,229,255,0.6)] animate-bounce" viewBox="0 0 100 100">
-                                                        <path d="M50,80 L50,20 M30,40 L50,15 L70,40" fill="none" stroke="#00e5ff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
-                                                    </svg>
-                                                    <div class="border border-[#00e5ff] bg-black/80 backdrop-blur-md text-white font-bold px-4 py-2 rounded-xl text-sm shadow-[0_0_15px_rgba(0,229,255,0.3)]">
-                                                        Click en <span class="text-[#00e5ff]">"Cobrar Reparaciones"</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div class="relative w-full md:w-[50%] p-6 md:p-10 z-10 flex flex-col justify-center">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <h4 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3 font-display">
-                                                        <span class="text-primary opacity-80 text-lg">04</span> Cobrar Reparaciones
-                                                    </h4>
-                                                    <span class="bg-primary text-white text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Taller</span>
-                                                </div>
-                                                <p class="text-white/80 leading-relaxed text-lg mb-6 mt-6">En la pantalla de Caja, en lugar de iniciar una nueva venta, haz clic en el botón <strong class="text-[#00e5ff]">Cobrar Reparaciones</strong> para buscar la orden terminada.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Step 6: Detalles Reparacion -->
-                                    <div class="w-full shrink-0">
-                                        <div class="flex flex-col md:flex-row bg-[#1e1b26] relative group">
-                                            <div class="relative w-full md:w-[50%] min-h-[250px] md:min-h-[350px] overflow-hidden bg-[#15131b]">
-                                                <div class="absolute inset-4 bg-contain bg-center bg-no-repeat transition-transform duration-700 hover:scale-105" style="background-image: url('<?php echo BASE_URL; ?>/assets/images/help/repair_checkout.png');"></div>
-                                            </div>
-                                            <div class="relative w-full md:w-[50%] p-6 md:p-10 z-10 flex flex-col justify-center">
-                                                <div class="flex justify-between items-start mb-2">
-                                                    <h4 class="text-2xl font-bold text-white tracking-tight flex items-center gap-3 font-display">
-                                                        <span class="text-primary opacity-80 text-lg">05</span> Confirmar Orden
-                                                    </h4>
-                                                    <span class="bg-primary text-white text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider">Finalizar</span>
-                                                </div>
-                                                <p class="text-white/80 leading-relaxed text-lg mb-6 mt-6">Revisa los detalles de la orden técnica, selecciona el método de pago y haz clic en "Cobrar y Entregar" para finalizar.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                </div>
-                                
-                                <!-- Carousel Controls -->
-                                <div class="absolute bottom-0 left-0 right-0 p-4 md:p-6 bg-gradient-to-t from-black/80 to-transparent flex justify-between items-center z-20">
-                                    <button type="button" onclick="prevSlide4()" id="btn-prev-4" class="bg-white/10 text-white backdrop-blur-md px-4 py-2.5 rounded-xl flex items-center gap-2 hover:bg-white/20 disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-sm font-bold border border-white/10">
-                                        <span class="material-symbols-outlined text-[18px]">arrow_back</span> Anterior
-                                    </button>
-                                    <div class="flex gap-2">
-                                        <div class="w-4 h-2 rounded-full bg-primary indicator-4 transition-colors"></div>
-                                        <div class="w-2 h-2 rounded-full bg-border indicator-4 transition-colors"></div>
-                                        <div class="w-2 h-2 rounded-full bg-border indicator-4 transition-colors"></div>
-                                        <div class="w-2 h-2 rounded-full bg-border indicator-4 transition-colors"></div>
-                                        <div class="w-2 h-2 rounded-full bg-border indicator-4 transition-colors"></div>
-                                        <div class="w-2 h-2 rounded-full bg-border indicator-4 transition-colors"></div>
-                                    </div>
-                                    <button type="button" onclick="nextSlide4()" id="btn-next-4" class="bg-primary text-white px-4 py-2.5 rounded-xl flex items-center gap-2 hover:bg-primary/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-bold shadow-md shadow-primary/20">
-                                        Siguiente <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-        </div>
-
-                <!-- CONSEJOS Y AVISOS SECTION -->
-        <div class="mt-16 bg-surface border border-border rounded-3xl p-8 relative overflow-hidden mb-12">
-            <div class="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2"></div>
-            
-            <h3 class="text-2xl font-display font-bold text-text-main flex items-center gap-3 mb-8">
-                <div class="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center">
-                    <span class="material-symbols-outlined text-[22px]">lightbulb</span>
-                </div>
-                Recomendaciones y Avisos Importantes
-            </h3>
-            
-            <div class="space-y-6">
-                <!-- Callout Tip -->
-                <div class="relative overflow-hidden bg-background border border-border/80 rounded-2xl p-6 group transition-colors hover:border-blue-500/30">
-                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500"></div>
-                    <div class="flex flex-col sm:flex-row items-start gap-5 relative z-10">
-                        <div class="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0 shadow-inner">
-                            <span class="material-symbols-outlined text-[24px]">edit_note</span>
-                        </div>
-                        <div class="flex-1">
-                            <h5 class="text-text-main font-bold text-base mb-2 flex flex-wrap items-center gap-2">
-                                Cargar Productos Específicos
-                                <span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-blue-500/10 text-blue-400 border border-blue-500/20">Sugerencia</span>
-                            </h5>
-                            <p class="text-sm text-text-muted leading-relaxed mb-5">
-                                Al crear un producto, el sistema sugiere un nombre automático (ej. "Periférico" o "Funda"). <strong>Recuerda que puedes borrarlo o completarlo a tu gusto.</strong>
+                        <?php // Descriptive Body ?>
+                        <div class="p-6 md:p-8 space-y-6">
+                            <p class="text-sm md:text-base text-text-muted leading-relaxed">
+                                El módulo de inventario te permite supervisar la disponibilidad en tiempo real de todos los productos y repuestos disponibles en el local físico o taller central.
                             </p>
+
+                            <?php // Feature Points ?>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">search</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Consulta Rápida</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                Visualiza stock general con búsqueda en tiempo real por <strong class="text-text-main">Nombre</strong>, <strong class="text-text-main">ID</strong> o código.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-secondary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">edit_note</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Actualizar Stock y Precios</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                Haz clic en <span class="text-primary font-semibold">Editar</span> en cualquier producto para registrar ingresos, ajustar costos o modificar el margen.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-yellow-500/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">toggle_on</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Baja Lógica (Activo / Inactivo)</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                Haz clic en el botón de estado <span class="text-success font-semibold">Activo</span> de la tabla para pausar un producto sin borrar su historial. Cambiará a <span class="text-error font-semibold">Inactivo</span> y no figurará en ventas.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <?php // ACCORDION: Step by step walkthrough ?>
+                            <div class="rounded-2xl border border-border bg-surface/70 overflow-hidden">
+                                <button onclick="toggleAccordion('acc-step-inventario')" class="w-full p-4 md:p-5 flex items-center justify-between text-left hover:bg-card/50 transition-colors" type="button">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                                            <span class="material-symbols-outlined text-[18px]">add_box</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-sm md:text-base font-display font-bold text-text-main">¿Cómo agregar un producto o repuesto paso a paso?</span>
+                                            <span class="block text-xs text-text-muted">3 pasos guiados para el alta en catálogo</span>
+                                        </div>
+                                    </div>
+                                    <span id="acc-icon-acc-step-inventario" class="material-symbols-outlined text-text-muted text-[22px] transition-transform duration-200">expand_more</span>
+                                </button>
+                                
+                                <div id="acc-step-inventario" class="hidden p-5 pt-2 border-t border-border space-y-4">
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-primary text-primary flex items-center justify-center text-xs font-bold shrink-0 z-10">1</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-text-main">Ingresar al sub-módulo de Inventario</p>
+                                            <p class="text-xs text-text-muted">Desde el menú lateral, pulsa en "Inventario" y ubica el botón <span class="text-primary font-semibold">+ Nuevo Producto</span> en la esquina superior derecha.</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-border text-text-muted flex items-center justify-center text-xs font-bold shrink-0 z-10">2</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-text-main">Completar datos técnicos y precio</p>
+                                            <p class="text-xs text-text-muted">Indica Nombre descriptivo (ej. <em>Funda Silicona</em>, <em>Módulo Display</em>), Precio de venta al público y define el Stock inicial disponible.</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start gap-3.5">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-border text-text-muted flex items-center justify-center text-xs font-bold shrink-0">3</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-medium text-text-main">Guardar y Sincronizar</p>
+                                            <p class="text-xs text-text-muted">Al guardar, el producto estará inmediatamente disponible para ser vendido en el mostrador o asignado a órdenes de reparación en taller.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <?php // MOCKUP PREVIEW CONTAINER ?>
+                            <div class="rounded-2xl border border-border bg-[#0f141c] overflow-hidden shadow-inner">
+                                <div class="px-4 py-3 bg-[#151b24] border-b border-border flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-error"></span>
+                                        <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
+                                        <span class="w-2.5 h-2.5 rounded-full bg-success"></span>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-primary/10 text-primary border border-primary/20">DATOS REALES DEL LOCAL</span>
+                                </div>
+
+                                <div class="p-4 space-y-3">
+                                    <div class="flex items-center justify-between pb-1">
+                                        <div class="flex items-center gap-2">
+                                            <span class="material-symbols-outlined text-primary text-[18px]">format_list_bulleted</span>
+                                            <span class="text-xs font-semibold text-text-main">Existencias en Tiempo Real</span>
+                                        </div>
+                                        <span class="text-xs text-text-muted"><?php echo count($realProducts); ?> de <?php echo $totalProds; ?> registros</span>
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <?php foreach ($realProducts as $idx => $p): 
+                                            $cant = (int)$p['cantidad'];
+                                            if ($cant > 5) {
+                                                $badgeClass = 'bg-primary/10 border-primary/30 text-primary';
+                                                $badgeText = 'Disponible';
+                                            } elseif ($cant > 0) {
+                                                $badgeClass = 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400';
+                                                $badgeText = 'Crítico';
+                                            } else {
+                                                $badgeClass = 'bg-error/10 border-error/30 text-error';
+                                                $badgeText = 'Agotado';
+                                            }
+                                        ?>
+                                        <div class="flex items-center justify-between p-3 rounded-xl bg-surface/60 border border-border/70 hover:border-primary/40 transition-colors">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-8 h-8 rounded-lg bg-card flex items-center justify-center text-primary text-xs font-mono font-bold">
+                                                    #<?php echo htmlspecialchars($p['id_producto']); ?>
+                                                </div>
+                                                <div>
+                                                    <p class="text-xs md:text-sm font-medium text-text-main"><?php echo htmlspecialchars($p['nombre']); ?></p>
+                                                    <p class="text-[11px] text-text-muted">SKU: ART-<?php echo str_pad($p['id_producto'], 4, '0', STR_PAD_LEFT); ?> • Almacén Central</p>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-3">
+                                                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border <?php echo $badgeClass; ?>">
+                                                    <span class="text-xs font-bold font-mono"><?php echo $cant; ?></span>
+                                                    <span class="text-[11px] font-medium"><?php echo $badgeText; ?></span>
+                                                </div>
+                                                <span class="text-xs md:text-sm font-mono text-text-main font-semibold">$<?php echo number_format((float)$p['precio'], 2, ',', '.'); ?></span>
+                                            </div>
+                                        </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <?php // Card Footer Controls ?>
+                        <div class="px-6 md:px-8 py-4 bg-surface/50 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <div class="flex items-center gap-2 text-xs text-text-muted">
+                                <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
+                                <span>Tip: Presiona <kbd class="px-1.5 py-0.5 rounded bg-card border border-border text-[11px] font-mono text-text-main">F3</kbd> en cualquier pantalla para saltar al inventario.</span>
+                            </div>
+                            <a href="<?php echo BASE_URL; ?>/modules/inventory/index.php" class="px-4 py-2 rounded-xl bg-primary text-[#0c141b] font-bold text-xs hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                                <span>Ir al Inventario</span>
+                                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                            </a>
+                        </div>
+                    </article>
+
+                    <?php // Preview Cards to switch to other modules ?>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div onclick="switchTab('taller')" class="rounded-2xl border border-border bg-card p-5 flex items-center justify-between hover:border-primary/40 transition-all cursor-pointer group">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-10 h-10 rounded-xl border border-border bg-surface flex items-center justify-center text-text-muted group-hover:text-primary transition-colors font-display font-bold">02</div>
+                                <div>
+                                    <h3 class="text-sm font-display font-bold text-text-main group-hover:text-primary transition-colors">Taller y Reparaciones</h3>
+                                    <p class="text-xs text-text-muted">Recepción de equipos, órdenes y diagnósticos.</p>
+                                </div>
+                            </div>
+                            <span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                        </div>
+
+                        <div onclick="switchTab('ventas')" class="rounded-2xl border border-border bg-card p-5 flex items-center justify-between hover:border-primary/40 transition-all cursor-pointer group">
+                            <div class="flex items-center gap-3.5">
+                                <div class="w-10 h-10 rounded-xl border border-border bg-surface flex items-center justify-center text-text-muted group-hover:text-primary transition-colors font-display font-bold">03</div>
+                                <div>
+                                    <h3 class="text-sm font-display font-bold text-text-main group-hover:text-primary transition-colors">Ventas y Facturación</h3>
+                                    <p class="text-xs text-text-muted">Cobro en mostrador y medios de pago.</p>
+                                </div>
+                            </div>
+                            <span class="material-symbols-outlined text-primary group-hover:translate-x-1 transition-transform">arrow_forward</span>
+                        </div>
+                    </div>
+                </div>
+
+                <?php // ==================== PESTAÑA 2: TALLER ==================== ?>
+                <div id="tab-pane-taller" class="help-pane space-y-6 hidden">
+                    <article class="rounded-3xl border border-border bg-card overflow-hidden shadow-lg transition-all">
+                        <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl shadow-[0_0_16px_rgba(14,165,160,0.15)]">
+                                    02
+                                </div>
+                                <div>
+                                    <h2 class="text-xl md:text-2xl font-display font-bold text-text-main tracking-tight">
+                                        Taller y Reparaciones
+                                    </h2>
+                                    <p class="text-xs md:text-sm text-text-muted">
+                                        Ciclo completo de servicio técnico: ingreso, diagnóstico, repuestos y entrega.
+                                    </p>
+                                </div>
+                            </div>
+                            <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold">
+                                <span class="material-symbols-outlined text-[16px]">build</span>
+                                Servicio Técnico
+                            </span>
+                        </div>
+
+                        <div class="p-6 md:p-8 space-y-6">
+                            <p class="text-sm md:text-base text-text-muted leading-relaxed">
+                                Controla cada orden con código único de seguimiento, asociando el cliente, modelo del teléfono, repuestos necesarios y presupuesto acordado.
+                            </p>
+
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="bg-surface border border-border/50 rounded-xl p-4">
-                                    <div class="flex items-center gap-2 mb-2">
-                                        <span class="material-symbols-outlined text-blue-400 text-[18px]">smartphone</span>
-                                        <span class="font-semibold text-xs text-text-main uppercase tracking-wider">Funda con diseño</span>
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">assignment_turned_in</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Boleta y Estados</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                Emite el comprobante para el cliente y avanza el estado: <strong class="text-text-main">Recibido</strong>, <strong class="text-text-main">En reparación</strong> y <strong class="text-text-main">Listo</strong>.
+                                            </p>
+                                        </div>
                                     </div>
-                                    <p class="text-xs text-text-muted">Escribe "Funda de Silicona Spider-Man", Marca "Motorola", Modelo "Moto G20". Usa la descripción para el color.</p>
                                 </div>
-                                <div class="bg-surface border border-border/50 rounded-xl p-4">
-                                    <div class="flex items-center gap-2 mb-2">
-                                        <span class="material-symbols-outlined text-blue-400 text-[18px]">mouse</span>
-                                        <span class="font-semibold text-xs text-text-main uppercase tracking-wider">Accesorios sueltos</span>
+
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-secondary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">extension</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Asignación de Repuestos</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                Descuenta del inventario los componentes utilizados (módulos, pines, baterías) sumándolos al costo del trabajo.
+                                            </p>
+                                        </div>
                                     </div>
-                                    <p class="text-xs text-text-muted">Si cargas un mouse, borra "Periférico" y escribe "Mouse Inalámbrico Logitech M185".</p>
+                                </div>
+                            </div>
+
+                            <?php // MOCKUP PREVIEW TALLER ?>
+                            <div class="rounded-2xl border border-border bg-[#0f141c] overflow-hidden shadow-inner">
+                                <div class="px-4 py-3 bg-[#151b24] border-b border-border flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-error"></span>
+                                        <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
+                                        <span class="w-2.5 h-2.5 rounded-full bg-success"></span>
+                                    </div>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-primary/10 text-primary border border-primary/20">ÓRDENES RECIENTES</span>
+                                </div>
+
+                                <div class="p-4 space-y-3">
+                                    <?php foreach ($realRepairs as $r): 
+                                        $st = $r['estado'];
+                                        $color = match($st) {
+                                            'Listo' => 'text-success bg-success/10 border-success/30',
+                                            'Entregado' => 'text-primary bg-primary/10 border-primary/30',
+                                            'En reparación' => 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
+                                            default => 'text-secondary bg-secondary/10 border-secondary/30'
+                                        };
+                                    ?>
+                                    <div class="flex items-center justify-between p-3 rounded-xl bg-surface/60 border border-border/70 hover:border-primary/40 transition-colors">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-lg bg-card flex items-center justify-center text-primary text-xs font-mono font-bold">
+                                                #<?php echo htmlspecialchars(substr($r['codigo_orden'], -4)); ?>
+                                            </div>
+                                            <div>
+                                                <p class="text-xs md:text-sm font-medium text-text-main"><?php echo htmlspecialchars($r['equipo_marca'] . ' ' . $r['equipo_modelo']); ?> <span class="text-[11px] text-text-muted">• <?php echo htmlspecialchars($r['cliente']); ?></span></p>
+                                                <p class="text-[11px] text-text-muted">Falla: <?php echo htmlspecialchars($r['falla_declarada'] ?: 'Revisión técnica'); ?></p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-3">
+                                            <span class="px-2.5 py-1 rounded-lg text-xs font-bold border <?php echo $color; ?>">
+                                                <?php echo htmlspecialchars($st); ?>
+                                            </span>
+                                            <span class="text-xs md:text-sm font-mono font-semibold text-text-main">
+                                                <?php echo $r['presupuesto'] ? '$' . number_format((float)$r['presupuesto'], 2, ',', '.') : 'S/P'; ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <?php endforeach; ?>
                                 </div>
                             </div>
                         </div>
+
+                        <div class="px-6 md:px-8 py-4 bg-surface/50 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <div class="flex items-center gap-2 text-xs text-text-muted">
+                                <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
+                                <span>Tip: Presiona <kbd class="px-1.5 py-0.5 rounded bg-card border border-border text-[11px] font-mono text-text-main">F4</kbd> en cualquier pantalla para saltar a Taller.</span>
+                            </div>
+                            <a href="<?php echo BASE_URL; ?>/modules/workshop/index.php" class="px-4 py-2 rounded-xl bg-primary text-[#0c141b] font-bold text-xs hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                                <span>Ir a Taller</span>
+                                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                            </a>
+                        </div>
+                    </article>
+                </div>
+
+                <?php // ==================== PESTAÑA 3: VENTAS ==================== ?>
+                <div id="tab-pane-ventas" class="help-pane space-y-6 hidden">
+                    <article class="rounded-3xl border border-border bg-card overflow-hidden shadow-lg transition-all">
+                        <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl shadow-[0_0_16px_rgba(14,165,160,0.15)]">
+                                    03
+                                </div>
+                                <div>
+                                    <h2 class="text-xl md:text-2xl font-display font-bold text-text-main tracking-tight">
+                                        Ventas y Facturación de Mostrador
+                                    </h2>
+                                    <p class="text-xs md:text-sm text-text-muted">
+                                        Punto de venta (POS) ágil, múltiples medios de pago y cobro de reparaciones de taller.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-6 md:p-8 space-y-6">
+                            <p class="text-sm md:text-base text-text-muted leading-relaxed">
+                                Gestiona las operaciones de mostrador en tiempo récord. El módulo permite cobrar productos directos del inventario y también liquidar y entregar las órdenes finalizadas del taller de reparaciones.
+                            </p>
+
+                            <?php // Feature Points ?>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">add_shopping_cart</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Venta de Mostrador</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                Cobro directo de accesorios y productos del inventario con cálculo automático de totales.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-blue-500/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">build</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">¿Dónde está el cobro de Taller?</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                En <strong class="text-text-main">Ventas</strong>, botón azul superior <strong class="text-blue-400 font-semibold">"Cobrar Reparaciones"</strong> junto a "+ Nueva Venta".
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-secondary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">payments</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Medios de Pago</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                Acepta <strong class="text-text-main">Efectivo</strong>, <strong class="text-text-main">Transferencia</strong> y <strong class="text-text-main">Tarjeta</strong> con balance en el arqueo diario.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <?php // ACCORDION: Cobro de Reparaciones Paso a Paso ?>
+                            <div class="rounded-2xl border border-blue-500/30 bg-surface/80 overflow-hidden shadow-sm">
+                                <button onclick="toggleAccordion('acc-step-ventas-reparacion')" class="w-full p-4 md:p-5 flex items-center justify-between text-left hover:bg-card/50 transition-colors" type="button">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                                            <span class="material-symbols-outlined text-[20px]">handyman</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-sm md:text-base font-display font-bold text-text-main">¿Dónde está y cómo cobrar una reparación de taller paso a paso?</span>
+                                            <span class="block text-xs text-text-muted">Guía completa de entrega y cobro de equipos terminados</span>
+                                        </div>
+                                    </div>
+                                    <span id="acc-icon-acc-step-ventas-reparacion" class="material-symbols-outlined text-text-muted text-[22px] transition-transform duration-200" style="transform: rotate(180deg);">expand_more</span>
+                                </button>
+                                
+                                <div id="acc-step-ventas-reparacion" class="p-5 pt-3 border-t border-border space-y-4">
+                                    <?php // Paso 1 ?>
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-primary text-primary flex items-center justify-center text-xs font-bold shrink-0 z-10">1</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">La orden debe estar en estado "Listo" en Taller</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                En el módulo <strong class="text-text-main">Taller</strong>, el técnico debe marcar la orden como <span class="px-2 py-0.5 rounded text-[11px] font-bold border border-success/30 bg-success/10 text-success">Listo</span>. Mientras la orden esté en <em>Recibido</em>, <em>En diagnóstico</em> o <em>En reparación</em> no figurará en la bandeja de cobro.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <?php // Paso 2 ?>
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-blue-400 text-blue-400 flex items-center justify-center text-xs font-bold shrink-0 z-10">2</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Abrir "Cobrar Reparaciones" desde el módulo Ventas</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                Ve al menú lateral y haz clic en <strong class="text-text-main">Ventas</strong>. En la esquina superior derecha, junto al botón verde "+ Nueva Venta", pulsa en el botón azul <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border border-blue-500/30 bg-blue-500/10 text-blue-400"><span class="material-symbols-outlined text-[13px]">build</span> Cobrar Reparaciones</span>.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <?php // Paso 3 ?>
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-border text-text-muted flex items-center justify-center text-xs font-bold shrink-0 z-10">3</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Verificar el Total a Cobrar (Mano de obra + Repuestos)</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                En la bandeja de equipos listos, localiza la tarjeta de la orden por su número (#ID) o nombre del cliente. El sistema suma automáticamente:
+                                                <code class="px-2 py-0.5 rounded bg-background text-[11px] font-mono text-primary border border-border block mt-1.5 w-fit">Total a Cobrar = Presupuesto Base + Costo de Repuestos asignados</code>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <?php // Paso 4 ?>
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-border text-text-muted flex items-center justify-center text-xs font-bold shrink-0 z-10">4</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Seleccionar Método de Pago y confirmar</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                Elige el medio de pago acordado (<strong class="text-text-main">Efectivo</strong>, <strong class="text-text-main">Transferencia</strong> o <strong class="text-text-main">Tarjeta</strong>) y haz clic en el botón verde <span class="px-2.5 py-0.5 rounded text-[11px] font-bold bg-primary text-[#0c141b]">Cobrar y Entregar</span>.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <?php // Paso 5 ?>
+                                    <div class="flex items-start gap-3.5">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-success text-success flex items-center justify-center text-xs font-bold shrink-0">5</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Entrega y Cierre Contable Automático</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                Al confirmar, el sistema asienta el ingreso en el historial de ventas bajo el concepto de <em>Servicio Técnico Taller</em> y cambia automáticamente la orden a <span class="px-2 py-0.5 rounded text-[11px] font-bold border border-primary/30 bg-primary/10 text-primary">Entregado</span> con la fecha y hora exacta del retiro.
+                                            </p>
+                                            <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=repairs_to_charge" class="inline-flex items-center gap-1.5 mt-3 px-3.5 py-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-xs font-bold transition-colors">
+                                                <span class="material-symbols-outlined text-[16px]">build</span>
+                                                <span>Ir directo a la Bandeja de Cobrar Reparaciones</span>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <?php // MOCKUP LISTADO DE VENTAS ?>
+                            <div class="rounded-2xl border border-border bg-[#0f141c] overflow-hidden p-4 space-y-3">
+                                <div class="flex items-center justify-between pb-2 border-b border-border/50">
+                                    <span class="text-xs font-semibold text-text-main flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-primary text-[18px]">receipt</span>
+                                        Últimas Operaciones Asentadas
+                                    </span>
+                                </div>
+                                <div class="space-y-2">
+                                    <?php foreach ($realSales as $s): ?>
+                                    <div class="flex items-center justify-between p-3 rounded-xl bg-surface/60 border border-border/70">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-lg bg-card flex items-center justify-center text-primary text-xs font-mono font-bold">
+                                                #<?php echo $s['id_venta']; ?>
+                                            </div>
+                                            <div>
+                                                <p class="text-xs font-medium text-text-main">Venta Registrada • <?php echo htmlspecialchars($s['metodo_de_pago']); ?></p>
+                                                <p class="text-[11px] text-text-muted"><?php echo htmlspecialchars($s['fecha']); ?></p>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs md:text-sm font-mono font-bold text-primary">$<?php echo number_format((float)$s['total'], 2, ',', '.'); ?></span>
+                                    </div>
+                                    <?php endforeach; ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="px-6 md:px-8 py-4 bg-surface/50 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <div class="flex items-center gap-2 text-xs text-text-muted">
+                                <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
+                                <span>Tip: Presiona <kbd class="px-1.5 py-0.5 rounded bg-card border border-border text-[11px] font-mono text-text-main">F2</kbd> en cualquier pantalla para abrir Nueva Venta.</span>
+                            </div>
+                            <div class="flex items-center gap-2.5">
+                                <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=repairs_to_charge" class="px-3.5 py-2 rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-xs font-bold transition-colors flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-[16px]">build</span>
+                                    <span>Cobrar Reparaciones</span>
+                                </a>
+                                <a href="<?php echo BASE_URL; ?>/modules/sales/index.php" class="px-4 py-2 rounded-xl bg-primary text-[#0c141b] font-bold text-xs hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                                    <span>Ir a Ventas</span>
+                                    <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                                </a>
+                            </div>
+                        </div>
+                    </article>
+                </div>
+
+                <?php // ==================== PESTAÑA 4: CLIENTES ==================== ?>
+                <div id="tab-pane-clientes" class="help-pane space-y-6 hidden">
+                    <article class="rounded-3xl border border-border bg-card overflow-hidden shadow-lg transition-all">
+                        <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl shadow-[0_0_16px_rgba(14,165,160,0.15)]">
+                                    04
+                                </div>
+                                <div>
+                                    <h2 class="text-xl md:text-2xl font-display font-bold text-text-main tracking-tight">
+                                        Clientes y Cuentas
+                                    </h2>
+                                    <p class="text-xs md:text-sm text-text-muted">
+                                        Padrón centralizado de contactos, vinculación con órdenes y compras.
+                                    </p>
+                                </div>
+                            </div>
+                            <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold">
+                                <span class="material-symbols-outlined text-[16px]">person</span>
+                                Directorio
+                            </span>
+                        </div>
+
+                        <div class="p-6 md:p-8 space-y-6">
+                            <p class="text-sm md:text-base text-text-muted leading-relaxed">
+                                Mantén un registro ordenado de todos los clientes. Al ingresar un equipo a reparación o realizar una venta, los datos quedan automáticamente vinculados a su historial.
+                            </p>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">badge</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Identificación por DNI</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                Evita duplicados registrando DNI, teléfono y correo para enviar comprobantes y avisos de entrega.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-secondary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">history</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Historial de Dispositivos</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                Revisa al instante las reparaciones anteriores y garantías activas de cada cliente.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="px-6 md:px-8 py-4 bg-surface/50 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <div class="flex items-center gap-2 text-xs text-text-muted">
+                                <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
+                                <span>Tip: Presiona <kbd class="px-1.5 py-0.5 rounded bg-card border border-border text-[11px] font-mono text-text-main">Ctrl + B</kbd> para abrir el módulo Clientes.</span>
+                            </div>
+                            <a href="<?php echo BASE_URL; ?>/modules/clients/index.php" class="px-4 py-2 rounded-xl bg-primary text-[#0c141b] font-bold text-xs hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                                <span>Ir a Clientes</span>
+                                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                            </a>
+                        </div>
+                    </article>
+                </div>
+
+                <?php // ==================== PESTAÑA 5: PROVEEDORES ==================== ?>
+                <div id="tab-pane-proveedores" class="help-pane space-y-6 hidden">
+                    <article class="rounded-3xl border border-border bg-card overflow-hidden shadow-lg transition-all">
+                        <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl shadow-[0_0_16px_rgba(14,165,160,0.15)]">
+                                    05
+                                </div>
+                                <div>
+                                    <h2 class="text-xl md:text-2xl font-display font-bold text-text-main tracking-tight">
+                                        Proveedores y Reportes Financieros
+                                    </h2>
+                                    <p class="text-xs md:text-sm text-text-muted">
+                                        Compras de insumos, auditoría de operaciones y gráficos de ingresos vs egresos.
+                                    </p>
+                                </div>
+                            </div>
+                            <span class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-semibold">
+                                <span class="material-symbols-outlined text-[16px]">analytics</span>
+                                Administración
+                            </span>
+                        </div>
+
+                        <div class="p-6 md:p-8 space-y-6">
+                            <p class="text-sm md:text-base text-text-muted leading-relaxed">
+                                Administra las relaciones comerciales con importadores y distribuidores de repuestos. Las compras registradas se reflejan automáticamente como gasto en los balances mensuales del Dashboard.
+                            </p>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">add_shopping_cart</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Nueva Compra de Repuestos</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                Carga facturas de compra para incrementar el stock de los productos y registrar el costo exacto de adquisición.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-secondary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">query_stats</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Auditoría y Reportes</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                El sistema registra cada acción de usuarios en el historial de actividades y permite exportar balances a Excel y PDF con un clic.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="px-6 md:px-8 py-4 bg-surface/50 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <div class="flex items-center gap-2 text-xs text-text-muted">
+                                <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
+                                <span>Tip: Los administradores pueden consultar el historial de actividades desde el Dashboard de administración.</span>
+                            </div>
+                            <a href="<?php echo BASE_URL; ?>/modules/suppliers/index.php" class="px-4 py-2 rounded-xl bg-primary text-[#0c141b] font-bold text-xs hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                                <span>Ir a Proveedores</span>
+                                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                            </a>
+                        </div>
+                    </article>
+                </div>
+
+            </section>
+
+            <?php // RIGHT COMPANION RAIL (4 Cols) ?>
+            <aside class="lg:col-span-4 space-y-6">
+
+                <?php // CARD: ATAJOS DE TECLADO ?>
+                <div class="rounded-3xl border border-border bg-card p-6 space-y-4 shadow-lg">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                            <span class="material-symbols-outlined text-[18px]">bolt</span>
+                        </div>
+                        <h3 class="text-base font-display font-bold text-text-main">Atajos de Teclado</h3>
+                    </div>
+
+                    <p class="text-xs text-text-muted leading-relaxed">
+                        Agiliza la atención en mostrador sin usar el mouse. Haz clic en cualquiera o presiona la tecla directamente:
+                    </p>
+
+                    <div class="space-y-2">
+                        <?php // F2: Venta ?>
+                        <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=new_sale" class="flex items-center justify-between p-3 rounded-2xl bg-surface border border-border hover:border-primary/50 transition-all group">
+                            <div class="flex items-center gap-2.5">
+                                <span class="material-symbols-outlined text-text-muted group-hover:text-primary transition-colors text-[18px]">add_shopping_cart</span>
+                                <span class="text-xs font-medium text-text-main group-hover:text-primary transition-colors">Nueva Venta Mostrador</span>
+                            </div>
+                            <kbd class="px-2 py-1 rounded-lg bg-card border border-border font-mono text-xs text-primary font-bold shadow-sm">F2</kbd>
+                        </a>
+
+                        <?php // F3: Inventario ?>
+                        <a href="<?php echo BASE_URL; ?>/modules/inventory/index.php" class="flex items-center justify-between p-3 rounded-2xl bg-surface border border-border hover:border-secondary/50 transition-all group">
+                            <div class="flex items-center gap-2.5">
+                                <span class="material-symbols-outlined text-text-muted group-hover:text-secondary transition-colors text-[18px]">search</span>
+                                <span class="text-xs font-medium text-text-main group-hover:text-secondary transition-colors">Buscar Repuesto / Stock</span>
+                            </div>
+                            <kbd class="px-2 py-1 rounded-lg bg-card border border-border font-mono text-xs text-secondary font-bold shadow-sm">F3</kbd>
+                        </a>
+
+                        <?php // F4: Taller ?>
+                        <a href="<?php echo BASE_URL; ?>/modules/workshop/index.php" class="flex items-center justify-between p-3 rounded-2xl bg-surface border border-border hover:border-primary/50 transition-all group">
+                            <div class="flex items-center gap-2.5">
+                                <span class="material-symbols-outlined text-text-muted group-hover:text-primary transition-colors text-[18px]">build</span>
+                                <span class="text-xs font-medium text-text-main group-hover:text-primary transition-colors">Nueva Orden de Taller</span>
+                            </div>
+                            <kbd class="px-2 py-1 rounded-lg bg-card border border-border font-mono text-xs text-primary font-bold shadow-sm">F4</kbd>
+                        </a>
+
+                        <?php // Ctrl + B: Clientes ?>
+                        <a href="<?php echo BASE_URL; ?>/modules/clients/index.php" class="flex items-center justify-between p-3 rounded-2xl bg-surface border border-border hover:border-border/80 transition-all group">
+                            <div class="flex items-center gap-2.5">
+                                <span class="material-symbols-outlined text-text-muted group-hover:text-text-main transition-colors text-[18px]">group</span>
+                                <span class="text-xs font-medium text-text-main">Filtro Rápido de Clientes</span>
+                            </div>
+                            <kbd class="px-2 py-1 rounded-lg bg-card border border-border font-mono text-xs text-text-muted font-bold shadow-sm">Ctrl + B</kbd>
+                        </a>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Callout Importante -->
-                    <div class="relative overflow-hidden bg-background border border-border/80 rounded-2xl p-6 group transition-colors hover:border-red-500/30">
-                        <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-red-500"></div>
-                        <div class="flex flex-col sm:flex-row items-start gap-4 relative z-10">
-                            <div class="w-10 h-10 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shrink-0 shadow-inner">
-                                <span class="material-symbols-outlined text-[20px]">inventory_2</span>
-                            </div>
-                            <div>
-                                <h5 class="text-text-main font-bold text-sm mb-1 flex flex-wrap items-center gap-2">
-                                    Atención con el Stock
-                                    <span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-red-500/10 text-red-400 border border-red-500/20">Crítico</span>
-                                </h5>
-                                <p class="text-sm text-text-muted leading-relaxed">
-                                    Mantén el inventario actualizado. El sistema descontará stock automáticamente al cobrar reparaciones. Un stock desactualizado generará errores en caja.
-                                </p>
-                            </div>
+                <?php // CARD: PREGUNTAS FRECUENTES (FAQ) ?>
+                <div class="rounded-3xl border border-border bg-card p-6 space-y-4 shadow-lg">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-lg bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary">
+                            <span class="material-symbols-outlined text-[18px]">quiz</span>
                         </div>
+                        <h3 class="text-base font-display font-bold text-text-main">Preguntas Frecuentes</h3>
                     </div>
 
-                    <!-- Callout Warning -->
-                    <div class="relative overflow-hidden bg-background border border-border/80 rounded-2xl p-6 group transition-colors hover:border-orange-500/30">
-                        <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-orange-500"></div>
-                        <div class="flex flex-col sm:flex-row items-start gap-4 relative z-10">
-                            <div class="w-10 h-10 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center text-orange-400 shrink-0 shadow-inner">
-                                <span class="material-symbols-outlined text-[20px]">build</span>
+                    <div class="space-y-2.5 text-xs">
+                        <?php // FAQ 1 ?>
+                        <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
+                            <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
+                                <span>¿Cómo reimprimir una orden de taller?</span>
+                                <span class="material-symbols-outlined text-text-muted text-[18px] group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <div class="p-3.5 pt-0 text-text-muted border-t border-border/40 mt-1 leading-relaxed">
+                                Ingresa al módulo <strong class="text-text-main">Taller</strong>, localiza el número de ticket o equipo del cliente y presiona el botón <span class="text-primary font-semibold">Imprimir Comprobante</span> para generar la orden en formato térmico o PDF.
                             </div>
-                            <div>
-                                <h5 class="text-text-main font-bold text-sm mb-1 flex flex-wrap items-center gap-2">
-                                    Cierre de Reparaciones
-                                    <span class="px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider bg-orange-500/10 text-orange-400 border border-orange-500/20">Atención</span>
-                                </h5>
-                                <p class="text-sm text-text-muted leading-relaxed">
-                                    Cuando la reparación pase a estado "Listo", asentar qué repuestos se usaron es <strong class="text-orange-400 font-medium">esencial</strong> para descontar correctamente al cobrar.
-                                </p>
+                        </details>
+
+                        <?php // FAQ 2 ?>
+                        <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
+                            <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
+                                <span>¿Dónde se cobra una reparación finalizada?</span>
+                                <span class="material-symbols-outlined text-text-muted text-[18px] group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <div class="p-3.5 pt-0 text-text-muted border-t border-border/40 mt-1 leading-relaxed">
+                                Cuando una orden pasa a estado <strong class="text-text-main">"Listo"</strong>, se cobra desde <strong class="text-text-main">Ventas > Reparaciones a Cobrar</strong>. Al ingresar el pago, el equipo cambia automáticamente a <strong class="text-text-main">"Entregado"</strong> y se asienta el ingreso.
                             </div>
-                        </div>
+                        </details>
+
+                        <?php // FAQ 3 ?>
+                        <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
+                            <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
+                                <span>¿Qué hacer si un stock queda en nivel crítico?</span>
+                                <span class="material-symbols-outlined text-text-muted text-[18px] group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <div class="p-3.5 pt-0 text-text-muted border-t border-border/40 mt-1 leading-relaxed">
+                                Cuando las existencias son iguales o menores a 5 unidades, el sistema activa una alerta visual roja. Puedes registrar una nueva compra desde <strong class="text-text-main">Proveedores</strong> o editar la cantidad directamente en <strong class="text-text-main">Inventario</strong>.
+                            </div>
+                        </details>
+
+                        <?php // FAQ 4 ?>
+                        <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
+                            <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
+                                <span>¿Cómo anular una venta y emitir nota de crédito?</span>
+                                <span class="material-symbols-outlined text-text-muted text-[18px] group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <div class="p-3.5 pt-0 text-text-muted border-t border-border/40 mt-1 leading-relaxed">
+                                Desde el listado de <strong class="text-text-main">Ventas</strong>, busca la transacción y pulsa el botón de anulación (requiere confirmación). Los artículos volverán al stock automáticamente y podrás descargar la <strong class="text-text-main">Nota de Crédito</strong> asociada.
+                            </div>
+                        </details>
                     </div>
                 </div>
-            </div>
+
+
+            </aside>
         </div>
 
-        <div class="mt-12 bg-surface border border-border rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-3">
-            <div class="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                <span class="material-symbols-outlined">support_agent</span>
-            </div>
-            <h3 class="text-text-main font-bold font-display text-lg">¿Necesitas más ayuda?</h3>
-            <p class="text-sm text-text-muted max-w-md">Si tienes dudas técnicas sobre el sistema o encuentras algún inconveniente, por favor contacta con el equipo de administración de Nokia1100.</p>
-        </div>
     </div>
 </main>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // --- Carousel 1 (Inventario) ---
-        let currentSlide1 = 0;
-        const track1 = document.getElementById('carousel-track');
-        const prevBtn1 = document.getElementById('btn-prev');
-        const nextBtn1 = document.getElementById('btn-next');
-        const indicators1 = document.querySelectorAll('.indicator');
+// Manejador interactivo de cambio de pestañas de ayuda
+function switchTab(tabId) {
+    // 1. Actualizar estilos de los botones de pestañas
+    const tabs = ['inventario', 'taller', 'ventas', 'clientes', 'proveedores'];
+    tabs.forEach(t => {
+        const btn = document.getElementById('tab-btn-' + t);
+        const pane = document.getElementById('tab-pane-' + t);
         
-        function updateCarousel1() {
-            if(!track1) return;
-            track1.style.transform = `translateX(-${currentSlide1 * 100}%)`;
-            
-            if(prevBtn1) prevBtn1.disabled = currentSlide1 === 0;
-            if(nextBtn1) nextBtn1.disabled = currentSlide1 === 2;
-            
-            indicators1.forEach((ind, i) => {
-                ind.classList.toggle('bg-primary', i === currentSlide1);
-                ind.classList.toggle('w-4', i === currentSlide1);
-                ind.classList.toggle('bg-border', i !== currentSlide1);
-                ind.classList.toggle('w-2', i !== currentSlide1);
-            });
-        }
-        
-        window.nextSlide = function() {
-            if(currentSlide1 < 2) { currentSlide1++; updateCarousel1(); }
-        }
-        window.prevSlide = function() {
-            if(currentSlide1 > 0) { currentSlide1--; updateCarousel1(); }
-        }
-        updateCarousel1();
-
-        // --- Carousel 2 (Clientes) ---
-        let currentSlide2 = 0;
-        const track2 = document.getElementById('carousel-track-2');
-        const prevBtn2 = document.getElementById('btn-prev-2');
-        const nextBtn2 = document.getElementById('btn-next-2');
-        const indicators2 = document.querySelectorAll('.indicator-2');
-        
-        function updateCarousel2() {
-            if(!track2) return;
-            track2.style.transform = `translateX(-${currentSlide2 * 100}%)`;
-            
-            if(prevBtn2) prevBtn2.disabled = currentSlide2 === 0;
-            if(nextBtn2) nextBtn2.disabled = currentSlide2 === 1; // Only 2 slides
-            
-            indicators2.forEach((ind, i) => {
-                ind.classList.toggle('bg-secondary', i === currentSlide2);
-                ind.classList.toggle('w-4', i === currentSlide2);
-                ind.classList.toggle('bg-border', i !== currentSlide2);
-                ind.classList.toggle('w-2', i !== currentSlide2);
-            });
-        }
-        
-        window.nextSlide2 = function() {
-            if(currentSlide2 < 1) { currentSlide2++; updateCarousel2(); }
-        }
-        window.prevSlide2 = function() {
-            if(currentSlide2 > 0) { currentSlide2--; updateCarousel2(); }
-        }
-        updateCarousel2();
-
-            // --- Carousel 4: Ventas y Cobros ---
-    const track4 = document.getElementById('carousel-track-4');
-    const prevBtn4 = document.getElementById('btn-prev-4');
-    const nextBtn4 = document.getElementById('btn-next-4');
-    const indicators4 = document.querySelectorAll('.indicator-4');
-    
-    let currentIndex4 = 0;
-    const maxIndex4 = 5; // 4 slides (0, 1, 2, 3)
-
-    function updateCarousel4() {
-        if (!track4) return;
-        track4.style.transform = `translateX(-${currentIndex4 * 100}%)`;
-        
-        // Update buttons
-        if(prevBtn4) prevBtn4.disabled = currentIndex4 === 0;
-        if(nextBtn4) nextBtn4.disabled = currentIndex4 === maxIndex4;
-        
-        // Update indicators
-        indicators4.forEach((ind, i) => {
-            if (i === currentIndex4) {
-                ind.classList.remove('w-2', 'bg-border');
-                ind.classList.add('w-4', 'bg-primary');
-            } else {
-                ind.classList.remove('w-4', 'bg-primary');
-                ind.classList.add('w-2', 'bg-border');
+        if (t === tabId) {
+            if (btn) {
+                btn.className = 'help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-primary/10 border border-primary/40 text-primary shadow-[0_0_12px_rgba(14,165,160,0.15)] font-display';
             }
-        });
-    }
-
-    window.nextSlide4 = function() {
-        if (currentIndex4 < maxIndex4) {
-            currentIndex4++;
-            updateCarousel4();
+            if (pane) {
+                pane.classList.remove('hidden');
+                pane.classList.add('block');
+            }
+        } else {
+            if (btn) {
+                btn.className = 'help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-border/80 font-display';
+            }
+            if (pane) {
+                pane.classList.remove('block');
+                pane.classList.add('hidden');
+            }
         }
-    }
-
-    window.prevSlide4 = function() {
-        if (currentIndex4 > 0) {
-            currentIndex4--;
-            updateCarousel4();
-        }
-    }
-    
-    // Initialize
-    updateCarousel4();
-
-    // --- Carousel 3 (Taller de Reparaciones) ---
-        let currentSlide3 = 0;
-        const track3 = document.getElementById('carousel-track-3');
-        const prevBtn3 = document.getElementById('btn-prev-3');
-        const nextBtn3 = document.getElementById('btn-next-3');
-        const indicators3 = document.querySelectorAll('.indicator-3');
-        
-        function updateCarousel3() {
-            if(!track3) return;
-            track3.style.transform = `translateX(-${currentSlide3 * 100}%)`;
-            
-            if(prevBtn3) prevBtn3.disabled = currentSlide3 === 0;
-            if(nextBtn3) nextBtn3.disabled = currentSlide3 === 3; // 4 slides
-            
-            indicators3.forEach((ind, i) => {
-                ind.classList.toggle('bg-[#0EA5A0]', i === currentSlide3);
-                ind.classList.toggle('w-4', i === currentSlide3);
-                ind.classList.toggle('bg-border', i !== currentSlide3);
-                ind.classList.toggle('w-2', i !== currentSlide3);
-            });
-        }
-        
-        window.nextSlide3 = function() {
-            if(currentSlide3 < 3) { currentSlide3++; updateCarousel3(); }
-        }
-        window.prevSlide3 = function() {
-            if(currentSlide3 > 0) { currentSlide3--; updateCarousel3(); }
-        }
-        updateCarousel3();
     });
+
+    // Guardar preferencia en sesión local
+    try {
+        sessionStorage.setItem('help_active_tab', tabId);
+    } catch(e) {}
+}
+
+// Alternar acordeón paso a paso
+function toggleAccordion(id) {
+    const el = document.getElementById(id);
+    const icon = document.getElementById('acc-icon-' + id);
+    if (!el) return;
+
+    if (el.classList.contains('hidden')) {
+        el.classList.remove('hidden');
+        if (icon) icon.style.transform = 'rotate(180deg)';
+    } else {
+        el.classList.add('hidden');
+        if (icon) icon.style.transform = 'rotate(0deg)';
+    }
+}
+
+// Restaurar pestaña activa al recargar
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const saved = sessionStorage.getItem('help_active_tab');
+        if (saved && ['inventario', 'taller', 'ventas', 'clientes', 'proveedores'].includes(saved)) {
+            switchTab(saved);
+        }
+    } catch(e) {}
+});
 </script>
 
-<?php Layout::renderFooter(); ?>
+<?php
+Layout::renderFooter();
+?>

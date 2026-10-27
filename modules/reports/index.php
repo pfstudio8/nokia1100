@@ -3,12 +3,13 @@
 require_once __DIR__ . '/Controllers/ReportsController.php';
 $controller = new ReportsController();
 
-$action = $_GET['action'] ?? 'dashboard';
+$action = $_POST['action'] ?? ($_GET['action'] ?? 'dashboard');
 
 switch ($action) {
     case 'dashboard':
-    default:
         $controller->dashboard();
         break;
+    default:
+        http_response_code(404);
+        exit('Acción no encontrada');
 }
-?>

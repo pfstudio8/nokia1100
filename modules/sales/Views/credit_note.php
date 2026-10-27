@@ -6,7 +6,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Nota de Crédito #NC-<?php echo $venta['id_venta']; ?> - NOKIA 1100</title>
-    <!-- Incluir iconos Material Symbols -->
+    <?php // Incluir iconos Material Symbols ?>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/modules/sales/sales_invoice.css?v=<?php echo time(); ?>">
     <style>

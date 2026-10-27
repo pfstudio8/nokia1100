@@ -29,67 +29,148 @@ let activeToasts = [];
 window.showToast = function(message, type = 'success') {
     const toast = document.createElement('div');
     
-    // Configuración visual según el tipo de notificación
-    let bgColor, borderColor, textColor, icon;
-    switch(type) {
-        case 'error':
-            bgColor = 'rgba(248, 113, 113, 0.1)';
-            borderColor = 'rgba(248, 113, 113, 0.3)';
-            textColor = '#F87171'; // Alerta
-            icon = 'error';
+    // Mapeo de códigos comunes a textos legibles
+    const friendlyMessages = {
+        'deleted': 'Registro eliminado correctamente',
+        'saved': 'Cambios guardados exitosamente',
+        'created': 'Nuevo registro creado con éxito',
+        'has_sales': 'No se puede borrar porque posee ventas asociadas',
+        'has_orders': 'No se puede borrar porque posee órdenes asociadas',
+        'has_purchases': 'No se puede borrar porque posee compras asociadas',
+        'in_use': 'Elemento en uso, imposible modificar',
+        'updated': 'Datos actualizados correctamente'
+    };
+    const finalMessage = friendlyMessages[message] || String(message);
+
+    // Normalizar para detección semántica (sin tildes)
+    const rawType = String(type || '').toLowerCase().trim();
+    const normalizedText = finalMessage.toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    // Categorización semántica: 'baja' (rojo), 'modificacion' (amarillo), 'info' (cyan), 'alta' (verde)
+    let category = 'alta';
+
+    if (['baja', 'delete', 'deleted', 'cancel', 'cancelado', 'error', 'danger', 'rojo', 'red'].includes(rawType)) {
+        category = 'baja';
+    } else if (['warning', 'modificacion', 'cambio', 'proceso', 'yellow', 'amarillo', 'orange'].includes(rawType)) {
+        category = 'modificacion';
+    } else if (['info', 'azul', 'cyan'].includes(rawType)) {
+        category = 'info';
+    } else if (['alta', 'success', 'verde', 'green', 'create', 'created'].includes(rawType)) {
+        category = 'alta';
+    } else {
+        const bajaKeywords = [
+            'cancelad', 'eliminad', 'borrad', 'anulad', 'desactivad', 'baja',
+            'error', 'fallo', 'fallida', 'imposible', 'no se puede', 'rechazad', 'insuficiente'
+        ];
+        const modKeywords = [
+            'modificad', 'actualizad', 'editad', 'guardad', 'procesando', 'cambio',
+            'iniciando', 'generando', 'cargando', 'atencion', 'cuidado'
+        ];
+        const infoKeywords = ['abriendo', 'saltando', 'reporte', 'informe', 'consulta'];
+
+        if (bajaKeywords.some(kw => normalizedText.includes(kw))) {
+            category = 'baja';
+        } else if (modKeywords.some(kw => normalizedText.includes(kw))) {
+            category = 'modificacion';
+        } else if (infoKeywords.some(kw => normalizedText.includes(kw))) {
+            category = 'info';
+        } else {
+            category = 'alta';
+        }
+    }
+
+    // Configuración visual: Colores 100% sólidos, vivos y limpios (sin efecto neón, sin tonos apagados/oscuros)
+    let solidBg, borderColor, icon;
+
+    switch (category) {
+        case 'baja':
+            // ROJO SÓLIDO VIVO (Baja / Error / Cancelado)
+            solidBg = '#b91c1c';
+            borderColor = '#ef4444';
+            if (normalizedText.includes('cancelad')) {
+                icon = 'cancel';
+            } else if (normalizedText.includes('baja') || normalizedText.includes('eliminad') || normalizedText.includes('borrad')) {
+                icon = 'do_not_disturb_on';
+            } else {
+                icon = 'error';
+            }
             break;
-        case 'warning':
-            bgColor = 'rgba(251, 191, 36, 0.1)';
-            borderColor = 'rgba(251, 191, 36, 0.3)';
-            textColor = '#FBBF24'; // Precaución / Amarillo
-            icon = 'warning';
+
+        case 'modificacion':
+            // ÁMBAR / AMARILLO SÓLIDO VIVO (Modificación / Proceso)
+            solidBg = '#b45309';
+            borderColor = '#f59e0b';
+            if (normalizedText.includes('procesando') || normalizedText.includes('generando') || normalizedText.includes('cargando') || normalizedText.includes('iniciando')) {
+                icon = 'sync';
+            } else {
+                icon = 'edit_note';
+            }
             break;
+
         case 'info':
-            bgColor = 'rgba(14, 165, 160, 0.1)';
-            borderColor = 'rgba(14, 165, 160, 0.3)';
-            textColor = '#0EA5A0'; // Acento Principal
+            // CIAN / AZUL SÓLIDO VIVO (Info / Exportación)
+            solidBg = '#0284c7';
+            borderColor = '#38bdf8';
             icon = 'info';
             break;
-        case 'success':
+
+        case 'alta':
         default:
-            bgColor = 'rgba(74, 222, 128, 0.1)';
-            borderColor = 'rgba(74, 222, 128, 0.3)';
-            textColor = '#4ADE80'; // Éxito
-            icon = 'check_circle';
+            // VERDE SÓLIDO VIVO (Alta exitosa / Guardado / Completado)
+            solidBg = '#047857';
+            borderColor = '#10b981';
+            if (normalizedText.includes('completad') || normalizedText.includes('nuevo') || normalizedText.includes('agregad')) {
+                icon = 'add_circle';
+            } else {
+                icon = 'check_circle';
+            }
             break;
     }
 
     Object.assign(toast.style, {
-        background: '#263347', // Card Background
-        border: `1px solid ${borderColor}`,
-        color: textColor,
-        padding: '1rem 1.5rem',
+        background: solidBg,
+        backgroundColor: solidBg,
+        border: `1.5px solid ${borderColor}`,
+        color: '#ffffff',
+        padding: '0.65rem 1.25rem',
         borderRadius: '12px',
         display: 'flex',
         alignItems: 'center',
-        gap: '0.75rem',
-        boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
-        backdropFilter: 'blur(12px)',
-        fontWeight: '500',
+        gap: '0.65rem',
+        boxShadow: '0 10px 25px -4px rgba(0, 0, 0, 0.45), 0 4px 6px -2px rgba(0, 0, 0, 0.25)',
+        fontWeight: '600',
         fontSize: '0.9rem',
         position: 'absolute',
         top: '0',
         left: '50%',
         margin: '0',
         width: 'max-content',
-        minWidth: '250px',
-        maxWidth: '400px',
+        minWidth: '220px',
+        maxWidth: '460px',
         justifyContent: 'center',
         opacity: '0',
         transform: 'translate(-50%, -20px) scale(0.9)',
-
-        transition: 'all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        transition: 'all 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+        backdropFilter: 'none',
+        webkitBackdropFilter: 'none'
     });
 
-    toast.innerHTML = `
-        <span class="material-symbols-outlined" style="font-size: 1.2rem;">${icon}</span>
-        <span>${message}</span>
-    `;
+    // Construcción segura vía DOM: el mensaje NUNCA se interpreta como HTML (previene XSS)
+    const iconEl = document.createElement('span');
+    iconEl.className = 'material-symbols-outlined';
+    Object.assign(iconEl.style, {
+        fontSize: '1.25rem', color: '#ffffff', display: 'inline-flex',
+        alignItems: 'center', justifyContent: 'center'
+    });
+    iconEl.textContent = icon;
+
+    const textEl = document.createElement('span');
+    Object.assign(textEl.style, { color: '#ffffff', lineHeight: '1.35', fontWeight: '600' });
+    textEl.textContent = finalMessage;
+
+    toast.appendChild(iconEl);
+    toast.appendChild(textEl);
 
     toastContainer.appendChild(toast);
     activeToasts.push(toast);
@@ -124,19 +205,26 @@ window.showToast = function(message, type = 'success') {
         renderToasts();
     }, 10);
 
-    // Remover automáticamente después de 3.5 segundos
-    setTimeout(() => {
-        // Quitamos del arreglo activo para que los demás avancen al frente instantáneamente
+    // Remover automáticamente después de 3.5 segundos o manualmente vía toast.dismiss()
+    let isDismissed = false;
+    const dismiss = () => {
+        if (isDismissed) return;
+        isDismissed = true;
+        clearTimeout(autoDismissTimer);
         activeToasts = activeToasts.filter(t => t !== toast);
         renderToasts();
         
-        // Animamos la salida de este toast específico
         toast.style.opacity = '0';
         toast.style.transform = 'translate(-50%, -20px) scale(0.9)';
         toast.style.pointerEvents = 'none';
         
         setTimeout(() => toast.remove(), 400);
-    }, 3500);
+    };
+
+    const autoDismissTimer = setTimeout(dismiss, 3500);
+
+    toast.dismiss = dismiss;
+    return toast;
 };
 
 // Polyfill window.showConfirmModal

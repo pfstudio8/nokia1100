@@ -19,13 +19,13 @@ Layout::renderAdminSidebar('dashboard');
 
         <?php // Banner visual ?>
         <section class="mb-10 w-full rounded-3xl relative flex items-center bg-card shadow-lg border border-border">
-            <div class="relative z-10 w-full p-8 md:p-12 flex flex-col justify-center h-full max-w-3xl">
-                <h2 class="text-4xl md:text-5xl font-display font-bold text-text-main mb-4 tracking-tight">Bienvenido a Nokia1100</h2>
-                <p class="text-sm md:text-base text-text-muted font-medium max-w-lg leading-relaxed">Supervisa todas las operaciones, controla el inventario en tiempo real y analiza el rendimiento corporativo con precisión.</p>
+            <div class="relative z-10 w-full p-5 sm:p-8 md:p-12 flex flex-col justify-center h-full max-w-3xl">
+                <h2 class="text-2xl sm:text-4xl md:text-5xl font-display font-bold text-text-main mb-3 tracking-tight">Bienvenido a Nokia1100</h2>
+                <p class="text-xs sm:text-sm md:text-base text-text-muted font-medium max-w-lg leading-relaxed">Supervisa todas las operaciones, controla el inventario en tiempo real y analiza el rendimiento corporativo con precisión.</p>
             </div>
         </section>
 
-        <!-- Metrics -->
+        <?php // Metrics ?>
         <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
             
             <div class="bg-card p-6 rounded-3xl flex flex-col justify-between group hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative overflow-hidden border border-border">
@@ -77,7 +77,7 @@ Layout::renderAdminSidebar('dashboard');
         <?php // Tablas de datos ?>
         <section class="grid grid-cols-1 gap-6">
             
-            <!-- Ventas Recientes -->
+            <?php // Ventas Recientes ?>
             <div class="col-span-12 bg-card rounded-3xl overflow-hidden p-0 flex flex-col justify-between border border-border shadow-lg">
                 <div>
                     <div class="p-6 md:p-8 border-b border-border flex justify-between items-center bg-transparent">
@@ -87,7 +87,7 @@ Layout::renderAdminSidebar('dashboard');
                             </div>
                             <h3 class="font-display text-lg font-bold text-text-main tracking-tight">Ventas Recientes</h3>
                         </div>
-                        <a href="<?php echo BASE_URL; ?>/modules/sales/sales.php" class="text-sm font-medium text-text-muted hover:text-text-main transition-colors flex items-center gap-1">Ver todas <span class="material-symbols-outlined text-sm">arrow_right_alt</span></a>
+                        <a href="<?php echo BASE_URL; ?>/modules/sales/index.php" class="text-sm font-medium text-text-muted hover:text-text-main transition-colors flex items-center gap-1">Ver todas <span class="material-symbols-outlined text-sm">arrow_right_alt</span></a>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
@@ -100,7 +100,7 @@ Layout::renderAdminSidebar('dashboard');
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-border">
-                                <!-- Skeleton Rows -->
+                                <?php // Skeleton Rows ?>
                                 <tr id="sales-skeleton-1" class="skeleton-row">
                                     <td class="px-6 md:px-8 py-5"><div class="skeleton h-4 w-16 rounded"></div></td>
                                     <td class="px-6 md:px-8 py-5"><div class="skeleton h-4 w-24 rounded"></div></td>
@@ -131,10 +131,26 @@ Layout::renderAdminSidebar('dashboard');
 </main>
 
 <script>
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     fetch('<?php echo BASE_URL; ?>/modules/admin/index.php?action=get_dashboard_data')
-        .then(response => response.json())
+        .then(response => {
+            if (response.status === 401 || response.status === 403) {
+                window.location.href = '<?php echo BASE_URL; ?>/index.php?error=' + encodeURIComponent('Sesión expirada o no autorizada');
+                return null;
+            }
+            if (!response.ok) {
+                throw new Error('HTTP error ' + response.status);
+            }
+            return response.json();
+        })
         .then(data => {
+            if (!data) return;
             // Actualizar Métricas (Remover skeleton y asignar valor)
             const mVentas = document.getElementById('metric-ventas');
             mVentas.textContent = data.totalVentas;
@@ -166,13 +182,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 data.ventasRecientes.forEach(v => {
                     const dateObj = new Date(v.fecha);
                     const dateStr = dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
-                    const metodo = v.metodo_de_pago ? v.metodo_de_pago : 'N/A';
+                    const metodo = escapeHtml(v.metodo_de_pago ? v.metodo_de_pago : 'N/A');
                     const totalFormatted = parseFloat(v.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     
                     const tr = document.createElement('tr');
                     tr.className = 'hover:bg-surface/50 transition-colors group';
                     tr.innerHTML = `
-                        <td class='px-6 md:px-8 py-5 text-sm font-bold text-primary'>#TX-${v.id_venta}</td>
+                        <td class='px-6 md:px-8 py-5 text-sm font-bold text-primary'>#TX-${escapeHtml(v.id_venta)}</td>
                         <td class='px-6 md:px-8 py-5 text-sm text-text-muted group-hover:text-text-main transition-colors font-medium'>${dateStr}</td>
                         <td class='px-6 md:px-8 py-5 text-sm'>
                             <span class='px-3 py-1.5 rounded-full border border-border/30 bg-surface/80 text-[10px] font-bold text-text-muted uppercase tracking-widest shadow-sm'>${metodo}</span>

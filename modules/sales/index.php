@@ -3,7 +3,7 @@
 require_once __DIR__ . '/Controllers/SalesController.php';
 $controller = new SalesController();
 
-$action = $_GET['action'] ?? 'sales';
+$action = $_POST['action'] ?? ($_GET['action'] ?? 'sales');
 
 switch ($action) {
     case 'new_sale':
@@ -21,9 +21,19 @@ switch ($action) {
     case 'export_sales':
         $controller->export_sales();
         break;
+    case 'check_ready_repairs':
+        $controller->check_ready_repairs();
+        break;
+    case 'credit_note':
+        $controller->credit_note();
+        break;
+    case 'rollback':
+        $controller->rollback();
+        break;
     case 'sales':
-    default:
         $controller->sales();
         break;
+    default:
+        http_response_code(404);
+        exit('Acción no encontrada');
 }
-?>

@@ -1,6 +1,12 @@
 <?php
 // modules/suppliers/Views/list.php
 
+/**
+ * Variables inyectadas por SuppliersController::suppliers()
+ * @var array $suppliers
+ */
+$suppliers = $suppliers ?? [];
+
 Layout::renderHead('Proveedores - Nokia 1100');
 Layout::renderAdminSidebar('proveedores');
 ?>
@@ -24,16 +30,15 @@ Layout::renderAdminSidebar('proveedores');
         </div>
         
         <div class="dashboard-header flex justify-between items-center mb-8" style="flex-wrap: wrap; gap: 1rem;">
-            <div style="display: flex; gap: 1rem; align-items: center;">
-                <input type="text" id="search-input" placeholder="Buscar proveedor..." style="width: 250px; padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 0.9rem;">
-                <!-- Botones de Exportación -->
-                <button type="button" onclick="exportTableToExcel('suppliers-table', 'proveedores', this)" class="px-3 py-1.5 rounded-lg border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5">
+            <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="search-input" placeholder="Buscar proveedor..." class="w-full sm:w-[220px]" style="padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 0.9rem;">
+                <button type="button" onclick="exportTableToExcel('suppliers-table', 'proveedores', this)" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5 cursor-pointer">
                     <span class="material-symbols-outlined text-[16px]">download</span> Excel
                 </button>
-                <button type="button" onclick="exportTableToPDF('suppliers-table', 'Listado de Proveedores', 'proveedores', this)" class="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5">
+                <button type="button" onclick="exportTableToPDF('suppliers-table', 'Listado de Proveedores', 'proveedores', this)" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer">
                     <span class="material-symbols-outlined text-[16px]">download</span> PDF
                 </button>
-                <a href="<?php echo BASE_URL; ?>/modules/admin/dashboard.php" class="btn-back">Volver</a>
+                <a href="<?php echo BASE_URL; ?>/modules/admin/index.php" class="btn-back">Volver</a>
             </div>
         </div>
 
@@ -43,6 +48,7 @@ Layout::renderAdminSidebar('proveedores');
         <form method="POST" action="" style="background: var(--surface-hover); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid var(--border);">
             <h3 style="margin-bottom: 1rem; font-size: 1.1rem; font-family: 'Outfit', sans-serif;">Agregar Proveedor</h3>
             <input type="hidden" name="action" value="add">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
                 <div class="form-group">
                     <label>Nombre Empresa</label>
@@ -95,7 +101,12 @@ Layout::renderAdminSidebar('proveedores');
                                 </td>
                                 <td>
                                     <a href="index.php?action=edit_supplier&id=<?php echo $row['id_proveedor']; ?>" style="color: var(--primary-color); font-weight: 600; font-size: 0.85rem; margin-right: 1rem;">Editar</a>
-                                    <a href="suppliers.php?delete=<?php echo $row['id_proveedor']; ?>" class="btn-delete" data-confirm="¿Seguro que deseas eliminar este proveedor?" data-confirm-title="Eliminar Proveedor">Eliminar</a>
+                                    <form method="POST" action="index.php" style="display:inline;">
+                                        <input type="hidden" name="action" value="delete_supplier">
+                                        <input type="hidden" name="id_proveedor" value="<?php echo (int)$row['id_proveedor']; ?>">
+                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                        <button type="submit" class="btn-delete" style="background:none; border:none; cursor:pointer; padding:0; font-family:inherit; font-size:inherit;" data-confirm="¿Seguro que deseas eliminar este proveedor?" data-confirm-title="Eliminar Proveedor">Eliminar</button>
+                                    </form>
                                 </td>
                             </tr>
                             <tr id="history-<?php echo $row['id_proveedor']; ?>" style="display: none;" class="history-row">

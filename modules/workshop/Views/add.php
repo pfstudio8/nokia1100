@@ -25,8 +25,9 @@ if ($_SESSION['role'] === 'admin') {
 
 
         <form method="POST" action="" enctype="multipart/form-data" class="glass-card rounded-2xl p-6 md:p-8">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- CLIENTE -->
+                <?php // CLIENTE ?>
                 <div>
                     <h3 class="text-lg font-display font-medium text-primary mb-4 flex items-center gap-2">
                         <span class="material-symbols-outlined text-xl">person</span> Datos del Cliente
@@ -55,7 +56,7 @@ if ($_SESSION['role'] === 'admin') {
                     </div>
                 </div>
 
-                <!-- EQUIPO -->
+                <?php // EQUIPO ?>
                 <div>
                     <h3 class="text-lg font-display font-medium text-primary mb-4 flex items-center gap-2">
                         <span class="material-symbols-outlined text-xl">smartphone</span> Datos del Equipo

@@ -39,7 +39,9 @@ class WorkshopController extends BaseController
             'estado_filter' => $estado_filter,
             'search' => $search,
             'page' => $page,
-            'total_pages' => $total_pages
+            'total_pages' => $total_pages,
+            'total_items' => $total_items,
+            'limit' => $limit
         ]);
     }
 
@@ -61,7 +63,9 @@ class WorkshopController extends BaseController
         $this->render_view(__DIR__ . '/../Views/history.php', [
             'paid_repairs' => $paid_repairs,
             'page' => $page,
-            'total_pages' => $total_pages
+            'total_pages' => $total_pages,
+            'total_items' => $total_items,
+            'limit' => $limit
         ]);
     }
 
@@ -76,6 +80,10 @@ class WorkshopController extends BaseController
 
         $error = '';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $token = $_POST['csrf_token'] ?? '';
+            if (empty($_SESSION['session_token']) || !hash_equals($_SESSION['session_token'], (string)$token)) {
+                $this->redirect("index.php?action=add&error=" . urlencode("Token CSRF inválido"));
+            }
             try {
                 $id_reparacion = $this->workshop_model->create_repair_order(
                     $_POST['id_cliente_existente'] ?? 0,
@@ -98,15 +106,18 @@ class WorkshopController extends BaseController
                         mkdir($upload_dir, 0777, true);
                     }
                     
+                    $allowed_types = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                    $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+
                     for ($i = 0; $i < count($_FILES['fotos']['tmp_name']); $i++) {
                         if ($_FILES['fotos']['error'][$i] === UPLOAD_ERR_OK) {
                             $tmp_name = $_FILES['fotos']['tmp_name'][$i];
                             $name = basename($_FILES['fotos']['name'][$i]);
                             $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+                            $mime = $finfo->file($tmp_name);
                             
-                            // Simple validation
-                            $allowed_types = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-                            if (in_array($ext, $allowed_types)) {
+                            if (in_array($ext, $allowed_types, true) && in_array($mime, $allowed_mimes, true) && @getimagesize($tmp_name) !== false) {
                                 $new_name = 'rep_' . $id_reparacion . '_' . time() . '_' . $i . '.' . $ext;
                                 $dest = $upload_dir . $new_name;
                                 if (move_uploaded_file($tmp_name, $dest)) {
@@ -144,11 +155,43 @@ class WorkshopController extends BaseController
         $error = '';
         $success = '';
 
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $token = $_POST['csrf_token'] ?? '';
+            if (empty($_SESSION['session_token']) || !hash_equals($_SESSION['session_token'], (string)$token)) {
+                $this->redirect("index.php?action=view&id=$id_reparacion&error=" . urlencode("Token CSRF inválido"));
+            }
+        }
+
+        // Action: send_to_cashier
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'send_to_cashier') {
+            try {
+                // Verificar que la orden exista y esté estrictamente en estado Listo
+                $currentRepair = $this->workshop_model->find_repair_by_id($id_reparacion);
+                if (!$currentRepair) {
+                    throw new Exception("Orden de reparación no encontrada.");
+                }
+                if ($currentRepair['estado'] !== 'Listo') {
+                    throw new Exception("Solo se pueden enviar a Ventas las órdenes que se encuentren en estado 'Listo'.");
+                }
+
+                $raw_presupuesto = str_replace(',', '.', (string)($_POST['presupuesto'] ?? ''));
+                $presupuesto = (is_numeric($raw_presupuesto) && (float)$raw_presupuesto > 0) 
+                    ? (float)$raw_presupuesto 
+                    : (float)($currentRepair['presupuesto'] ?? 0);
+                $nota = trim($_POST['nota_resolucion'] ?? '');
+                $this->workshop_model->send_repair_to_cashier($id_reparacion, $presupuesto, $nota, (int)$_SESSION['user_id']);
+                $this->redirect("index.php?action=view&id=$id_reparacion&success=" . urlencode("¡Reparación enviada a Ventas para su cobro exitosamente!"));
+            } catch (Exception $e) {
+                $this->redirect("index.php?action=view&id=$id_reparacion&error=" . urlencode($e->getMessage()));
+            }
+        }
+
         // Action: update_status
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
             try {
                 $estado = trim($_POST['estado'] ?? '');
-                $presupuesto = (float)($_POST['presupuesto'] ?? 0);
+                $raw_presupuesto = str_replace(',', '.', (string)($_POST['presupuesto'] ?? ''));
+                $presupuesto = is_numeric($raw_presupuesto) ? (float)$raw_presupuesto : 0;
                 
                 $this->workshop_model->update_repair_status_and_budget(
                     $id_reparacion,
@@ -158,9 +201,11 @@ class WorkshopController extends BaseController
                     $_SESSION['user_id']
                 );
                 
-                $msg = "Orden actualizada correctamente.";
-                
-
+                if ($estado === 'Listo') {
+                    $msg = "¡Orden actualizada a 'Listo'! Ya puedes enviarla a Ventas para su cobro.";
+                } else {
+                    $msg = "Orden actualizada correctamente.";
+                }
 
                 $this->redirect("index.php?action=view&id=$id_reparacion&success=" . urlencode($msg));
             } catch (Exception $e) {
@@ -205,7 +250,12 @@ class WorkshopController extends BaseController
                     $tipo = $_POST['tipo_imagen'] ?? 'Progreso';
                     
                     $allowed_types = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
-                    if (in_array($ext, $allowed_types)) {
+                    $allowed_mimes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
+                    $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                    $mime = $finfo->file($tmp_name);
+
+                    if (in_array($ext, $allowed_types, true) && in_array($mime, $allowed_mimes, true) && @getimagesize($tmp_name) !== false) {
                         $new_name = 'rep_' . $id_reparacion . '_' . time() . '.' . $ext;
                         $dest = $upload_dir . $new_name;
                         if (move_uploaded_file($tmp_name, $dest)) {
@@ -215,7 +265,7 @@ class WorkshopController extends BaseController
                             throw new Exception("Error al guardar la imagen en el servidor.");
                         }
                     } else {
-                        throw new Exception("Formato de imagen no permitido.");
+                        throw new Exception("El archivo seleccionado no es una imagen válida o su formato no está permitido.");
                     }
                 } else {
                     throw new Exception("No se seleccionó ninguna imagen o hubo un error en la subida.");
@@ -268,7 +318,7 @@ class WorkshopController extends BaseController
 
     public function print_receipt()
     {
-        $this->check_auth();
+        $this->check_access('taller');
 
         $id_reparacion = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         if (!$id_reparacion) {
@@ -305,5 +355,55 @@ class WorkshopController extends BaseController
             'repair' => $repair
         ]);
     }
+
+    public function delivery_receipt()
+    {
+        // Se imprime desde el taller y también desde la caja (Cobrar Reparaciones)
+        $this->check_any_access(['taller', 'cobrar_reparaciones', 'ventas', 'venta']);
+
+        $id_reparacion = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        if (!$id_reparacion) {
+            die("ID no válido.");
+        }
+
+        $data = $this->workshop_model->get_delivery_receipt_data($id_reparacion);
+        if (!$data || empty($data['repair'])) {
+            die("Orden de reparación no encontrada.");
+        }
+
+        $this->render_view(__DIR__ . '/../Views/delivery_receipt.php', $data);
+    }
+
+    public function check_status()
+    {
+        $this->check_auth(true);
+        header('Content-Type: application/json; charset=utf-8');
+
+        if (isset($_SESSION['role']) && $_SESSION['role'] === 'guest') {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Acceso denegado']);
+            exit();
+        }
+
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        if (!$id) {
+            echo json_encode(['success' => false, 'error' => 'ID no válido']);
+            exit();
+        }
+
+        $repair = $this->workshop_model->find_repair_by_id($id);
+        if (!$repair) {
+            echo json_encode(['success' => false, 'error' => 'Orden no encontrada']);
+            exit();
+        }
+
+        echo json_encode([
+            'success' => true,
+            'id_reparacion' => $id,
+            'estado' => $repair['estado'],
+            'fecha_entrega' => $repair['fecha_entrega'],
+            'is_delivered' => ($repair['estado'] === 'Entregado')
+        ]);
+        exit();
+    }
 }
-?>

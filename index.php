@@ -3,12 +3,17 @@
 session_start();
 require_once __DIR__ . '/config/db.php';
 
+if (empty($_SESSION['session_token'])) {
+    $_SESSION['session_token'] = bin2hex(random_bytes(32));
+}
+$csrf_token = $_SESSION['session_token'];
+
 // Si ya tiene sesión activa, redirigir según su rol
 if (isset($_SESSION['user_id'])) {
     if ($_SESSION['role'] === 'admin') {
-        header("Location: " . BASE_URL . "/modules/admin/dashboard.php");
+        header("Location: " . BASE_URL . "/modules/admin/index.php");
     } else {
-        header("Location: " . BASE_URL . "/modules/employee/dashboard.php");
+        header("Location: " . BASE_URL . "/modules/employee/index.php");
     }
     exit();
 }
@@ -21,19 +26,19 @@ if (isset($_SESSION['user_id'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Sistema Nokia1100</title>
     
-    <!-- Tailwind CSS -->
+    <?php // Tailwind CSS ?>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Boxicons CDN -->
+    <?php // Boxicons CDN ?>
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     
-    <!-- Google Fonts -->
+    <?php // Google Fonts ?>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     
-    <!-- Material Symbols -->
+    <?php // Material Symbols ?>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
 
-    <!-- Estilos Personalizados del Sistema -->
+    <?php // Estilos Personalizados del Sistema ?>
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/login.css?v=<?php echo time(); ?>">
 
@@ -48,15 +53,16 @@ if (isset($_SESSION['user_id'])) {
     ?>
     <div class="double-slider-container <?php echo $wrapperClass; ?>" id="authContainer">
         
-        <!-- PANEL 1: REGISTRO -->
+        <?php // PANEL 1: REGISTRO ?>
         <div class="form-container sign-up-container">
-            <!-- Formulario de Registro Tradicional -->
+            <?php // Formulario de Registro Tradicional ?>
             <div id="register-form-wrapper" class="w-full flex flex-col justify-center">
                 <h2>Crear Cuenta</h2>
                 
 
 
                 <form action="<?php echo BASE_URL; ?>/modules/auth/index.php?action=register" method="POST" novalidate>
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                     <div class="grid grid-cols-2 gap-x-4">
                         <div class="input-box">
                             <input type="text" name="nombre" placeholder=" " required>
@@ -101,7 +107,7 @@ if (isset($_SESSION['user_id'])) {
                             <i class='bx bxs-lock-alt'></i>
                         </div>
                     </div>
-                    <!-- Password Strength Meter -->
+                    <?php // Password Strength Meter ?>
                     <div id="password-strength-container" class="w-full h-1 bg-border/30 mb-5 rounded-full overflow-hidden" style="display: none;">
                         <div id="password-strength-bar" class="h-full w-0 transition-all duration-300"></div>
                     </div>
@@ -129,12 +135,13 @@ if (isset($_SESSION['user_id'])) {
                 </div>
             </div>
 
-            <!-- Formulario de Ingreso de Invitado (ahora en el panel de Registro) -->
+            <?php // Formulario de Ingreso de Invitado (ahora en el panel de Registro) ?>
             <div id="guest-form-wrapper" class="w-full hidden flex flex-col justify-center">
                 <h2>Invitado</h2>
                 <p class="text-text-muted text-xs mb-6 leading-relaxed">Ingresá tu nombre para acceder de forma limitada y consultar el stock del sistema.</p>
                 
                 <form action="<?php echo BASE_URL; ?>/modules/auth/index.php?action=guestLogin" method="POST" novalidate>
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                     <div class="input-box">
                         <input type="text" name="guest_name" placeholder=" " required minlength="2" maxlength="30">
                         <label>Nombre de Invitado</label>
@@ -156,15 +163,16 @@ if (isset($_SESSION['user_id'])) {
             </div>
         </div>
 
-        <!-- PANEL 2: INICIAR SESIÓN -->
+        <?php // PANEL 2: INICIAR SESIÓN ?>
         <div class="form-container sign-in-container">
-            <!-- Formulario de Login Tradicional -->
+            <?php // Formulario de Login Tradicional ?>
             <div id="login-form-wrapper" class="w-full flex flex-col justify-center">
                 <h2>Iniciar Sesión</h2>
                 
 
 
                 <form action="<?php echo BASE_URL; ?>/modules/auth/index.php?action=login" method="POST" novalidate>
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                     <div class="input-box">
                         <input type="text" name="username" placeholder=" " required>
                         <label>Usuario</label>
@@ -195,15 +203,15 @@ if (isset($_SESSION['user_id'])) {
             </div>
         </div>
 
-        <!-- CAPA DE COBERTURA SLIDER (OVERLAY) -->
+        <?php // CAPA DE COBERTURA SLIDER (OVERLAY) ?>
         <div class="overlay-container">
             <div class="overlay">
-                <!-- Mostrado cuando la cobertura está a la izquierda (Registrándose) -->
+                <?php // Mostrado cuando la cobertura está a la izquierda (Registrándose) ?>
                 <div class="overlay-panel overlay-left">
                     <h1>¡BIENVENIDO!</h1>
                     <p>Inicia sesión con tu cuenta personal para acceder a todas las funciones de administración y taller.</p>
                 </div>
-                <!-- Mostrado cuando la cobertura está a la derecha (Iniciando Sesión) -->
+                <?php // Mostrado cuando la cobertura está a la derecha (Iniciando Sesión) ?>
                 <div class="overlay-panel overlay-right">
                     <h1>REGÍSTRATE</h1>
                     <p>Ingresa tus datos personales para unirte al equipo y comenzar a usar el sistema Nokia 1100.</p>
@@ -213,15 +221,15 @@ if (isset($_SESSION['user_id'])) {
 
     </div>
 
-    <!-- Contenedor Unificado para Notificaciones Toasts Flotantes -->
+    <?php // Contenedor Unificado para Notificaciones Toasts Flotantes ?>
     <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col items-end pointer-events-none gap-2"></div>
 
-    <!-- Cargar Scripts del Sistema para animaciones Toasts y decodificación de URL -->
+    <?php // Cargar Scripts del Sistema para animaciones Toasts y decodificación de URL ?>
 
     <script src="<?php echo BASE_URL; ?>/assets/js/framer-toaster.js?v=<?php echo time(); ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/main.js?v=<?php echo time(); ?>"></script>
 
-    <!-- Script de Gestión de Acceso -->
+    <?php // Script de Gestión de Acceso ?>
     <script src="<?php echo BASE_URL; ?>/assets/js/login.js?v=<?php echo time(); ?>"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {

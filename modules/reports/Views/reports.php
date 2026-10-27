@@ -13,7 +13,7 @@ Layout::renderAdminSidebar('reportes');
             </div>
         </header>
 
-        <!-- TABS Pestañas de Reportes -->
+        <?php // TABS Pestañas de Reportes ?>
         <div class="border-b border-border mb-6">
             <nav class="flex gap-4" aria-label="Tabs">
                 <button class="tab-btn px-4 py-2 border-b-2 font-medium text-sm text-primary border-primary transition-colors" data-tab="tab-finanzas">Financiero</button>
@@ -23,7 +23,7 @@ Layout::renderAdminSidebar('reportes');
             </nav>
         </div>
 
-        <!-- CONTENIDO: FINANCIERO -->
+        <?php // CONTENIDO: FINANCIERO ?>
         <div id="tab-finanzas" class="tab-content block">
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
                 <div class="bg-surface/30 p-6 rounded-2xl border border-border/30 h-[50vh]">
@@ -41,13 +41,13 @@ Layout::renderAdminSidebar('reportes');
             </div>
         </div>
 
-        <!-- CONTENIDO: INVENTARIO -->
+        <?php // CONTENIDO: INVENTARIO ?>
         <div id="tab-inventario" class="tab-content hidden">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 <div class="bg-surface/30 p-6 rounded-2xl border border-border/30 h-[50vh] flex flex-col">
                     <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase mb-4 w-full text-left">Salud del Stock</h3>
                     <div class="w-full h-full flex flex-col gap-3 justify-center pb-8">
-                        <!-- Item Sano -->
+                        <?php // Item Sano ?>
                         <div class="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-background/50 hover:bg-surface/50 transition-colors">
                             <div class="flex items-center gap-4">
                                 <div class="w-10 h-10 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-400">
@@ -61,7 +61,7 @@ Layout::renderAdminSidebar('reportes');
                             <span class="text-xl font-bold text-text-main"><?php echo $stock_stats['sano']; ?></span>
                         </div>
 
-                        <!-- Item Crítico -->
+                        <?php // Item Crítico ?>
                         <div class="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-background/50 hover:bg-surface/50 transition-colors">
                             <div class="flex items-center gap-4">
                                 <div class="w-10 h-10 rounded-lg bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400">
@@ -75,7 +75,7 @@ Layout::renderAdminSidebar('reportes');
                             <span class="text-xl font-bold text-text-main"><?php echo $stock_stats['bajo']; ?></span>
                         </div>
 
-                        <!-- Item Agotado -->
+                        <?php // Item Agotado ?>
                         <div class="flex items-center justify-between p-4 rounded-xl border border-border/50 bg-background/50 hover:bg-surface/50 transition-colors">
                             <div class="flex items-center gap-4">
                                 <div class="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
@@ -107,16 +107,16 @@ Layout::renderAdminSidebar('reportes');
                 </div>
             </div>
 
-            <!-- Tabla HTML: Stock Crítico -->
+            <?php // Tabla HTML: Stock Crítico ?>
             <div class="bg-surface/30 p-6 rounded-2xl border border-border/30">
                 <div class="flex justify-between items-center mb-6">
                     <h3 class="text-sm font-semibold tracking-wide text-red-400 uppercase">Reporte de Stock Crítico</h3>
                     <div class="flex gap-2 items-center">
                         <input type="text" id="search-critical-stock" placeholder="Buscar producto..." class="bg-background border border-border text-sm rounded-lg px-3 py-1.5 focus:border-primary outline-none">
-                        <button onclick="exportTableToExcel('critical-stock-table', 'StockCritico', this)" class="px-3 py-1.5 rounded-lg border border-green-500/30 bg-green-500/10 text-xs text-green-400 hover:bg-green-500/20 flex items-center gap-1.5 transition-colors">
+                        <button type="button" onclick="exportTableToExcel('critical-stock-table', 'stock_critico', this)" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5 cursor-pointer">
                             <span class="material-symbols-outlined text-[16px]">download</span> Excel
                         </button>
-                        <button onclick="exportTableToPDF('critical-stock-table', 'Reporte de Stock Crítico', 'stock_critico', this)" class="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-xs text-red-400 hover:bg-red-500/20 flex items-center gap-1.5 transition-colors">
+                        <button type="button" onclick="exportTableToPDF('critical-stock-table', 'Reporte de Stock Crítico', 'stock_critico', this)" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer">
                             <span class="material-symbols-outlined text-[16px]">download</span> PDF
                         </button>
                     </div>
@@ -156,7 +156,7 @@ Layout::renderAdminSidebar('reportes');
             </div>
         </div>
 
-        <!-- CONTENIDO: VENTAS -->
+        <?php // CONTENIDO: VENTAS ?>
         <div id="tab-ventas" class="tab-content hidden">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div class="lg:col-span-3 bg-surface/30 p-6 rounded-2xl border border-border/30 h-[40vh]">
@@ -180,7 +180,7 @@ Layout::renderAdminSidebar('reportes');
             </div>
         </div>
 
-        <!-- CONTENIDO: TALLER -->
+        <?php // CONTENIDO: TALLER ?>
         <div id="tab-taller" class="tab-content hidden">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 <div class="bg-surface/30 p-6 rounded-2xl border border-border/30 h-[50vh] flex flex-col items-center">
@@ -201,10 +201,10 @@ Layout::renderAdminSidebar('reportes');
                     <h3 class="text-sm font-semibold tracking-wide text-text-muted uppercase">Historial de Reparaciones</h3>
                     <div class="flex gap-2 items-center">
                         <input type="text" id="search-repairs" placeholder="Buscar reparación..." class="bg-background border border-border text-sm rounded-lg px-3 py-1.5 focus:border-primary outline-none">
-                        <button onclick="exportTableToExcel('repairs-table', 'Reparaciones', this)" class="px-3 py-1.5 rounded-lg border border-green-500/30 bg-green-500/10 text-xs text-green-400 hover:bg-green-500/20 flex items-center gap-1.5 transition-colors">
+                        <button type="button" onclick="exportTableToExcel('repairs-table', 'reparaciones', this)" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5 cursor-pointer">
                             <span class="material-symbols-outlined text-[16px]">download</span> Excel
                         </button>
-                        <button onclick="exportTableToPDF('repairs-table', 'Reporte de Reparaciones', 'reparaciones', this)" class="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 text-xs text-red-400 hover:bg-red-500/20 flex items-center gap-1.5 transition-colors">
+                        <button type="button" onclick="exportTableToPDF('repairs-table', 'Reporte de Reparaciones', 'reparaciones', this)" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer">
                             <span class="material-symbols-outlined text-[16px]">download</span> PDF
                         </button>
                     </div>

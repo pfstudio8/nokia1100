@@ -6,7 +6,7 @@ require_once __DIR__ . '/../Models/AdminModel.php';
 
 class AdminController extends BaseController
 {
-    private $admin_model;
+    private AdminModel $admin_model;
 
     public function __construct()
     {
@@ -24,10 +24,7 @@ class AdminController extends BaseController
 
     public function get_dashboard_data()
     {
-        $this->check_access('dashboard');
-
-        // Simulamos un retraso de 1 segundo en la red para que se pueda ver la animación del Skeleton Loader.
-        sleep(1);
+        $this->check_access('dashboard', true);
 
         $total_ventas = $this->admin_model->get_total_sales();
         $total_trans = $this->admin_model->get_total_transactions();
@@ -63,7 +60,11 @@ class AdminController extends BaseController
         $this->check_access('usuarios');
 
         if ($_SERVER["REQUEST_METHOD"] !== "POST") {
-            $this->redirect("users.php");
+            $this->redirect("index.php?action=users");
+        }
+
+        if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+            $this->redirect("index.php?action=users&error=" . urlencode("Token CSRF inválido"));
         }
 
         $nombre           = trim($_POST['nombre'] ?? '');
@@ -78,40 +79,40 @@ class AdminController extends BaseController
         $rol              = trim($_POST['rol'] ?? 'empleado');
 
         if (empty($nombre) || empty($apellido) || empty($dni) || empty($email) || empty($username) || empty($password) || empty($password_confirm) || empty($rol)) {
-            $this->redirect("users.php?error=" . urlencode("Complete todos los campos requeridos"));
+            $this->redirect("index.php?action=users&error=" . urlencode("Complete todos los campos requeridos"));
         }
 
         if ($password !== $password_confirm) {
-            $this->redirect("users.php?error=" . urlencode("Las contraseñas no coinciden"));
+            $this->redirect("index.php?action=users&error=" . urlencode("Las contraseñas no coinciden"));
         }
 
         $pass_check = $this->validate_password($password);
         if ($pass_check !== true) {
-            $this->redirect("users.php?error=" . urlencode($pass_check));
+            $this->redirect("index.php?action=users&error=" . urlencode($pass_check));
         }
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $this->redirect("users.php?error=" . urlencode("El formato del email no es válido"));
+            $this->redirect("index.php?action=users&error=" . urlencode("El formato del email no es válido"));
         }
 
         if (!preg_match('/^[0-9]{7,10}$/', $dni)) {
-            $this->redirect("users.php?error=" . urlencode("El DNI debe tener entre 7 y 10 dígitos"));
+            $this->redirect("index.php?action=users&error=" . urlencode("El DNI debe tener entre 7 y 10 dígitos"));
         }
 
         if ($rol !== 'admin' && $rol !== 'empleado') {
-            $this->redirect("users.php?error=" . urlencode("El rol seleccionado no es válido"));
+            $this->redirect("index.php?action=users&error=" . urlencode("El rol seleccionado no es válido"));
         }
 
         if ($this->admin_model->check_username_exists($username)) {
-            $this->redirect("users.php?error=" . urlencode("El nombre de usuario ya está en uso"));
+            $this->redirect("index.php?action=users&error=" . urlencode("El nombre de usuario ya está en uso"));
         }
 
         if ($this->admin_model->check_email_exists($email)) {
-            $this->redirect("users.php?error=" . urlencode("El email ingresado ya está registrado"));
+            $this->redirect("index.php?action=users&error=" . urlencode("El email ingresado ya está registrado"));
         }
 
         if ($this->admin_model->check_dni_exists($dni)) {
-            $this->redirect("users.php?error=" . urlencode("El DNI ingresado ya está registrado"));
+            $this->redirect("index.php?action=users&error=" . urlencode("El DNI ingresado ya está registrado"));
         }
 
         try {
@@ -136,9 +137,9 @@ class AdminController extends BaseController
             require_once __DIR__ . '/../../../config/audit.php';
             audit_log($this->conn, 'USER_CREATE', $_SESSION['user_id'], 'usuario', $id_nuevo, "Administrador creó usuario directamente: $username ($nombre $apellido) con rol $rol");
 
-            $this->redirect("users.php?success=" . urlencode("Usuario '$username' agregado correctamente y listo para operar"));
+            $this->redirect("index.php?action=users&success=" . urlencode("Usuario '$username' agregado correctamente y listo para operar"));
         } catch (Exception $e) {
-            $this->redirect("users.php?error=" . urlencode($e->getMessage()));
+            $this->redirect("index.php?action=users&error=" . urlencode($e->getMessage()));
         }
     }
 
@@ -147,7 +148,11 @@ class AdminController extends BaseController
         $this->check_access('usuarios');
 
         if ($_SERVER["REQUEST_METHOD"] !== "POST") {
-            $this->redirect("users.php");
+            $this->redirect("index.php?action=users");
+        }
+
+        if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+            $this->redirect("index.php?action=users&error=" . urlencode("Token CSRF inválido"));
         }
 
         $id_usuario = (int)($_POST['id_usuario'] ?? 0);
@@ -163,27 +168,48 @@ class AdminController extends BaseController
         $rol        = trim($_POST['rol'] ?? 'empleado');
 
         if ($id_usuario === 0 || $id_persona === 0 || empty($nombre) || empty($apellido) || empty($dni) || empty($email) || empty($username) || empty($rol)) {
-            $this->redirect("users.php?error=" . urlencode("Complete todos los campos requeridos"));
+            $this->redirect("index.php?action=users&error=" . urlencode("Complete todos los campos requeridos"));
         }
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $this->redirect("users.php?error=" . urlencode("El formato del email no es válido"));
+            $this->redirect("index.php?action=users&error=" . urlencode("El formato del email no es válido"));
         }
 
         if (!preg_match('/^[0-9]{7,10}$/', $dni)) {
-            $this->redirect("users.php?error=" . urlencode("El DNI debe tener entre 7 y 10 dígitos"));
+            $this->redirect("index.php?action=users&error=" . urlencode("El DNI debe tener entre 7 y 10 dígitos"));
+        }
+
+        if ($rol !== 'admin' && $rol !== 'empleado') {
+            $this->redirect("index.php?action=users&error=" . urlencode("El rol seleccionado no es válido"));
+        }
+
+        $target = $this->admin_model->find_user_by_id($id_usuario);
+        if (!$target) {
+            $this->redirect("index.php?action=users&error=" . urlencode("El usuario especificado no existe"));
+        }
+
+        // Evita la autodegradación de rol
+        if ($id_usuario === (int)$_SESSION['user_id'] && $rol !== 'admin') {
+            $this->redirect("index.php?action=users&error=" . urlencode("No puedes cambiar tu propio rol de administrador"));
+        }
+
+        // No permitir degradar al único admin activo del sistema
+        if ($target['rol'] === 'admin' && $rol === 'empleado' && (int)$target['is_active'] === 1) {
+            if ($this->admin_model->count_active_admins($id_usuario) === 0) {
+                $this->redirect("index.php?action=users&error=" . urlencode("No podés quitarle el rol de administrador al único admin del sistema"));
+            }
         }
 
         if ($this->admin_model->check_username_exists($username, $id_usuario)) {
-            $this->redirect("users.php?error=" . urlencode("El nombre de usuario ya está en uso"));
+            $this->redirect("index.php?action=users&error=" . urlencode("El nombre de usuario ya está en uso"));
         }
 
         if ($this->admin_model->check_email_exists($email, $id_persona)) {
-            $this->redirect("users.php?error=" . urlencode("El email ingresado ya está registrado"));
+            $this->redirect("index.php?action=users&error=" . urlencode("El email ingresado ya está registrado"));
         }
 
         if ($this->admin_model->check_dni_exists($dni, $id_persona)) {
-            $this->redirect("users.php?error=" . urlencode("El DNI ingresado ya está registrado"));
+            $this->redirect("index.php?action=users&error=" . urlencode("El DNI ingresado ya está registrado"));
         }
 
         try {
@@ -191,7 +217,7 @@ class AdminController extends BaseController
             if (!empty($password)) {
                 $pass_check = $this->validate_password($password);
                 if ($pass_check !== true) {
-                    $this->redirect("users.php?error=" . urlencode($pass_check));
+                    $this->redirect("index.php?action=users&error=" . urlencode($pass_check));
                 }
                 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             }
@@ -216,9 +242,9 @@ class AdminController extends BaseController
             require_once __DIR__ . '/../../../config/audit.php';
             audit_log($this->conn, 'USER_UPDATE', $_SESSION['user_id'], 'usuario', $id_usuario, "Administrador editó datos del usuario: $username ($nombre $apellido) con rol $rol");
 
-            $this->redirect("users.php?success=" . urlencode("Usuario '$username' actualizado correctamente"));
+            $this->redirect("index.php?action=users&success=" . urlencode("Usuario '$username' actualizado correctamente"));
         } catch (Exception $e) {
-            $this->redirect("users.php?error=" . urlencode($e->getMessage()));
+            $this->redirect("index.php?action=users&error=" . urlencode($e->getMessage()));
         }
     }
 
@@ -226,14 +252,23 @@ class AdminController extends BaseController
     {
         $this->check_access('usuarios');
 
-        $id_usuario = isset($_GET['id']) ? (int)$_GET['id'] : 0;
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $this->redirect("index.php?action=users&error=" . urlencode("Método no permitido. Se requiere petición POST."));
+        }
+
+        $csrf_token = $_POST['csrf_token'] ?? '';
+        if (!$this->verify_csrf($csrf_token)) {
+            $this->redirect("index.php?action=users&error=" . urlencode("Token CSRF inválido"));
+        }
+
+        $id_usuario = isset($_POST['id']) ? (int)$_POST['id'] : 0;
         if ($id_usuario === 0) {
-            $this->redirect("users.php");
+            $this->redirect("index.php?action=users");
         }
 
         // Evita la autodesactivación
         if ($id_usuario === (int)$_SESSION['user_id']) {
-            $this->redirect("users.php?error=" . urlencode("No puedes desactivarte a ti mismo"));
+            $this->redirect("index.php?action=users&error=" . urlencode("No puedes desactivarte a ti mismo"));
         }
 
         $target = $this->admin_model->find_user_by_id($id_usuario);
@@ -241,7 +276,7 @@ class AdminController extends BaseController
         // No permitir desactivar al único admin activo del sistema
         if ($target && $target['rol'] === 'admin' && (int)$target['is_active'] === 1) {
             if ($this->admin_model->count_active_admins($id_usuario) === 0) {
-                $this->redirect("users.php?error=" . urlencode("No podés desactivar al único administrador del sistema"));
+                $this->redirect("index.php?action=users&error=" . urlencode("No podés desactivar al único administrador del sistema"));
             }
         }
 
@@ -257,9 +292,9 @@ class AdminController extends BaseController
             audit_log($this->conn, $audit_action, $_SESSION['user_id'], 'usuario', $id_usuario, "Administrador $action_str al usuario: $username");
 
             $msg = $res['new_status'] ? "Usuario reactivado con éxito" : "Usuario desactivado correctamente";
-            $this->redirect("users.php?success=" . urlencode($msg));
+            $this->redirect("index.php?action=users&success=" . urlencode($msg));
         } else {
-            $this->redirect("users.php?error=" . urlencode("Error al cambiar estado del usuario"));
+            $this->redirect("index.php?action=users&error=" . urlencode("Error al cambiar estado del usuario"));
         }
     }
 
@@ -268,20 +303,24 @@ class AdminController extends BaseController
         $this->check_access('usuarios');
 
         if ($_SERVER["REQUEST_METHOD"] !== "POST") {
-            $this->redirect("users.php");
+            $this->redirect("index.php?action=users");
+        }
+
+        if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+            $this->redirect("index.php?action=users&error=" . urlencode("Token CSRF inválido"));
         }
 
         $id_usuario = (int)($_POST['id_usuario'] ?? 0);
         $modulos = $_POST['modulos'] ?? [];
 
         if ($id_usuario === 0) {
-            $this->redirect("users.php?error=" . urlencode("Usuario no válido"));
+            $this->redirect("index.php?action=users&error=" . urlencode("Usuario no válido"));
         }
 
         // Los administradores tienen acceso total y sus permisos no pueden modificarse
         $target = $this->admin_model->find_user_by_id($id_usuario);
         if ($target && $target['rol'] === 'admin') {
-            $this->redirect("users.php?error=" . urlencode("Los permisos de un administrador no pueden modificarse: siempre tiene acceso total"));
+            $this->redirect("index.php?action=users&error=" . urlencode("Los permisos de un administrador no pueden modificarse: siempre tiene acceso total"));
         }
 
         $modules_str = implode(',', $modulos);
@@ -293,9 +332,9 @@ class AdminController extends BaseController
             require_once __DIR__ . '/../../../config/audit.php';
             audit_log($this->conn, 'USER_PERMISSIONS_UPDATE', $_SESSION['user_id'], 'usuario', $id_usuario, "Modificados permisos de módulos para: $username. Nuevos: $modules_str");
 
-            $this->redirect("users.php?success=" . urlencode("Permisos actualizados correctamente"));
+            $this->redirect("index.php?action=users&success=" . urlencode("Permisos actualizados correctamente"));
         } else {
-            $this->redirect("users.php?error=" . urlencode("Error al guardar permisos"));
+            $this->redirect("index.php?action=users&error=" . urlencode("Error al guardar permisos"));
         }
     }
 
@@ -304,25 +343,31 @@ class AdminController extends BaseController
         $this->check_access('usuarios');
 
         if ($_SERVER["REQUEST_METHOD"] !== "POST") {
-            $this->redirect("users.php");
+            $this->redirect("index.php?action=users");
+        }
+
+        if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+            $this->redirect("index.php?action=users&error=" . urlencode("Token CSRF inválido"));
         }
 
         $id_usuario = (int)($_POST['id_usuario'] ?? 0);
         $rol = trim($_POST['rol'] ?? '');
 
         if ($id_usuario === 0 || ($rol !== 'admin' && $rol !== 'empleado')) {
-            $this->redirect("users.php?error=" . urlencode("Datos no válidos"));
+            $this->redirect("index.php?action=users&error=" . urlencode("Datos no válidos"));
         }
 
-        if ($id_usuario === (int)$_SESSION['user_id']) {
-            $this->redirect("users.php?error=" . urlencode("No puedes cambiar tu propio rol"));
+
+        // Verificación de autodegradación
+        if ($id_usuario === (int)($_SESSION['user_id'] ?? 0)) {
+            $this->redirect("index.php?action=users&error=" . urlencode("No puedes cambiar tu propio rol"));
         }
 
         // No permitir degradar al único admin activo
         if ($rol === 'empleado') {
             $target = $this->admin_model->find_user_by_id($id_usuario);
             if ($target && $target['rol'] === 'admin' && $this->admin_model->count_active_admins($id_usuario) === 0) {
-                $this->redirect("users.php?error=" . urlencode("No podés quitarle el rol de administrador al único admin del sistema"));
+                $this->redirect("index.php?action=users&error=" . urlencode("No podés quitarle el rol de administrador al único admin del sistema"));
             }
         }
 
@@ -333,9 +378,9 @@ class AdminController extends BaseController
             require_once __DIR__ . '/../../../config/audit.php';
             audit_log($this->conn, 'USER_ROLE_UPDATE', $_SESSION['user_id'], 'usuario', $id_usuario, "Actualizado rol de usuario: $username a $rol");
 
-            $this->redirect("users.php?success=" . urlencode("Rol de usuario actualizado correctamente"));
+            $this->redirect("index.php?action=users&success=" . urlencode("Rol de usuario actualizado correctamente"));
         } else {
-            $this->redirect("users.php?error=" . urlencode("Error al actualizar rol"));
+            $this->redirect("index.php?action=users&error=" . urlencode("Error al actualizar rol"));
         }
     }
 
@@ -348,6 +393,10 @@ class AdminController extends BaseController
         $error_msg = "";
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+                header("Location: index.php?action=profile&error=" . urlencode("Token CSRF inválido."));
+                exit;
+            }
             $nombre = trim($_POST['nombre'] ?? '');
             $apellido = trim($_POST['apellido'] ?? '');
             $username = trim($_POST['username'] ?? '');
@@ -376,13 +425,8 @@ class AdminController extends BaseController
                         throw new Exception("El nombre de usuario ya está en uso.");
                     }
 
-                    $this->admin_model->update_profile_transaction($id_user, $id_persona, $persona_data, null);
-                    
-                    // Actualiza el nombre de usuario en la base de datos
-                    $updateUser = $this->conn->prepare("UPDATE usuario SET nombre_usuario = ? WHERE id_usuario = ?");
-                    $updateUser->bind_param("si", $username, $id_user);
-                    $updateUser->execute();
-                    $updateUser->close();
+                    // Actualización atómica de persona y usuario en una sola transacción
+                    $this->admin_model->update_profile_transaction($id_user, $id_persona, $persona_data, null, $username);
 
                     $_SESSION['username'] = $username;
                     header("Location: index.php?action=profile&success=" . urlencode("Perfil actualizado correctamente."));
@@ -410,7 +454,7 @@ class AdminController extends BaseController
         $this->check_access('auditoria'); 
 
         $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
-        $modulo = 'Inventario';
+        $modulo = isset($_GET['modulo']) ? trim($_GET['modulo']) : '';
         
         $logs = $this->admin_model->get_audit_logs($limit, $modulo);
 
@@ -421,4 +465,3 @@ class AdminController extends BaseController
         ]);
     }
 }
-?>

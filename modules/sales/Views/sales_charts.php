@@ -1,6 +1,22 @@
 <?php
 // modules/sales/Views/sales_charts.php
 
+/**
+ * Variables inyectadas por SalesController::sales_charts()
+ * @var array $dates
+ * @var array $totals
+ * @var array $methods
+ * @var array $method_amounts
+ * @var array $top_names
+ * @var array $top_quantities
+ */
+$dates = $dates ?? [];
+$totals = $totals ?? [];
+$methods = $methods ?? [];
+$method_amounts = $method_amounts ?? [];
+$top_names = $top_names ?? [];
+$top_quantities = $top_quantities ?? [];
+
 Layout::renderHead('Estadísticas de Ventas - NOKIA1100');
 Layout::renderAdminSidebar('graficos');
 ?>
@@ -11,14 +27,14 @@ Layout::renderAdminSidebar('graficos');
                 <h2 class="text-2xl font-display font-medium text-text-main">Estadísticas de Ventas</h2>
                 <p class="text-text-muted text-sm mt-1">Reporte financiero y métricas de desempeño (Últimos 30 días)</p>
             </div>
-            <div class="flex items-center gap-2">
-                <button id="btnExportPdf" class="px-4 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-red-500 text-sm font-medium transition-colors flex items-center gap-2">
-                    <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> PDF
+            <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" id="btnExportXls" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5 cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">download</span> Excel
                 </button>
-                <button id="btnExportXls" class="px-4 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-green-500 text-sm font-medium transition-colors flex items-center gap-2">
-                    <span class="material-symbols-outlined text-[18px]">table_chart</span> Excel
+                <button type="button" id="btnExportPdf" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer">
+                    <span class="material-symbols-outlined text-[16px]">download</span> PDF
                 </button>
-                <a href="<?php echo BASE_URL; ?>/modules/admin/dashboard.php" class="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-sm font-medium transition-colors flex items-center gap-2 ml-2">
+                <a href="<?php echo BASE_URL; ?>/modules/admin/index.php" class="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-sm font-medium transition-colors flex items-center gap-2 ml-2">
                     <span class="material-symbols-outlined text-[18px]">arrow_back</span> Volver al Dashboard
                 </a>
             </div>

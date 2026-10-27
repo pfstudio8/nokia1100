@@ -9,6 +9,3 @@ $db = new Database();
 
 // Expone la variable $conn heredada para compatibilidad
 $conn = $db->getConnection();
-
-
-?>

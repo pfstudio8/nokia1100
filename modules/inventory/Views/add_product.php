@@ -12,21 +12,22 @@ Layout::renderAdminSidebar('inventario');
                 <h2>Nuevo Producto</h2>
                 <p>Registrar un nuevo producto en el catálogo</p>
             </div>
-            <a href="inventory.php" class="btn-back flex items-center gap-2">
+            <a href="index.php" class="btn-back flex items-center gap-2">
                 <span class="material-symbols-outlined text-sm">arrow_back</span> Volver
             </a>
         </div>
 
         <?php if (isset($_GET['error'])): ?>
-            <div class="bg-red-50 border border-red-200 text-red-600 text-sm p-4 rounded-xl mb-6 font-medium flex gap-3 items-center">
+            <div class="bg-red-500/10 border border-red-500/20 text-red-400 text-sm p-4 rounded-xl mb-6 font-medium flex gap-3 items-center">
                 <span class="material-symbols-outlined text-lg">error</span>
                 <?php echo htmlspecialchars($_GET['error']); ?>
             </div>
         <?php endif; ?>
 
-        <form method="POST" action="process_product.php" class="space-y-6">
+        <form method="POST" action="index.php?action=process_product" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Clasificación -->
+                <?php // Clasificación ?>
                 <div class="md:col-span-2">
                     <label class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wide">Categoría</label>
                     <select name="categoria" required class="w-full p-3 bg-background border border-border rounded-lg text-text-main focus:outline-none focus:border-primary transition-colors">
@@ -41,7 +42,7 @@ Layout::renderAdminSidebar('inventario');
                     </select>
                 </div>
 
-                <!-- Información Principal -->
+                <?php // Información Principal ?>
                 <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wide">Nombre del Producto</label>
@@ -70,7 +71,7 @@ Layout::renderAdminSidebar('inventario');
 
                 <div class="h-px bg-border/40 md:col-span-2 my-2"></div>
 
-                <!-- Detalles Comerciales -->
+                <?php // Detalles Comerciales ?>
                 <div>
                     <label class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wide">Precio de Venta ($)</label>
                     <div class="relative">
@@ -92,7 +93,7 @@ Layout::renderAdminSidebar('inventario');
             </div>
 
             <div class="pt-6 mt-6 border-t border-border flex justify-end">
-                <button type="submit" class="btn-primary w-full md:w-auto px-8 py-3 bg-primary text-text-inverse font-bold rounded-lg hover:bg-primary-hover transition-colors shadow-[0_4px_14px_0_rgba(79,224,229,0.39)]">
+                <button type="submit" class="btn-primary w-full md:w-auto px-8 py-3 bg-primary text-text-inverse font-bold rounded-lg hover:bg-primary-hover transition-colors shadow-[0_4px_14px_0_rgba(14,165,160,0.35)]">
                     REGISTRAR PRODUCTO
                 </button>
             </div>

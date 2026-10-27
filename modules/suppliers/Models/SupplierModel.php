@@ -161,6 +161,11 @@ class SupplierModel extends BaseModel
                     $stmt_det->bind_param("iss", $id_producto, $item['marca'], $item['modelo']);
                     if (!$stmt_det->execute()) throw new Exception("Error al crear detalle de producto");
                     $stmt_det->close();
+
+                    $stmt_inv_init = $this->conn->prepare("INSERT INTO inventario (id_producto, cantidad) VALUES (?, 0)");
+                    $stmt_inv_init->bind_param("i", $id_producto);
+                    if (!$stmt_inv_init->execute()) throw new Exception("Error al inicializar inventario del producto");
+                    $stmt_inv_init->close();
                 }
 
                 // NO actualizamos el inventario aquí, el pedido queda 'Pendiente'
@@ -234,4 +239,3 @@ class SupplierModel extends BaseModel
         return $success;
     }
 }
-?>

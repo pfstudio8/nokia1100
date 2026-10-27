@@ -2,11 +2,7 @@
 // modules/inventory/Views/add_stock.php
 
 Layout::renderHead('Agregar Stock - NOKIA1100');
-if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
-    Layout::renderAdminSidebar('inventario');
-} else {
-    Layout::renderEmployeeSidebar('inventario');
-}
+Layout::renderAdminSidebar('inventario');
 ?>
 <main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen">
     <div class="glass-card mb-8 border border-border/50 max-w-3xl mx-auto">
@@ -15,14 +11,13 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                 <h2 class="text-2xl font-display font-medium text-text-main">Agregar Nuevo Producto</h2>
                 <p class="text-text-muted text-sm mt-1">Registrar un nuevo producto en almacén</p>
             </div>
-            <a href="<?php echo BASE_URL . ($_SESSION['role'] === 'admin' ? '/modules/admin/dashboard.php' : '/modules/employee/dashboard.php'); ?>" class="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-sm font-medium transition-colors flex items-center gap-2">
+            <a href="<?php echo BASE_URL . '/modules/inventory/index.php'; ?>" class="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-sm font-medium transition-colors flex items-center gap-2">
                 <span class="material-symbols-outlined text-[18px]">arrow_back</span> Volver
             </a>
         </div>
 
-
-
         <form method="POST" action="" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             <div>
                 <label for="nombre" class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Nombre del Producto</label>
                 <input type="text" id="nombre" name="nombre" required value="<?php echo isset($nombre) ? htmlspecialchars($nombre) : ''; ?>" placeholder="Ej: Celular, Cargador..." class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main">

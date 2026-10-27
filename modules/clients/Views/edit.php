@@ -25,6 +25,7 @@ if ($_SESSION['role'] === 'admin') {
 
 
         <form method="POST" action="" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             <div>
                 <label for="nombre"
                     class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Nombre Completo

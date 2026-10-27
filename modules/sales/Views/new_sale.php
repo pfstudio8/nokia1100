@@ -1,6 +1,10 @@
 <?php
 // modules/sales/Views/new_sale.php
 
+// Variables inyectadas por SalesController::new_sale()
+// @var array $products
+$products = $products ?? [];
+
 Layout::renderHead('Nueva Venta - NOKIA1100');
 if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') Layout::renderAdminSidebar('ventas');
 else Layout::renderEmployeeSidebar('venta');
@@ -12,15 +16,17 @@ else Layout::renderEmployeeSidebar('venta');
                 <h2 class="text-2xl font-display font-medium text-text-main">Nueva Venta</h2>
                 <p class="text-text-muted text-sm mt-1">Terminal de Punto de Venta (POS)</p>
             </div>
-            <a href="<?php echo BASE_URL . ($_SESSION['role'] === 'admin' ? '/modules/sales/sales.php' : '/modules/employee/dashboard.php'); ?>"
-               class="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-sm font-medium text-text-main transition-colors flex items-center gap-2">
-                <span class="material-symbols-outlined text-[18px]">arrow_back</span> Volver
-            </a>
+            <div class="flex items-center gap-3">
+                <a href="<?php echo BASE_URL . ($_SESSION['role'] === 'admin' ? '/modules/sales/index.php' : '/modules/employee/index.php'); ?>"
+                   class="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-sm font-medium text-text-main transition-colors flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">arrow_back</span> Volver
+                </a>
+            </div>
         </div>
 
         <div id="alert-box" style="display:none;"></div>
 
-        <!-- Selector de producto -->
+        <?php // Selector de producto ?>
         <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-8 bg-surface/30 p-6 rounded-2xl border border-border/30">
             <div class="md:col-span-8">
                 <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Producto</label>
@@ -85,10 +91,10 @@ else Layout::renderEmployeeSidebar('venta');
     </div>
 </main>
 
-<!-- Modal Procesar Venta -->
+<?php // Modal Procesar Venta ?>
 <div id="payment-modal" class="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-surface border border-border/50 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <!-- Header -->
+        <?php // Header ?>
         <div class="p-6 border-b border-border/30 flex justify-between items-center bg-surface-hover/30">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
@@ -106,9 +112,9 @@ else Layout::renderEmployeeSidebar('venta');
             </button>
         </div>
 
-        <!-- Body -->
+        <?php // Body ?>
         <div class="p-4 md:p-6 overflow-y-auto space-y-4 md:space-y-5">
-            <!-- Detalle de Compra -->
+            <?php // Detalle de Compra ?>
             <div>
                 <div class="flex justify-between items-center mb-1">
                     <h4 class="text-[10px] font-bold text-text-muted uppercase tracking-widest">Detalle de Compra</h4>
@@ -125,7 +131,7 @@ else Layout::renderEmployeeSidebar('venta');
                 </div>
             </div>
 
-            <!-- Total a Pagar -->
+            <?php // Total a Pagar ?>
             <div>
                 <div class="bg-surface-hover border border-primary/30 rounded-lg p-4 flex justify-between items-center shadow-[inset_0_0_15px_rgba(0,0,0,0.2)]">
                     <div>
@@ -137,7 +143,7 @@ else Layout::renderEmployeeSidebar('venta');
                 </div>
             </div>
 
-            <!-- Método de Pago -->
+            <?php // Método de Pago ?>
             <div>
                 <h4 class="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-2">Seleccione Método de Pago</h4>
                 <div class="grid grid-cols-3 gap-2">
@@ -157,7 +163,7 @@ else Layout::renderEmployeeSidebar('venta');
                 <input type="hidden" id="modal_metodo_pago" value="Efectivo">
             </div>
 
-            <!-- Liquidación Efectivo (Condicional) -->
+            <?php // Liquidación Efectivo (Condicional) ?>
             <div id="cash-liquidation-block" class="border border-border/30 rounded-lg p-4 bg-background/30 mt-2 transition-all duration-300">
                 <div class="flex justify-between items-center mb-3">
                     <h4 class="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1">
@@ -176,7 +182,7 @@ else Layout::renderEmployeeSidebar('venta');
                 <div class="mb-4">
                     <p class="text-[9px] text-text-muted mb-1.5">Sugerencias:</p>
                     <div class="flex flex-wrap gap-1.5" id="quick-suggestions">
-                        <!-- Generado dinámicamente -->
+                        <?php // Generado dinámicamente ?>
                     </div>
                 </div>
 
@@ -196,14 +202,14 @@ else Layout::renderEmployeeSidebar('venta');
                 </div>
             </div>
 
-            <!-- Descripción de la Venta -->
+            <?php // Descripción de la Venta ?>
             <div class="mt-4">
                 <label class="block text-[11px] font-bold text-text-muted uppercase tracking-widest mb-2">Descripción / Notas (Opcional)</label>
                 <textarea id="venta_descripcion" rows="2" class="w-full bg-surface border border-border/50 rounded-lg py-2 px-3 text-sm text-text-main focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" placeholder="Ej: Este equipo cuenta con 3 meses de garantía..."></textarea>
             </div>
         </div>
 
-        <!-- Footer -->
+        <?php // Footer ?>
         <div class="p-4 border-t border-border/30 bg-surface-hover/50 flex justify-end gap-3 items-center">
             <button type="button" onclick="closePaymentModal()" class="px-4 py-2 rounded-lg text-xs font-medium text-text-muted hover:text-text-main transition-colors">
                 Cancelar
@@ -215,7 +221,7 @@ else Layout::renderEmployeeSidebar('venta');
     </div>
 </div>
 
-<!-- Modal Venta Exitosa -->
+<?php // Modal Venta Exitosa ?>
 <div id="success-modal" class="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-surface border border-border/50 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col text-center p-8">
         <div class="w-20 h-20 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center mx-auto mb-6">
@@ -236,4 +242,7 @@ else Layout::renderEmployeeSidebar('venta');
 </div>
 <?php Layout::renderFooter(); ?>
 
+<script>
+    window.CSRF_TOKEN = '<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>';
+</script>
 <script src="<?php echo BASE_URL; ?>/modules/sales/new_sale.js?v=<?php echo time(); ?>"></script>

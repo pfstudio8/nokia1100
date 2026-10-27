@@ -1,6 +1,10 @@
 <?php
 session_start();
 require_once __DIR__ . '/../config/db.php';
+
+if (empty($_SESSION['session_token'])) {
+    $_SESSION['session_token'] = bin2hex(random_bytes(32));
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -26,9 +30,8 @@ require_once __DIR__ . '/../config/db.php';
             <p class="text-sm text-text-muted">Introduce tu email para recibir un enlace de recuperación.</p>
         </div>
 
-
-
         <form action="<?php echo BASE_URL; ?>/modules/auth/index.php?action=forgot_password" method="POST" class="space-y-5" novalidate>
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? ''); ?>">
             <div>
                 <label for="email" class="block text-xs font-bold text-text-muted mb-2 uppercase tracking-wider">Correo
                     Electrónico</label>
@@ -50,7 +53,7 @@ require_once __DIR__ . '/../config/db.php';
         </div>
     </div>
 
-    <!-- Contenedor Unificado para Notificaciones Toasts Flotantes -->
+    <?php // Contenedor Unificado para Notificaciones Toasts Flotantes ?>
     <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col items-end pointer-events-none gap-2"></div>
 
     <script src="<?php echo BASE_URL; ?>/assets/js/framer-toaster.js?v=<?php echo time(); ?>"></script>
@@ -71,7 +74,7 @@ require_once __DIR__ . '/../config/db.php';
             }
             
             <?php if (isset($_SESSION['mail_debug_notice'])): ?>
-                if (typeof showToast === "function") showToast("<?php echo addslashes($_SESSION['mail_debug_notice']); ?>", "warning");
+                if (typeof showToast === "function") showToast(<?php echo json_encode((string)$_SESSION['mail_debug_notice'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE); ?>, "warning");
                 msgShowed = true;
                 <?php unset($_SESSION['mail_debug_notice']); ?>
             <?php endif; ?>

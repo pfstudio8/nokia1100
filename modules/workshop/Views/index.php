@@ -1,6 +1,14 @@
 <?php
 // modules/workshop/Views/index.php
 
+$search = $search ?? '';
+$estado_filter = $estado_filter ?? '';
+$repairs = $repairs ?? [];
+$page = $page ?? 1;
+$total_pages = $total_pages ?? 1;
+$total_items = $total_items ?? 0;
+$limit = $limit ?? 10;
+
 Layout::renderHead('Taller - Nokia 1100');
 
 if ($_SESSION['role'] === 'admin') {
@@ -17,12 +25,12 @@ if ($_SESSION['role'] === 'admin') {
                 <h2 class="text-3xl font-display font-medium text-text-main">Taller de Reparaciones</h2>
                 <p class="text-text-muted mt-1 text-sm">Gestión de órdenes, presupuestos y control de equipos</p>
             </div>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-3 flex-wrap">
                 <!-- Botones de Exportación -->
-                <button type="button" onclick="exportTableToExcel('workshop-table', 'taller', this)" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5">
+                <button type="button" onclick="exportTableToExcel('workshop-table', 'taller', this)" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5 cursor-pointer">
                     <span class="material-symbols-outlined text-[16px]">download</span> Excel
                 </button>
-                <button type="button" onclick="exportTableToPDF('workshop-table', 'Órdenes de Reparación', 'taller', this)" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5">
+                <button type="button" onclick="exportTableToPDF('workshop-table', 'Órdenes de Reparación', 'taller', this)" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer">
                     <span class="material-symbols-outlined text-[16px]">download</span> PDF
                 </button>
 
@@ -31,7 +39,7 @@ if ($_SESSION['role'] === 'admin') {
                 </a>
 
                 <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
-                <a href="add.php" class="bg-primary text-background hover:bg-primary-hover px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2">
+                <a href="index.php?action=add" class="bg-primary text-background hover:bg-primary-hover px-4 py-2 rounded-lg font-medium text-sm transition-all flex items-center gap-2">
                     <span class="material-symbols-outlined text-[18px]">add</span> Nueva Orden
                 </a>
                 <?php endif; ?>
@@ -100,10 +108,10 @@ if ($_SESSION['role'] === 'admin') {
                                 </td>
                                 <td class="p-4 text-right">
                                     <div class="flex items-center justify-end gap-2">
-                                        <a href="view.php?id=<?php echo $r['id_reparacion']; ?>" class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface border border-border text-text-main hover:bg-primary-hover hover:text-white transition-colors" title="Ver / Gestionar">
+                                        <a href="index.php?action=view&id=<?php echo $r['id_reparacion']; ?>" class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface border border-border text-text-main hover:bg-primary-hover hover:text-white transition-colors" title="Ver / Gestionar">
                                             <span class="material-symbols-outlined text-[16px]">visibility</span>
                                         </a>
-                                        <a href="print_receipt.php?id=<?php echo $r['id_reparacion']; ?>" target="_blank" class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface border border-border text-text-main hover:bg-surface-hover transition-colors" title="Imprimir Comprobante">
+                                        <a href="index.php?action=print_receipt&id=<?php echo $r['id_reparacion']; ?>" target="_blank" class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface border border-border text-text-main hover:bg-surface-hover transition-colors" title="Imprimir Comprobante">
                                             <span class="material-symbols-outlined text-[16px]">print</span>
                                         </a>
                                     </div>
@@ -117,23 +125,75 @@ if ($_SESSION['role'] === 'admin') {
             </table>
         </div>
 
-        <?php if (isset($total_pages) && $total_pages > 0): ?>
-            <div class="mt-6 flex justify-center gap-2">
-                <?php 
-                $query_args = [];
-                if (!empty($estado_filter)) $query_args['estado'] = $estado_filter;
-                if (!empty($search)) $query_args['search'] = $search;
-                
-                for ($i = 1; $i <= $total_pages; $i++): 
-                    $query_args['page'] = $i;
-                    $qs = http_build_query($query_args);
-                ?>
-                    <a href="?<?php echo $qs; ?>" class="px-3 py-1.5 border border-border rounded-xl text-sm font-medium transition-colors <?php echo $i === ($page ?? 1) ? 'bg-primary text-background' : 'bg-surface text-text-main hover:bg-surface-hover'; ?>">
-                        <?php echo $i; ?>
-                    </a>
-                <?php endfor; ?>
+        <?php 
+        $total_items = $total_items ?? count($repairs ?? []);
+        $limit = $limit ?? 10;
+        $page = $page ?? 1;
+        $total_pages = $total_pages ?? max(1, ceil($total_items / $limit));
+        $count_current = count($repairs ?? []);
+        $from = ($total_items > 0) ? (($page - 1) * $limit + 1) : 0;
+        $to = ($total_items > 0) ? min($from + $count_current - 1, $total_items) : 0;
+
+        $query_args = [];
+        if (!empty($estado_filter)) $query_args['estado'] = $estado_filter;
+        if (!empty($search)) $query_args['search'] = $search;
+        ?>
+
+        <div class="mt-6 pt-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
+            <div>
+                <?php if ($total_items > 0): ?>
+                    Mostrando <strong class="text-text-main font-semibold"><?php echo $from; ?>–<?php echo $to; ?></strong> de <strong class="text-text-main font-semibold"><?php echo $total_items; ?></strong> órdenes
+                    <span class="mx-1.5 opacity-40">•</span>
+                    Página <strong class="text-primary font-semibold"><?php echo $page; ?></strong> de <strong class="text-text-main font-semibold"><?php echo $total_pages; ?></strong>
+                <?php else: ?>
+                    <span>No hay órdenes para mostrar</span>
+                <?php endif; ?>
             </div>
-        <?php endif; ?>
+
+            <?php if ($total_pages > 1): ?>
+                <div class="flex items-center gap-1.5 flex-wrap justify-center">
+                    <?php if ($page > 1): 
+                        $prev_args = $query_args;
+                        $prev_args['page'] = $page - 1;
+                    ?>
+                        <a href="?<?php echo http_build_query($prev_args); ?>" class="px-2.5 py-1.5 border border-border rounded-lg bg-surface hover:bg-surface-hover text-text-main transition-colors flex items-center gap-1" title="Página anterior">
+                            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+                            <span class="hidden md:inline">Anterior</span>
+                        </a>
+                    <?php else: ?>
+                        <span class="px-2.5 py-1.5 border border-border/40 rounded-lg bg-surface/30 text-text-muted/40 cursor-not-allowed flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+                            <span class="hidden md:inline">Anterior</span>
+                        </span>
+                    <?php endif; ?>
+
+                    <?php for ($i = 1; $i <= $total_pages; $i++): 
+                        $num_args = $query_args;
+                        $num_args['page'] = $i;
+                        $isCurrent = ($i === $page);
+                    ?>
+                        <a href="?<?php echo http_build_query($num_args); ?>" class="min-w-[32px] h-8 flex items-center justify-center px-2.5 rounded-lg border text-xs font-semibold transition-all <?php echo $isCurrent ? 'bg-primary text-background border-primary shadow-sm shadow-primary/20' : 'bg-surface border-border text-text-muted hover:text-text-main hover:bg-surface-hover'; ?>">
+                            <?php echo $i; ?>
+                        </a>
+                    <?php endfor; ?>
+
+                    <?php if ($page < $total_pages): 
+                        $next_args = $query_args;
+                        $next_args['page'] = $page + 1;
+                    ?>
+                        <a href="?<?php echo http_build_query($next_args); ?>" class="px-2.5 py-1.5 border border-border rounded-lg bg-surface hover:bg-surface-hover text-text-main transition-colors flex items-center gap-1" title="Página siguiente">
+                            <span class="hidden md:inline">Siguiente</span>
+                            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+                        </a>
+                    <?php else: ?>
+                        <span class="px-2.5 py-1.5 border border-border/40 rounded-lg bg-surface/30 text-text-muted/40 cursor-not-allowed flex items-center gap-1">
+                            <span class="hidden md:inline">Siguiente</span>
+                            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+                        </span>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+        </div>
 
     </div>
 </main>

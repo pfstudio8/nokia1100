@@ -71,6 +71,13 @@ function removeFromCart(index) {
     updateCartTable();
 }
 
+// Escapa texto para insertarlo de forma segura en HTML (previene XSS)
+function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[ch]));
+}
+
 function updateCartTable() {
     const tbody = document.getElementById('cart-body');
     const totalDisplay = document.getElementById('cart-total');
@@ -90,7 +97,7 @@ function updateCartTable() {
         const row = document.createElement('tr');
         row.className = 'hover:bg-surface/30 transition-colors';
         row.innerHTML = `
-            <td class="p-4 text-sm font-medium text-text-main">${item.displayName}</td>
+            <td class="p-4 text-sm font-medium text-text-main">${escapeHtml(item.displayName)}</td>
             <td class="p-4 text-sm text-right text-text-muted">$${item.costo.toFixed(2)}</td>
             <td class="p-4 text-sm text-center"><span class="bg-surface border border-border px-3 py-1 rounded-full text-text-muted">${item.cantidad}</span></td>
             <td class="p-4 text-sm text-right font-medium text-text-main">$${itemSubtotal.toFixed(2)}</td>
@@ -124,7 +131,8 @@ function submitPurchase() {
             descripcion: descripcion,
             tiempo_entrega: tiempoEntrega,
             iva: 0,
-            autorizado_por: autorizadoPor
+            autorizado_por: autorizadoPor,
+            csrf_token: window.CSRF_TOKEN || ''
         })
     })
     .then(res => res.json())

@@ -33,7 +33,7 @@
                 <div class="absolute -right-20 -top-20 w-40 h-40 bg-primary/10 rounded-full blur-3xl"></div>
                 <h2 class="text-xl font-display font-medium text-text-main mb-6 relative z-10">Consultar Estado de mi Equipo</h2>
                 
-                <form action="track.php" method="GET" class="relative z-10 max-w-sm mx-auto">
+                <form action="<?php echo BASE_URL; ?>/track.php" method="GET" class="relative z-10 max-w-sm mx-auto">
                     <div class="relative mb-4">
                         <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-text-muted">search</span>
                         <input type="text" name="code" placeholder="Ej: 24041234" required class="w-full bg-surface border border-border pl-12 pr-4 py-3.5 rounded-xl text-center text-text-main focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/50 transition-all text-lg font-display uppercase tracking-widest">
@@ -75,7 +75,7 @@
                             <?php 
                             $progress = ($current_idx / (count($estados) - 1)) * 100;
                             ?>
-                            <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-primary to-blue-500 transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(33,184,189,0.5)]" style="width: <?php echo $progress; ?>%;"></div>
+                            <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-primary to-secondary transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(14,165,160,0.5)]" style="width: <?php echo $progress; ?>%;"></div>
                         </div>
 
                         <div class="flex flex-col sm:flex-row justify-between gap-6 sm:gap-0 relative z-10 w-full px-2">
@@ -89,9 +89,9 @@
                                 $textClass = "text-text-muted text-xs font-medium sm:mt-4 transition-all duration-500 group-hover:text-text-main";
                                 
                                 if ($status === 'completed') {
-                                    $dotClass = "w-5 h-5 rounded-full bg-primary border-transparent shadow-[0_0_10px_rgba(33,184,189,0.4)]";
+                                    $dotClass = "w-5 h-5 rounded-full bg-primary border-transparent shadow-[0_0_10px_rgba(14,165,160,0.4)]";
                                 } else if ($status === 'current') {
-                                    $dotClass = "w-6 h-6 rounded-full border-[3px] border-primary bg-background shadow-[0_0_15px_rgba(33,184,189,0.6)] animate-pulse";
+                                    $dotClass = "w-6 h-6 rounded-full border-[3px] border-primary bg-background shadow-[0_0_15px_rgba(14,165,160,0.6)] animate-pulse";
                                     $textClass = "text-primary text-xs font-bold sm:mt-4";
                                 }
 
@@ -102,7 +102,7 @@
                             ?>
                             <div class="flex <?php echo $flexDir; ?> <?php echo $alignItems; ?> group w-full sm:w-1/5 relative">
                                 <?php if($idx < count($estados)-1): ?>
-                                    <!-- Mobile Vertical Line -->
+                                    <?php // Mobile Vertical Line ?>
                                     <div class="sm:hidden absolute top-6 left-[9px] bottom-[-24px] w-[2px] <?php echo ($idx < $current_idx) ? 'bg-primary' : 'bg-border'; ?>"></div>
                                 <?php endif; ?>
                                 
@@ -127,20 +127,27 @@
                     </div>
 
                     <div class="text-center mt-10">
-                        <span class="inline-block px-6 py-2 rounded-full border border-primary/30 bg-primary/10 text-primary font-medium text-sm shadow-[0_0_20px_rgba(33,184,189,0.15)]">
+                        <span class="inline-block px-6 py-2 rounded-full border border-primary/30 bg-primary/10 text-primary font-medium text-sm shadow-[0_0_20px_rgba(14,165,160,0.15)]">
                             Estado: <?php echo htmlspecialchars($repair['estado']); ?>
                         </span>
                     </div>
                 <?php endif; ?>
 
+                <?php
+                    $wsOrder = !empty($repair['codigo_orden']) ? $repair['codigo_orden'] : ($codigo ?? '');
+                    $wsEquipo = !empty($repair['equipo_marca']) ? ($repair['equipo_marca'] . ' ' . ($repair['equipo_modelo'] ?? '')) : '';
+                    $wsText = "Hola! Quisiera consultar sobre el estado de la orden de reparación" . ($wsOrder ? " #$wsOrder" : "") . ($wsEquipo ? " ($wsEquipo)" : "");
+                    $wsPhone = preg_replace('/[^0-9]/', '', $_ENV['WHATSAPP_PHONE'] ?? '5491100000000');
+                    $wsLink = "https://wa.me/{$wsPhone}?text=" . rawurlencode($wsText);
+                ?>
                 <div class="mt-14 pt-6 border-t border-border text-center">
                     <p class="text-text-muted text-sm flex items-center justify-center gap-2">
                         Para consultas directas: 
-                        <a href="#" class="inline-flex items-center gap-1 text-text-main hover:text-green-400 font-medium transition-colors">
-                            WhatsApp al taller
+                        <a href="<?php echo htmlspecialchars($wsLink, ENT_QUOTES, 'UTF-8'); ?>" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-text-main hover:text-green-400 font-medium transition-colors">
+                            <span class="material-symbols-outlined text-[18px] text-green-400">chat</span> WhatsApp al taller
                         </a>
                     </p>
-                    <a href="track.php" class="inline-block mt-4 text-xs text-text-muted hover:text-text-main underline decoration-border underline-offset-4">Consultar otro equipo</a>
+                    <a href="<?php echo BASE_URL; ?>/track.php" class="inline-block mt-4 text-xs text-text-muted hover:text-text-main underline decoration-border underline-offset-4">Consultar otro equipo</a>
                 </div>
             </div>
         <?php endif; ?>

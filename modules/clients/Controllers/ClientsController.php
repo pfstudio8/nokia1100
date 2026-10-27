@@ -6,7 +6,7 @@ require_once __DIR__ . '/../Models/ClientModel.php';
 
 class ClientsController extends BaseController
 {
-    private $client_model;
+    private ClientModel $client_model;
 
     public function __construct()
     {
@@ -23,6 +23,9 @@ class ClientsController extends BaseController
 
         // Procesar Alta de Cliente
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add') {
+            if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+                $this->redirect('index.php?error=' . urlencode("Token CSRF inválido."));
+            }
             $nombre = trim($_POST['nombre'] ?? '');
             $telefono = trim($_POST['telefono'] ?? '');
             $email = trim($_POST['email'] ?? '');
@@ -45,9 +48,12 @@ class ClientsController extends BaseController
             }
         }
 
-        // Procesar Baja de Cliente
-        if (isset($_GET['delete'])) {
-            $id_cliente = (int) $_GET['delete'];
+        // Procesar Baja de Cliente (solo POST: el token CSRF no debe viajar en la URL)
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
+            if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+                $this->redirect('index.php?error=' . urlencode("Token CSRF inválido."));
+            }
+            $id_cliente = (int) ($_POST['id_cliente'] ?? 0);
             $count = $this->client_model->count_reparaciones($id_cliente);
 
             if ($count > 0) {
@@ -99,6 +105,9 @@ class ClientsController extends BaseController
         $email = $client['email'];
 
         if ($_SERVER["REQUEST_METHOD"] === "POST") {
+            if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+                $this->redirect("index.php?action=edit&id=$id_cliente&error=" . urlencode("Token CSRF inválido."));
+            }
             $nombre = trim($_POST['nombre'] ?? '');
             $telefono = trim($_POST['telefono'] ?? '');
             $email = trim($_POST['email'] ?? '');
@@ -126,4 +135,3 @@ class ClientsController extends BaseController
         ]);
     }
 }
-?>

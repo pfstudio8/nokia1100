@@ -35,79 +35,112 @@ if (addUserForm) {
 }
 
 // --- Módulos y Permisos ---
-const adminModules = [
-    { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { id: 'inventario', label: 'Inventario', icon: 'inventory_2' },
-    { id: 'usuarios', label: 'Usuarios (Módulo Actual)', icon: 'group' },
-    { id: 'taller', label: 'Taller', icon: 'home_repair_service' },
-    { id: 'clientes', label: 'Clientes', icon: 'contact_page' },
-    { id: 'ventas', label: 'Ventas', icon: 'payments' },
-    { id: 'graficos', label: 'Estadísticas', icon: 'bar_chart' },
-    { id: 'proveedores', label: 'Proveedores', icon: 'local_shipping' },
-    { id: 'perfil', label: 'Mi Perfil', icon: 'person' }
+const allSystemModules = [
+    { id: 'dashboard', label: 'Inicio', icon: 'home', desc: 'Panel principal de operaciones' },
+    { id: 'venta', label: 'Generar Venta / Ventas', icon: 'payments', desc: 'Punto de venta y registro de transacciones' },
+    { id: 'cobrar_reparaciones', label: 'Cobrar Reparaciones', icon: 'price_check', desc: 'Caja para entrega de reparaciones terminadas' },
+    { id: 'taller', label: 'Taller', icon: 'home_repair_service', desc: 'Gestión y servicio técnico de reparaciones' },
+    { id: 'inventario', label: 'Consultar Stock / Inventario', icon: 'inventory_2', desc: 'Catálogo de productos, existencias y precios' },
+    { id: 'clientes', label: 'Clientes', icon: 'contact_page', desc: 'Directorio e historial de clientes' },
+    { id: 'reportes', label: 'Reportes y Estadísticas', icon: 'analytics', desc: 'Métricas financieras, ventas y taller' },
+    { id: 'proveedores', label: 'Proveedores y Compras', icon: 'local_shipping', desc: 'Directorio de proveedores y órdenes de compra' },
+    { id: 'usuarios', label: 'Administrar Usuarios', icon: 'group', desc: 'Gestión de personal y cuentas' },
+    { id: 'auditoria', label: 'Auditoría del Sistema', icon: 'security', desc: 'Registro de seguridad y eventos' }
 ];
 
-const employeeModules = [
-    { id: 'dashboard', label: 'Inicio', icon: 'home' },
-    { id: 'venta', label: 'Generar Venta', icon: 'point_of_sale' },
-    { id: 'taller', label: 'Taller', icon: 'home_repair_service' },
-    { id: 'clientes', label: 'Clientes', icon: 'contact_page' },
-    { id: 'inventario', label: 'Consultar Stock', icon: 'inventory_2' }
-];
+function selectAllModules(checked) {
+    const checkboxes = document.querySelectorAll('#modules-list input[name="modulos[]"]');
+    checkboxes.forEach(cb => { cb.checked = checked; });
+}
+
+function toggleModuleRow(event, checkboxId) {
+    if (event.target.tagName.toLowerCase() === 'input' || event.target.tagName.toLowerCase() === 'label') {
+        return;
+    }
+    const cb = document.getElementById(checkboxId);
+    if (cb) {
+        cb.checked = !cb.checked;
+    }
+}
 
 function openModulePermissions(id, fullName, role, modulosStr) {
+    if (role === 'admin') {
+        if (typeof showToast === 'function') {
+            showToast('Los administradores poseen acceso global a todos los módulos por diseño.', 'info');
+        } else {
+            alert('Los administradores poseen acceso global a todos los módulos por diseño.');
+        }
+        return;
+    }
     const tableContainer = document.getElementById('users-table-container');
     const permCard = document.getElementById('permission-card');
     
     // Asignar datos básicos
     document.getElementById('perm-user-id').value = id;
     document.getElementById('perm-user-name').textContent = fullName;
-    document.getElementById('perm-user-role').textContent = role === 'admin' ? 'Administrador' : 'Empleado';
+    document.getElementById('perm-user-role').textContent = 'Empleado';
     
-    // Elegir la lista de módulos correspondientes al rol
-    const modules = role === 'admin' ? adminModules : employeeModules;
+    // Todos los módulos del sistema disponibles para asignación
+    const modules = allSystemModules;
     
     // Parsear módulos permitidos
+    let isDefault = (modulosStr === 'DEFAULT' || modulosStr === null || modulosStr === undefined);
     let allowed = [];
-    let isDefault = (modulosStr === 'DEFAULT' || modulosStr === '');
     if (!isDefault) {
-        allowed = modulosStr.split(',');
+        allowed = modulosStr ? modulosStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+    } else {
+        // Por defecto para operarios/empleados: módulos base iniciales
+        allowed = ['dashboard', 'venta', 'inventario', 'clientes'];
     }
     
-    // Renderizar la lista con checkboxes
+    // Renderizar la lista con checkboxes y selector rápido
     const listContainer = document.getElementById('modules-list');
-    listContainer.innerHTML = '';
+    
+    let html = `
+        <div class="flex items-center justify-between pb-2 mb-3 border-b border-border/50 text-xs text-text-muted">
+            <span class="font-medium text-text-main">Módulos del Sistema (${modules.length})</span>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="selectAllModules(true)" class="text-xs text-primary hover:underline font-semibold bg-transparent border-0 cursor-pointer p-0">Marcar todos</button>
+                <span class="opacity-40">•</span>
+                <button type="button" onclick="selectAllModules(false)" class="text-xs text-text-muted hover:text-text-main font-semibold bg-transparent border-0 cursor-pointer p-0">Desmarcar todos</button>
+            </div>
+        </div>
+    `;
     
     modules.forEach(mod => {
-        // Si es por defecto, todos están activos. De lo contrario, comprobamos si está en la lista de permitidos
-        const isChecked = isDefault || allowed.includes(mod.id);
+        const isChecked = allowed.includes(mod.id);
         const checkboxId = `mod-${mod.id}`;
         
-        listContainer.innerHTML += `
-            <div class="flex items-center justify-between p-3 rounded-xl border border-border/60 bg-surface/30 hover:bg-surface/60 transition-colors">
+        html += `
+            <div onclick="toggleModuleRow(event, '${checkboxId}')" class="flex items-center justify-between p-3.5 rounded-xl border border-border/70 bg-surface/40 hover:bg-surface hover:border-primary/40 transition-all cursor-pointer select-none">
                 <div class="flex items-center gap-3">
-                    <span class="material-symbols-outlined text-text-muted" style="font-size: 1.25rem;">${mod.icon}</span>
-                    <label for="${checkboxId}" class="text-sm font-medium text-text-main cursor-pointer select-none">${mod.label}</label>
+                    <span class="material-symbols-outlined text-primary text-[22px] flex-shrink-0">${mod.icon}</span>
+                    <div>
+                        <label for="${checkboxId}" class="text-sm font-semibold text-text-main cursor-pointer select-none block leading-tight tracking-wide">${mod.label}</label>
+                        <span class="text-[11px] text-text-muted block mt-1">${mod.desc}</span>
+                    </div>
                 </div>
                 <input type="checkbox" name="modulos[]" value="${mod.id}" id="${checkboxId}" ${isChecked ? 'checked' : ''}
-                       class="w-4 h-4 rounded border-border text-primary bg-background focus:ring-primary/20 cursor-pointer">
+                       class="w-4 h-4 rounded border-border text-primary bg-background focus:ring-primary/20 cursor-pointer ml-3 flex-shrink-0" onclick="event.stopPropagation()">
             </div>
         `;
     });
+    
+    listContainer.innerHTML = html;
     
     // Mensaje informativo sobre estado de permisos
     const noteContainer = document.getElementById('perm-note');
     if (isDefault) {
         noteContainer.innerHTML = `
-            <div class="bg-primary/10 border border-primary/20 text-primary px-3 py-2 rounded-lg text-xs mt-1 mb-3 flex gap-2 items-center">
-                <span class="material-symbols-outlined" style="font-size:1.1rem; flex-shrink:0;">info</span>
-                <span>El usuario usa los permisos por defecto para su rol. Al guardar se personalizarán sus accesos.</span>
+            <div class="bg-primary/10 border border-primary/20 text-primary px-3.5 py-2.5 rounded-xl text-xs flex gap-2.5 items-center">
+                <span class="material-symbols-outlined" style="font-size:1.15rem; flex-shrink:0;">info</span>
+                <span>Este usuario utiliza la configuración inicial por defecto. Al guardar se aplicarán los permisos seleccionados.</span>
             </div>
         `;
     } else {
         noteContainer.innerHTML = `
-            <div class="bg-secondary/10 border border-secondary/20 text-secondary px-3 py-2 rounded-lg text-xs mt-1 mb-3 flex gap-2 items-center">
-                <span class="material-symbols-outlined" style="font-size:1.1rem; flex-shrink:0;">shield</span>
+            <div class="bg-secondary/10 border border-secondary/20 text-secondary px-3.5 py-2.5 rounded-xl text-xs flex gap-2.5 items-center">
+                <span class="material-symbols-outlined" style="font-size:1.15rem; flex-shrink:0;">shield</span>
                 <span>Permisos personalizados activos para este usuario.</span>
             </div>
         `;

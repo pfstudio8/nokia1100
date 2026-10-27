@@ -4,12 +4,12 @@
 }
 
 body {
-    background-color: #0A0A0B;
+    background-color: #181E26;
     color: #FAFAFA;
 }
 
 .glass-card {
-    background: rgba(17, 17, 19, 0.7);
+    background: rgba(31, 41, 55, 0.75);
     backdrop-filter: blur(16px);
-    border: 1px solid #27272A;
+    border: 1px solid #374151;
 }

@@ -12,7 +12,7 @@ Layout::renderAdminSidebar('proveedores');
                 <h2 class="text-2xl font-display font-medium text-text-main">Editar Proveedor</h2>
                 <p class="text-text-muted text-sm mt-1">Actualizar datos del proveedor en el directorio</p>
             </div>
-            <a href="suppliers.php"
+            <a href="index.php"
                 class="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-sm font-medium text-text-main transition-colors flex items-center gap-2">
                 <span class="material-symbols-outlined text-[18px]">arrow_back</span> Volver
             </a>
@@ -20,6 +20,7 @@ Layout::renderAdminSidebar('proveedores');
 
 
         <form method="POST" action="" class="space-y-6">
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             <div>
                 <label for="nombre"
                     class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Nombre Empresa

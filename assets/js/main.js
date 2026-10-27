@@ -13,6 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initHover3D();
     // Hago que las páginas carguen con un efecto de transición suave y opacidad al navegar por los enlaces
     initPageTransitions();
+    // Atajos de teclado rápidos para operaciones clave (F2, F3, F4, Ctrl+B)
+    initGlobalKeyboardShortcuts();
+    // Monitor en tiempo real de órdenes terminadas en Taller listas para cobrar
+    initReadyRepairsWatcher();
 });
 
 // Reemplaza la validación nativa del navegador por notificaciones tipo Toast
@@ -185,9 +189,12 @@ function handleUrlToasts() {
         'updated': 'Datos actualizados correctamente'
     };
 
+    // URLSearchParams ya decodifica; un segundo decode puede lanzar URIError con '%'
+    const safeDecode = (v) => { try { return decodeURIComponent(v); } catch (_) { return v; } };
+
     if (urlParams.has('success')) {
         const code = urlParams.get('success');
-        const msg = messages[code] || decodeURIComponent(code);
+        const msg = messages[code] || safeDecode(code);
         showToast(msg, 'success');
         urlParams.delete('success');
         const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
@@ -195,7 +202,7 @@ function handleUrlToasts() {
     }
     else if (urlParams.has('error')) {
         const code = urlParams.get('error');
-        const msg = messages[code] || decodeURIComponent(code);
+        const msg = messages[code] || safeDecode(code);
         showToast(msg, 'error');
         urlParams.delete('error');
         const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
@@ -229,8 +236,11 @@ function initHover3D() {
 // Envuelve los enlaces en animaciones de opacidad y deslizamiento al navegar
 function initPageTransitions() {
     document.body.addEventListener('click', e => {
+        // Respetar clic central / Ctrl / Cmd / Shift / Alt (abrir en nueva pestaña o ventana)
+        if (e.defaultPrevented || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+
         const link = e.target.closest('a');
-        if (!link) return;
+        if (!link || !link.href) return;
 
         // Evitar interceptar links que abren en otra pestaña, descargas o javascript
         if (link.target === '_blank' ||
@@ -250,5 +260,157 @@ function initPageTransitions() {
                 window.location.href = link.href;
             }, 150); // Timeout más rápido para que la navegación sea casi inmediata
         }
+    });
+}
+
+// Atajos de teclado globales (F2: Venta, F3: Inventario, F4: Taller, Ctrl+B: Clientes)
+function initGlobalKeyboardShortcuts() {
+    // Solo habilitar atajos si hay una sesión activa dentro del sistema (evitar en pantalla de login)
+    if (!document.getElementById('mainSidebar') && !document.getElementById('mobileTopBar')) {
+        return;
+    }
+
+    document.addEventListener('keydown', (e) => {
+        // Ignorar si el usuario está interactuando con campos de texto o modales activos
+        const tag = (document.activeElement && document.activeElement.tagName) || '';
+        const isEditable = document.activeElement && document.activeElement.isContentEditable;
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || isEditable) {
+            return;
+        }
+
+        const baseUrl = window.BASE_URL || (window.location.origin + '/nokia1100');
+
+        if (e.key === 'F2') {
+            e.preventDefault();
+            if (typeof showToast === 'function') showToast('Abriendo Nueva Venta (F2)...', 'info');
+            window.location.href = baseUrl + '/modules/sales/index.php?action=new_sale';
+        } else if (e.key === 'F3') {
+            e.preventDefault();
+            if (typeof showToast === 'function') showToast('Saltando al Inventario (F3)...', 'info');
+            window.location.href = baseUrl + '/modules/inventory/index.php';
+        } else if (e.key === 'F4') {
+            e.preventDefault();
+            if (typeof showToast === 'function') showToast('Abriendo Taller y Reparaciones (F4)...', 'info');
+            window.location.href = baseUrl + '/modules/workshop/index.php';
+        } else if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
+            e.preventDefault();
+            if (typeof showToast === 'function') showToast('Abriendo Clientes (Ctrl + B)...', 'info');
+            window.location.href = baseUrl + '/modules/clients/index.php';
+        }
+    });
+}
+
+// Monitor global en tiempo real de reparaciones listas para cobrar enviadas desde el taller
+function initReadyRepairsWatcher() {
+    // Si el usuario no ha iniciado sesión (ej: pantalla de login index.php o auth), no iniciar polling
+    if (!document.getElementById('mainSidebar') && !document.getElementById('mobileTopBar')) {
+        return;
+    }
+
+    // Si ya está en la bandeja especializada de cobrar reparaciones, esa pantalla maneja su propio ciclo de polling
+    if (window.location.href.includes('action=repairs_to_charge')) {
+        return;
+    }
+
+    const baseUrl = window.BASE_URL || (window.location.origin + '/nokia1100');
+    let lastKnownCount = null;
+    let knownIds = new Set();
+    let isFirstCheck = true;
+
+    function playGlobalChime() {
+        try {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            if (ctx.state === 'suspended') ctx.resume();
+            const notes = [
+                { freq: 698.46, time: 0, dur: 0.15 },
+                { freq: 880.00, time: 0.14, dur: 0.3 }
+            ];
+            notes.forEach(n => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(n.freq, ctx.currentTime + n.time);
+                gain.gain.setValueAtTime(0.001, ctx.currentTime + n.time);
+                gain.gain.exponentialRampToValueAtTime(0.2, ctx.currentTime + n.time + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + n.time + n.dur);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(ctx.currentTime + n.time);
+                osc.stop(ctx.currentTime + n.time + n.dur);
+            });
+        } catch (e) {
+            // Audio no soportado o bloqueado
+        }
+    }
+
+    function checkReadyRepairs() {
+        // No consultar mientras la pestaña está oculta (evita carga innecesaria en el servidor)
+        if (document.hidden) return;
+        fetch(baseUrl + '/modules/sales/index.php?action=check_ready_repairs', {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(res => {
+            if (res.status === 401) {
+                if (typeof pollInterval !== 'undefined') clearInterval(pollInterval);
+                return null;
+            }
+            if (!res.ok) return null;
+            return res.json();
+        })
+        .then(data => {
+            if (!data || !data.success) return;
+
+            const count = parseInt(data.count) || 0;
+            const incomingIds = (data.repairs || []).map(r => r.id);
+
+            // Actualizar insignias de conteo en la barra lateral
+            document.querySelectorAll('[data-badge="ready-repairs"]').forEach(badge => {
+                badge.textContent = count;
+                if (count > 0) {
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            });
+
+            if (isFirstCheck) {
+                lastKnownCount = count;
+                knownIds = new Set(incomingIds);
+                isFirstCheck = false;
+                return;
+            }
+
+            // Si hay órdenes nuevas que antes no estaban
+            const newOrders = (data.repairs || []).filter(r => !knownIds.has(r.id));
+            if (newOrders.length > 0) {
+                newOrders.forEach(o => knownIds.add(o.id));
+                lastKnownCount = count;
+
+                // Si ya está en la vista especializada de cobrar, esa pantalla maneja su propio reload
+                const isOnRepairsToCharge = window.location.href.includes('action=repairs_to_charge');
+                if (!isOnRepairsToCharge) {
+                    playGlobalChime();
+                    const latest = newOrders[newOrders.length - 1];
+                    if (typeof showToast === 'function') {
+                        showToast(`🔔 Taller: Orden #${latest.codigo} (${latest.cliente}) lista para cobrar (${latest.total_formatted})`, 'success');
+                    }
+                }
+            } else {
+                lastKnownCount = count;
+                knownIds = new Set(incomingIds);
+            }
+        })
+        .catch(() => {
+            // Silencioso ante fallos temporales
+        });
+    }
+
+    // Primer chequeo a los 2 segundos, luego cada 30 segundos y al volver a la pestaña
+    setTimeout(checkReadyRepairs, 2000);
+    setInterval(checkReadyRepairs, 30000);
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) checkReadyRepairs();
     });
 }

@@ -1,6 +1,10 @@
 <?php
 // modules/admin/Views/audit.php
 
+$limit = $limit ?? 100;
+$modulo = $modulo ?? '';
+$logs = $logs ?? [];
+
 Layout::renderHead('Registro de Auditoría - NOKIA1100');
 Layout::renderAdminSidebar('auditoria');
 ?>
@@ -15,13 +19,13 @@ Layout::renderAdminSidebar('auditoria');
                 <p class="text-text-muted text-sm mt-1">Historial de acciones críticas y eventos de seguridad</p>
             </div>
             <div class="flex flex-wrap items-center gap-4">
-                <div class="relative">
+                <div class="relative w-full sm:w-auto">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px]">search</span>
-                    <input type="text" id="search-input" placeholder="Buscar en auditoría..." class="bg-surface border border-border pl-10 pt-2 pb-2 pr-4 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
+                    <input type="text" id="search-input" placeholder="Buscar en auditoría..." class="w-full sm:w-64 bg-surface border border-border pl-10 pt-2 pb-2 pr-4 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
                 </div>
                 <div class="flex gap-2">
-                    <a href="<?php echo BASE_URL; ?>/modules/admin/audit.php?limit=100" class="px-4 py-2 rounded-xl border border-border <?php echo $limit == 100 ? 'bg-primary/20 text-primary' : 'bg-surface text-text-muted hover:text-text-main hover:bg-surface-hover'; ?> transition-colors text-sm font-medium">Últimos 100</a>
-                    <a href="<?php echo BASE_URL; ?>/modules/admin/audit.php?limit=500" class="px-4 py-2 rounded-xl border border-border <?php echo $limit == 500 ? 'bg-primary/20 text-primary' : 'bg-surface text-text-muted hover:text-text-main hover:bg-surface-hover'; ?> transition-colors text-sm font-medium">Últimos 500</a>
+                    <a href="<?php echo BASE_URL; ?>/modules/admin/index.php?action=audit&limit=100" class="px-4 py-2 rounded-xl border border-border <?php echo $limit == 100 ? 'bg-primary/20 text-primary' : 'bg-surface text-text-muted hover:text-text-main hover:bg-surface-hover'; ?> transition-colors text-sm font-medium">Últimos 100</a>
+                    <a href="<?php echo BASE_URL; ?>/modules/admin/index.php?action=audit&limit=500" class="px-4 py-2 rounded-xl border border-border <?php echo $limit == 500 ? 'bg-primary/20 text-primary' : 'bg-surface text-text-muted hover:text-text-main hover:bg-surface-hover'; ?> transition-colors text-sm font-medium">Últimos 500</a>
                 </div>
             </div>
         </div>
@@ -42,7 +46,7 @@ Layout::renderAdminSidebar('auditoria');
                 <tbody class="text-sm font-medium text-text-main divide-y divide-border/30">
                     <?php if (empty($logs)): ?>
                         <tr>
-                            <td colspan="6" class="p-8 text-center text-text-muted bg-surface/20">
+                            <td colspan="7" class="p-8 text-center text-text-muted bg-surface/20">
                                 <span class="material-symbols-outlined text-4xl mb-2 opacity-50">history</span>
                                 <p>No hay registros de auditoría disponibles.</p>
                             </td>
@@ -63,7 +67,7 @@ Layout::renderAdminSidebar('auditoria');
                                         } elseif (strpos($log['accion'], 'OK') !== false || strpos($log['accion'], 'CREATE') !== false) {
                                             $badgeClass = 'bg-green-500/10 border-green-500/20 text-green-400';
                                         } elseif (strpos($log['accion'], 'UPDATE') !== false) {
-                                            $badgeClass = 'bg-blue-500/10 border-blue-500/20 text-blue-400';
+                                            $badgeClass = 'bg-primary/10 border-primary/25 text-primary';
                                         }
                                     ?>
                                     <span class="inline-flex px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider <?php echo $badgeClass; ?>">

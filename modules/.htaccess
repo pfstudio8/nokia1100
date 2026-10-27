@@ -5,6 +5,10 @@ RewriteBase /nokia1100/modules/
 RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
 
-# 2. Redirigir peticiones de archivos PHP inexistentes al index.php de cada módulo como acción
-# Ejemplo: modules/inventory/add_product.php -> modules/inventory/index.php?action=add_product
+# 2. Alias retrocompatible: Redirigir 'customers' a 'clients'
+RewriteRule ^customers(?:/(.*))?$ clients/$1 [R=301,L]
+
+# 3. Redirigir peticiones de archivos PHP inexistentes al index.php de cada módulo como acción solo si el módulo existe
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{DOCUMENT_ROOT}/nokia1100/modules/$1/index.php -f
 RewriteRule ^([^/]+)/([^/]+)\.php$ $1/index.php?action=$2 [QSA,L]

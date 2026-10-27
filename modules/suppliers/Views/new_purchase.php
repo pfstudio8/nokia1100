@@ -1,6 +1,14 @@
 <?php
 // modules/suppliers/Views/new_purchase.php
 
+/**
+ * Variables inyectadas por SuppliersController::new_purchase()
+ * @var array $suppliers
+ * @var array $inventory
+ */
+$suppliers = $suppliers ?? [];
+$inventory = $inventory ?? [];
+
 Layout::renderHead('Registrar Pedido - NOKIA1100');
 Layout::renderAdminSidebar('proveedores');
 ?>
@@ -11,7 +19,7 @@ Layout::renderAdminSidebar('proveedores');
                 <h2 class="text-2xl font-display font-medium text-text-main">Registrar Pedido</h2>
                 <p class="text-text-muted text-sm mt-1">Gestión de abastecimiento e ingreso de mercadería</p>
             </div>
-            <a href="<?php echo BASE_URL; ?>/modules/admin/dashboard.php" class="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-sm font-medium transition-colors flex items-center gap-2">
+            <a href="<?php echo BASE_URL; ?>/modules/suppliers/index.php" class="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-sm font-medium transition-colors flex items-center gap-2">
                 <span class="material-symbols-outlined text-[18px]">arrow_back</span> Volver
             </a>
         </div>
@@ -123,5 +131,6 @@ Layout::renderAdminSidebar('proveedores');
 
 <script>
     window.BASE_URL = '<?php echo BASE_URL; ?>';
+    window.CSRF_TOKEN = '<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>';
 </script>
 <script src="<?php echo BASE_URL; ?>/modules/suppliers/new_purchase.js?v=<?php echo time(); ?>"></script>

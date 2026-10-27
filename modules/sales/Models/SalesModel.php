@@ -2,6 +2,7 @@
 // modules/sales/Models/SalesModel.php
 
 require_once __DIR__ . '/../../../classes/BaseModel.php';
+require_once __DIR__ . '/../../../classes/ServiceProduct.php';
 
 class SalesModel extends BaseModel
 {
@@ -21,14 +22,18 @@ class SalesModel extends BaseModel
                 INNER JOIN detalle_venta dv ON v.id_venta = dv.id_venta
                 LEFT JOIN producto p ON dv.id_producto = p.id_producto
                 ORDER BY v.fecha DESC
-                LIMIT $limit OFFSET $offset";
-        $result = $this->conn->query($sql);
+                LIMIT ? OFFSET ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("ii", $limit, $offset);
+        $stmt->execute();
+        $result = $stmt->get_result();
         $sales = [];
         if ($result && $result->num_rows > 0) {
             while ($row = $result->fetch_assoc()) {
                 $sales[] = $row;
             }
         }
+        $stmt->close();
         return $sales;
     }
 
@@ -44,7 +49,7 @@ class SalesModel extends BaseModel
         return 0;
     }
 
-    public function find_sale_by_id($id)
+    public function find_sale_by_id(int $id)
     {
         $stmt = $this->conn->prepare("SELECT id_venta, fecha, total, metodo_de_pago, estado FROM venta WHERE id_venta = ?");
         $stmt->bind_param("i", $id);
@@ -54,7 +59,7 @@ class SalesModel extends BaseModel
         return $row;
     }
 
-    public function get_sale_details($id_venta)
+    public function get_sale_details(int $id_venta)
     {
         $stmt = $this->conn->prepare("SELECT nombre_producto, cantidad, precio_unitario 
                                      FROM detalle_venta 
@@ -76,7 +81,7 @@ class SalesModel extends BaseModel
                 FROM producto p
                 JOIN inventario i ON p.id_producto = i.id_producto
                 JOIN producto_detalle d ON p.id_producto = d.id_producto
-                WHERE i.cantidad > 0 AND p.is_active = 1 AND p.id_producto != 13
+                WHERE i.cantidad > 0 AND p.is_active = 1 AND " . ServiceProduct::excludeSql('p') . "
                 ORDER BY p.nombre ASC";
         $result = $this->conn->query($sql);
         $products = [];
@@ -136,8 +141,11 @@ class SalesModel extends BaseModel
                 WHERE v.estado = 'completada'
                 GROUP BY dv.id_producto
                 ORDER BY total_vendido DESC
-                LIMIT $limit";
-        $result = $this->conn->query($sql);
+                LIMIT ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $limit);
+        $stmt->execute();
+        $result = $stmt->get_result();
         $names = [];
         $quantities = [];
         if ($result) {
@@ -146,6 +154,7 @@ class SalesModel extends BaseModel
                 $quantities[] = (int)$row['total_vendido'];
             }
         }
+        $stmt->close();
         return ['names' => $names, 'quantities' => $quantities];
     }
 
@@ -182,8 +191,11 @@ class SalesModel extends BaseModel
                 WHERE v.estado = 'completada'
                 GROUP BY dv.id_producto
                 ORDER BY rentabilidad DESC
-                LIMIT $limit";
-        $result = $this->conn->query($sql);
+                LIMIT ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $limit);
+        $stmt->execute();
+        $result = $stmt->get_result();
         $names = [];
         $values = [];
         if ($result) {
@@ -192,6 +204,7 @@ class SalesModel extends BaseModel
                 $values[] = (float)$row['rentabilidad'];
             }
         }
+        $stmt->close();
         return ['names' => $names, 'values' => $values];
     }
 
@@ -240,7 +253,7 @@ class SalesModel extends BaseModel
         return $data;
     }
 
-    public function create_sale_transaction($items, $metodo_pago, $user_id, $descripcion = '')
+    public function create_sale_transaction(array $items, string $metodo_pago, int|string $user_id, string $descripcion = '')
     {
         require_once __DIR__ . '/../../../config/audit.php';
         
@@ -282,6 +295,14 @@ class SalesModel extends BaseModel
                 }
             }
             $items = array_values($grouped_items);
+
+            // El producto contable de servicio técnico solo se factura desde el taller
+            $service_id = ServiceProduct::findId($this->conn);
+            foreach ($items as $item) {
+                if ($service_id !== null && (int)$item['id'] === $service_id) {
+                    throw new Exception("El servicio técnico del taller no puede venderse manualmente.");
+                }
+            }
 
             foreach ($items as $item) {
                 $stmt = $this->conn->prepare(
@@ -343,7 +364,7 @@ class SalesModel extends BaseModel
                 $stmt->close();
 
                 // Registrar en la auditoría el descuento de stock para el módulo de Inventario
-                audit_log($this->conn, 'INVENTORY_UPDATE', (int)$user_id, 'Inventario', $item['id'],
+                audit_log($this->conn, 'INVENTORY_UPDATE', $user_id, 'Inventario', (int)$item['id'],
                     "Stock de '$nombre_producto' reducido en {$item['cantidad']} unidades por venta (Usuario: $username_audit)");
             }
 
@@ -351,7 +372,7 @@ class SalesModel extends BaseModel
 
             $productos_str = implode(", ", $nombres_vendidos);
 
-            audit_log($this->conn, 'SALE_CREATE', (int)$user_id, 'venta', $id_venta,
+            audit_log($this->conn, 'SALE_CREATE', $user_id, 'venta', $id_venta,
                 "Usuario $username_audit registró venta. Total: \$$total_venta. Método: $metodo_pago. Productos: $productos_str");
 
             return $id_venta;
@@ -361,12 +382,12 @@ class SalesModel extends BaseModel
         }
     }
 
-    public function rollback_sale($id_venta, $user_id)
+    public function rollback_sale(int $id_venta, int|string $user_id)
     {
         $this->conn->begin_transaction();
         try {
             // Verificar estado actual
-            $stmt = $this->conn->prepare("SELECT estado FROM venta WHERE id_venta = ? FOR UPDATE");
+            $stmt = $this->conn->prepare("SELECT estado, descripcion FROM venta WHERE id_venta = ? FOR UPDATE");
             $stmt->bind_param("i", $id_venta);
             $stmt->execute();
             $res = $stmt->get_result();
@@ -398,6 +419,8 @@ class SalesModel extends BaseModel
             } elseif ($user_id === 'guest') {
                 $username_audit = "Invitado";
             }
+            $audit_user = ($user_id === 'guest') ? null : $user_id;
+            $service_id = ServiceProduct::findId($this->conn);
 
             // Devolver stock
             $stmt = $this->conn->prepare("SELECT d.id_producto, d.cantidad, d.nombre_producto FROM detalle_venta d WHERE d.id_venta = ?");
@@ -409,23 +432,57 @@ class SalesModel extends BaseModel
             require_once __DIR__ . '/../../../config/audit.php';
             
             while ($row = $detalles->fetch_assoc()) {
+                // El servicio técnico no es stock físico: no se devuelve al inventario
+                if ($service_id !== null && (int)$row['id_producto'] === $service_id) {
+                    continue;
+                }
+
                 $stmt_upd = $this->conn->prepare("UPDATE inventario SET cantidad = cantidad + ? WHERE id_producto = ?");
                 $stmt_upd->bind_param("ii", $row['cantidad'], $row['id_producto']);
                 if (!$stmt_upd->execute()) throw new Exception("Error al devolver el stock al inventario");
                 $stmt_upd->close();
                 
                 // Registrar en auditoría el retorno de stock
-                audit_log($this->conn, 'INVENTORY_UPDATE', (int)$user_id, 'Inventario', $row['id_producto'],
+                audit_log($this->conn, 'INVENTORY_UPDATE', $audit_user, 'Inventario', (int)$row['id_producto'],
                     "Stock de '{$row['nombre_producto']}' devuelto ({$row['cantidad']} unidades) por anulación de venta");
                 
                 $items_revertidos++;
             }
             $stmt->close();
 
+            // Si la venta corresponde al cobro de una reparación, registrar nota en historial sin devolver a la cola de cobro
+            $reparacion_afectada = null;
+            $prefijo = 'Cobro de Reparación #';
+            $desc_venta = (string)($venta['descripcion'] ?? '');
+            if (str_starts_with($desc_venta, $prefijo)) {
+                $resto = substr($desc_venta, strlen($prefijo));
+                $codigo_orden = trim(explode(' - ', $resto, 2)[0]);
+
+                $stmt_r = $this->conn->prepare("SELECT id_reparacion, estado FROM reparacion WHERE codigo_orden = ? FOR UPDATE");
+                $stmt_r->bind_param("s", $codigo_orden);
+                $stmt_r->execute();
+                $rep = $stmt_r->get_result()->fetch_assoc();
+                $stmt_r->close();
+
+                if ($rep) {
+                    $id_rep = (int)$rep['id_reparacion'];
+                    $estado_actual = $rep['estado'];
+                    $nota = "Cobro anulado (venta #$id_venta). Se emite Nota de Crédito. La reparación permanece finalizada.";
+                    $hist_user = is_numeric($audit_user) && (int)$audit_user > 0 ? (int)$audit_user : null;
+                    $stmt_h = $this->conn->prepare("INSERT INTO reparacion_historial (id_reparacion, estado_anterior, estado_nuevo, nota, id_usuario) VALUES (?, ?, ?, ?, ?)");
+                    $stmt_h->bind_param("isssi", $id_rep, $estado_actual, $estado_actual, $nota, $hist_user);
+                    $stmt_h->execute();
+                    $stmt_h->close();
+
+                    $reparacion_afectada = $codigo_orden;
+                }
+            }
+
             $this->conn->commit();
 
-            audit_log($this->conn, 'SALE_ROLLBACK', (int)$user_id, 'venta', $id_venta,
-                "Venta anulada por usuario $username_audit. Stock devuelto para $items_revertidos producto(s).");
+            $extra = $reparacion_afectada ? " Reparación #$reparacion_afectada con nota de cobro anulado." : '';
+            audit_log($this->conn, 'SALE_ROLLBACK', $audit_user, 'venta', $id_venta,
+                "Venta anulada por usuario $username_audit. Stock devuelto para $items_revertidos producto(s).$extra");
 
             return true;
         } catch (Exception $e) {
@@ -439,10 +496,13 @@ class SalesModel extends BaseModel
         $days = intval($days);
         $sql = "SELECT DATE(fecha) as dia, SUM(total) as total_ventas 
                 FROM venta 
-                WHERE fecha >= DATE(NOW()) - INTERVAL $days DAY 
+                WHERE estado != 'anulada' AND fecha >= DATE(NOW()) - INTERVAL ? DAY 
                 GROUP BY DATE(fecha) 
                 ORDER BY dia ASC";
-        $result = $this->conn->query($sql);
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $days);
+        $stmt->execute();
+        $result = $stmt->get_result();
         
         $labels = [];
         $data = [];
@@ -452,16 +512,17 @@ class SalesModel extends BaseModel
                 $data[] = $row['total_ventas'];
             }
         }
+        $stmt->close();
         return ['labels' => $labels, 'data' => $data];
     }
 
     public function get_sales_methods()
     {
-        $sql = "SELECT m.metodo, SUM(v.total) as total_ventas 
+        $sql = "SELECT COALESCE(m.metodo, v.metodo_de_pago, 'Otro') as metodo, SUM(v.total) as total_ventas 
                 FROM venta v
-                JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago
-                WHERE v.fecha >= DATE(NOW()) - INTERVAL 30 DAY
-                GROUP BY m.metodo";
+                LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago
+                WHERE v.estado != 'anulada' AND v.fecha >= DATE(NOW()) - INTERVAL 30 DAY
+                GROUP BY metodo";
         $result = $this->conn->query($sql);
         
         $labels = [];
@@ -478,26 +539,27 @@ class SalesModel extends BaseModel
     public function get_top_sales_products($limit = 5)
     {
         $limit = intval($limit);
-        $sql = "SELECT p.nombre, SUM(dv.cantidad) as total_vendido
+        $sql = "SELECT COALESCE(dv.nombre_producto, p.nombre) as nombre, SUM(dv.cantidad) as total_vendido
                 FROM detalle_venta dv
-                JOIN inventario i ON dv.id_inventario = i.id_inventario
-                JOIN producto p ON i.id_producto = p.id_producto
+                LEFT JOIN producto p ON dv.id_producto = p.id_producto
                 JOIN venta v ON dv.id_venta = v.id_venta
-                WHERE v.fecha >= DATE(NOW()) - INTERVAL 30 DAY
-                GROUP BY p.id_producto
-                ORDER BY total_vendido DESC LIMIT $limit";
-        $result = $this->conn->query($sql);
+                WHERE v.estado != 'anulada' AND v.fecha >= DATE(NOW()) - INTERVAL 30 DAY
+                GROUP BY dv.id_producto, COALESCE(dv.nombre_producto, p.nombre)
+                ORDER BY total_vendido DESC LIMIT ?";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bind_param("i", $limit);
+        $stmt->execute();
+        $result = $stmt->get_result();
         
         $labels = [];
         $data = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $labels[] = $row['nombre'];
-                $data[] = $row['total_vendido'];
+                $data[] = (int)$row['total_vendido'];
             }
         }
+        $stmt->close();
         return ['labels' => $labels, 'data' => $data];
     }
 }
-?>
-

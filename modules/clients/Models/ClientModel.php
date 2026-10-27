@@ -7,17 +7,25 @@ class ClientModel extends BaseModel
 {
     public function get_all($search = '')
     {
-        $where = "";
-        if ($search !== "") {
-            $search_escaped = $this->conn->real_escape_string($search);
-            $where = " WHERE nombre LIKE '%$search_escaped%' OR telefono LIKE '%$search_escaped%' OR email LIKE '%$search_escaped%'";
-        }
-        $sql = "SELECT id_cliente, nombre, telefono, email, created_at FROM cliente $where ORDER BY nombre ASC";
-        $result = $this->conn->query($sql);
         $clientes = [];
-        if ($result && $result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                $clientes[] = $row;
+        if ($search !== "") {
+            $term = "%" . $search . "%";
+            $stmt = $this->conn->prepare("SELECT id_cliente, nombre, telefono, email, created_at FROM cliente WHERE nombre LIKE ? OR telefono LIKE ? OR email LIKE ? ORDER BY nombre ASC");
+            $stmt->bind_param("sss", $term, $term, $term);
+            $stmt->execute();
+            $result = $stmt->get_result();
+            if ($result && $result->num_rows > 0) {
+                while ($row = $result->fetch_assoc()) {
+                    $clientes[] = $row;
+                }
+            }
+            $stmt->close();
+        } else {
+            $result = $this->conn->query("SELECT id_cliente, nombre, telefono, email, created_at FROM cliente ORDER BY nombre ASC");
+            if ($result && $result->num_rows > 0) {
+                while ($row = $result->fetch_assoc()) {
+                    $clientes[] = $row;
+                }
             }
         }
         return $clientes;
@@ -84,4 +92,3 @@ class ClientModel extends BaseModel
         return $success;
     }
 }
-?>

@@ -6,7 +6,7 @@ require_once __DIR__ . '/../Models/InventoryModel.php';
 
 class InventoryController extends BaseController
 {
-    private $inventory_model;
+    private InventoryModel $inventory_model;
 
     public function __construct()
     {
@@ -18,8 +18,9 @@ class InventoryController extends BaseController
     {
         $this->check_access('inventario');
 
-        $search = isset($_GET['search']) ? $_GET['search'] : '';
-        $filter = isset($_GET['filter']) ? $_GET['filter'] : '';
+        $search = isset($_GET['search']) ? trim($_GET['search']) : '';
+        $filter = isset($_GET['filter']) ? trim($_GET['filter']) : '';
+        $categoria = isset($_GET['categoria']) ? trim($_GET['categoria']) : '';
 
         $page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
         if ($page < 1)
@@ -27,17 +28,22 @@ class InventoryController extends BaseController
         $limit = 10;
         $offset = ($page - 1) * $limit;
 
-        $total_items = $this->inventory_model->get_inventory_count($search, $filter);
+        $total_items = $this->inventory_model->get_inventory_count($search, $filter, $categoria);
         $total_pages = ceil($total_items / $limit);
 
-        $items = $this->inventory_model->get_inventory($search, $filter, $limit, $offset);
+        $items = $this->inventory_model->get_inventory($search, $filter, $limit, $offset, $categoria);
+        $categorias = $this->inventory_model->get_all_categories();
 
         $this->render_view(__DIR__ . '/../Views/inventory.php', [
             'items' => $items,
             'search' => $search,
             'filter' => $filter,
+            'categoria' => $categoria,
+            'categorias' => $categorias,
             'page' => $page,
-            'total_pages' => $total_pages
+            'total_pages' => $total_pages,
+            'total_items' => $total_items,
+            'limit' => $limit
         ]);
     }
 
@@ -45,7 +51,7 @@ class InventoryController extends BaseController
     {
         $this->check_access('inventario');
         if ($_SESSION['role'] !== 'admin') {
-            $this->redirect(BASE_URL . "/modules/inventory/inventory.php");
+            $this->redirect(BASE_URL . "/modules/inventory/index.php");
         }
 
         $this->render_view(__DIR__ . '/../Views/add_product.php');
@@ -55,10 +61,14 @@ class InventoryController extends BaseController
     {
         $this->check_access('inventario');
         if ($_SESSION['role'] !== 'admin') {
-            $this->redirect(BASE_URL . "/modules/inventory/inventory.php");
+            $this->redirect(BASE_URL . "/modules/inventory/index.php");
         }
 
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
+            if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+                $this->redirect("index.php?action=add_product&error=" . urlencode("Token CSRF inválido"));
+            }
+
             $nombre = $_POST['nombre'] ?? '';
             $marca = $_POST['marca'] ?? '';
             $modelo = $_POST['modelo'] ?? '';
@@ -102,19 +112,26 @@ class InventoryController extends BaseController
                 $this->redirect("index.php?action=add_product&error=" . urlencode($e->getMessage()));
             }
         } else {
-            $this->redirect("inventory.php");
+            $this->redirect("index.php");
         }
     }
 
     public function add_stock()
     {
-        $this->check_auth();
+        $this->check_access('inventario');
+        if ($_SESSION['role'] !== 'admin') {
+            $this->redirect(BASE_URL . "/modules/inventory/index.php");
+        }
 
         $message = '';
         $messageType = '';
         $nombre = $marca = $modelo = $precio = $cantidad = '';
 
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
+            if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+                $this->redirect("index.php?action=add_stock&error=" . urlencode("Token CSRF inválido"));
+            }
+
             $nombre = $_POST['nombre'] ?? '';
             $marca = $_POST['marca'] ?? '';
             $modelo = $_POST['modelo'] ?? '';
@@ -165,21 +182,26 @@ class InventoryController extends BaseController
     {
         $this->check_access('inventario');
         if ($_SESSION['role'] !== 'admin') {
-            $this->redirect(BASE_URL . "/modules/inventory/inventory.php");
+            $this->redirect(BASE_URL . "/modules/inventory/index.php");
         }
 
         $id_producto = isset($_GET['id']) ? intval($_GET['id']) : 0;
         if ($id_producto === 0) {
-            $this->redirect(BASE_URL . "/modules/inventory/inventory.php");
+            $this->redirect(BASE_URL . "/modules/inventory/index.php");
         }
 
         $message = '';
         $messageType = '';
 
-        if ($_SERVER["REQUEST_METHOD"] == "POST") {
+        if (($_SERVER["REQUEST_METHOD"] ?? '') === "POST") {
+            if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+                $this->redirect("index.php?action=edit_stock&id=$id_producto&error=" . urlencode("Token CSRF inválido"));
+            }
+
             $nombre = $_POST['nombre'] ?? '';
             $marca = $_POST['marca'] ?? '';
             $modelo = $_POST['modelo'] ?? '';
+            $categoria = trim($_POST['categoria'] ?? '');
             $precio = $_POST['precio'] ?? '';
             $cantidad = $_POST['cantidad'] ?? '';
 
@@ -188,7 +210,7 @@ class InventoryController extends BaseController
             } else {
                 try {
                     $product_data = ['nombre' => $nombre, 'precio' => floatval($precio)];
-                    $detail_data = ['marca' => $marca, 'modelo' => $modelo];
+                    $detail_data = ['marca' => $marca, 'modelo' => $modelo, 'categoria' => $categoria];
                     $this->inventory_model->update_product_transaction($id_producto, $product_data, $detail_data, intval($cantidad));
 
                     require_once __DIR__ . '/../../../config/audit.php';
@@ -203,14 +225,18 @@ class InventoryController extends BaseController
 
         $product = $this->inventory_model->find_product_by_id($id_producto);
         if (!$product) {
-            $this->redirect(BASE_URL . "/modules/inventory/inventory.php");
+            $this->redirect(BASE_URL . "/modules/inventory/index.php");
         }
+
+        $categorias = $this->inventory_model->get_all_categories();
 
         $this->render_view(__DIR__ . '/../Views/edit_stock.php', [
             'id_producto' => $id_producto,
             'nombre' => $product['nombre'],
             'marca' => $product['marca'],
             'modelo' => $product['modelo'],
+            'categoria' => $product['categoria'] ?? '',
+            'categorias' => $categorias,
             'precio' => $product['precio'],
             'cantidad' => $product['cantidad'],
             'message' => $message,
@@ -222,27 +248,27 @@ class InventoryController extends BaseController
     {
         $this->check_access('inventario');
         if ($_SESSION['role'] !== 'admin') {
-            $this->redirect(BASE_URL . "/modules/inventory/inventory.php");
+            $this->redirect(BASE_URL . "/modules/inventory/index.php");
         }
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            $this->redirect(BASE_URL . "/modules/inventory/inventory.php");
+            $this->redirect(BASE_URL . "/modules/inventory/index.php");
         }
 
-        if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['session_token']) {
-            $this->redirect(BASE_URL . "/modules/inventory/inventory.php?error=" . urlencode("Token CSRF inválido"));
+        if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+            $this->redirect(BASE_URL . "/modules/inventory/index.php?error=" . urlencode("Token CSRF inválido"));
         }
 
         $id_producto = isset($_POST['id']) ? intval($_POST['id']) : 0;
 
         if ($id_producto > 0) {
             if ($this->inventory_model->toggle_product_status($id_producto)) {
-                $this->redirect(BASE_URL . "/modules/inventory/inventory.php?msg=status_updated");
+                $this->redirect(BASE_URL . "/modules/inventory/index.php?msg=status_updated");
             } else {
-                $this->redirect(BASE_URL . "/modules/inventory/inventory.php?error=update_failed");
+                $this->redirect(BASE_URL . "/modules/inventory/index.php?error=update_failed");
             }
         } else {
-            $this->redirect(BASE_URL . "/modules/inventory/inventory.php");
+            $this->redirect(BASE_URL . "/modules/inventory/index.php");
         }
     }
 
@@ -250,19 +276,29 @@ class InventoryController extends BaseController
     {
         $this->check_access('inventario');
         if ($_SESSION['role'] !== 'admin') {
-            $this->redirect(BASE_URL . "/modules/inventory/inventory.php");
+            $this->redirect(BASE_URL . "/modules/inventory/index.php");
         }
 
-        $id_producto = isset($_GET['id']) ? intval($_GET['id']) : 0;
+        // Solo POST: evita borrados por prefetch y fuga del token CSRF en la URL
+        if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+            $this->redirect(BASE_URL . "/modules/inventory/index.php");
+        }
+
+        $id_producto = isset($_POST['id']) ? intval($_POST['id']) : 0;
         if ($id_producto === 0) {
-            $this->redirect(BASE_URL . "/modules/inventory/inventory.php");
+            $this->redirect(BASE_URL . "/modules/inventory/index.php");
+        }
+
+        $csrf_token = $_POST['csrf_token'] ?? '';
+        if (!$this->verify_csrf($csrf_token)) {
+            $this->redirect(BASE_URL . "/modules/inventory/index.php?error=" . urlencode("Token CSRF inválido"));
         }
 
         $total_sales_purchases = $this->inventory_model->check_product_sales_purchases($id_producto);
 
         try {
             if ($total_sales_purchases > 0) {
-                $this->inventory_model->deactivate_product_and_delete_stock($id_producto);
+                $this->inventory_model->deactivate_product($id_producto);
                 $tipo_borrado = 'desactivado lógicamente';
             } else {
                 $this->inventory_model->delete_product_completely($id_producto);
@@ -271,9 +307,9 @@ class InventoryController extends BaseController
 
             require_once __DIR__ . '/../../../config/audit.php';
             audit_log($this->conn, 'INVENTORY_DELETE', $_SESSION['user_id'], 'Inventario', $id_producto, "Producto ID $id_producto $tipo_borrado");
-            $this->redirect(BASE_URL . "/modules/inventory/inventory.php?success=deleted");
+            $this->redirect(BASE_URL . "/modules/inventory/index.php?success=deleted");
         } catch (Exception $e) {
-            $this->redirect(BASE_URL . "/modules/inventory/inventory.php?error=" . urlencode($e->getMessage()));
+            $this->redirect(BASE_URL . "/modules/inventory/index.php?error=" . urlencode($e->getMessage()));
         }
     }
 
@@ -315,6 +351,13 @@ class InventoryController extends BaseController
         }
 
         $input = json_decode(file_get_contents('php://input'), true);
+
+        // Validación Anti-CSRF
+        $token = $input['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+        if (empty($_SESSION['session_token']) || !hash_equals($_SESSION['session_token'], (string)$token)) {
+            echo json_encode(['success' => false, 'message' => 'Token de seguridad inválido o expirado.']);
+            exit;
+        }
 
         if (!$input || !isset($input['nombre']) || !isset($input['precio'])) {
             echo json_encode(['success' => false, 'message' => 'Datos incompletos']);
@@ -373,6 +416,15 @@ class InventoryController extends BaseController
     public function update_images()
     {
         $this->check_access('inventario');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            die("Método no permitido. Se requiere petición POST.");
+        }
+        $token = $_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+        if (!$this->verify_csrf($token)) {
+            http_response_code(403);
+            die("Token CSRF inválido.");
+        }
         try {
             $this->inventory_model->update_images_db();
             echo "Imágenes actualizadas correctamente.";
@@ -382,4 +434,3 @@ class InventoryController extends BaseController
         exit;
     }
 }
-?>

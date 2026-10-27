@@ -15,7 +15,7 @@
 <body class="font-sans antialiased">
     <div class="auth-card">
         <div class="text-center mb-8">
-            <img src="<?php echo BASE_URL; ?>/assets/img/hero_phone.png" alt="Phone" class="w-16 h-16 mx-auto mb-4 object-contain filter drop-shadow-[0_0_15px_rgba(33,184,189,0.3)]">
+            <img src="<?php echo BASE_URL; ?>/assets/img/hero_phone.png" alt="Phone" class="w-16 h-16 mx-auto mb-4 object-contain filter drop-shadow-[0_0_15px_rgba(14,165,160,0.3)]">
             <h1 class="text-2xl font-bold font-display tracking-tight text-text-main mb-2">Crear Nueva Contraseña</h1>
             <p class="text-sm text-text-muted">Introduce tu nueva contraseña segura abajo.</p>
         </div>
@@ -52,7 +52,7 @@
                     </div>
                 </div>
 
-                <!-- Password Strength Meter -->
+                <?php // Password Strength Meter ?>
                 <div id="password-strength-container" class="w-full h-1 bg-border/30 rounded-full overflow-hidden" style="display: none; margin-top: 1rem; margin-bottom: 0.5rem;">
                     <div id="password-strength-bar" class="h-full w-0 transition-all duration-300"></div>
                 </div>
@@ -65,9 +65,8 @@
             <a href="<?php echo BASE_URL; ?>/index.php" class="text-primary hover:text-primary-hover transition-colors hover:underline font-semibold bg-transparent border-none cursor-pointer">Volver al inicio de sesión</a>
         </div>
     </div>
-    </div>
 
-    <!-- Contenedor Unificado para Notificaciones Toasts Flotantes -->
+    <?php // Contenedor Unificado para Notificaciones Toasts Flotantes ?>
     <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col items-end pointer-events-none gap-2"></div>
 
     <script src="<?php echo BASE_URL; ?>/assets/js/framer-toaster.js?v=<?php echo time(); ?>"></script>

@@ -6,7 +6,10 @@ require_once __DIR__ . '/../Models/SalesModel.php';
 
 class SalesController extends BaseController
 {
-    private $sales_model;
+    private SalesModel $sales_model;
+
+    // Métodos de pago permitidos (deben coincidir con los que ofrece la interfaz)
+    private const METODOS_PAGO = ['Efectivo', 'Transferencia', 'Tarjeta'];
 
     public function __construct()
     {
@@ -35,7 +38,9 @@ class SalesController extends BaseController
         $this->render_view(__DIR__ . '/../Views/list.php', [
             'sales' => $sales,
             'page' => $page,
-            'total_pages' => $total_pages
+            'total_pages' => $total_pages,
+            'total_items' => $total_items,
+            'limit' => $limit
         ]);
     }
 
@@ -52,6 +57,13 @@ class SalesController extends BaseController
             $input = json_decode(file_get_contents('php://input'), true);
 
             if ($input) {
+                // Validación Anti-CSRF
+                $token = $input['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+                if (empty($_SESSION['session_token']) || !hash_equals($_SESSION['session_token'], (string)$token)) {
+                    echo json_encode(['success' => false, 'message' => 'Token de seguridad inválido o expirado.']);
+                    exit;
+                }
+
                 $items = $input['items'] ?? [];
                 $metodo_pago = $input['metodo_pago'] ?? '';
                 $descripcion = $input['descripcion'] ?? '';
@@ -60,6 +72,12 @@ class SalesController extends BaseController
                     echo json_encode(['success' => false, 'message' => 'Datos incompletos']);
                     exit;
                 }
+
+                if (!is_string($metodo_pago) || !in_array($metodo_pago, self::METODOS_PAGO, true)) {
+                    echo json_encode(['success' => false, 'message' => 'Método de pago no válido']);
+                    exit;
+                }
+                $descripcion = mb_substr((string) $descripcion, 0, 255);
 
                 try {
                     $id_venta = $this->sales_model->create_sale_transaction($items, $metodo_pago, $_SESSION['user_id'], $descripcion);
@@ -80,7 +98,7 @@ class SalesController extends BaseController
 
     public function invoice()
     {
-        $this->check_auth();
+        $this->check_any_access(['ventas', 'venta']);
 
         $id_venta = isset($_GET['id']) ? intval($_GET['id']) : 0;
         if ($id_venta === 0) {
@@ -103,12 +121,8 @@ class SalesController extends BaseController
     public function repairs_to_charge()
     {
         $this->check_auth();
-        // Verificar acceso a ventas
-        if ($_SESSION['role'] === 'admin') {
-            $this->check_access('ventas');
-        } else {
-            $this->check_access('venta');
-        }
+        // Verificar acceso a cobrar reparaciones o ventas
+        $this->check_any_access(['cobrar_reparaciones', 'venta', 'ventas']);
 
         require_once __DIR__ . '/../../workshop/Models/WorkshopModel.php';
         $workshop_model = new WorkshopModel();
@@ -116,26 +130,22 @@ class SalesController extends BaseController
         // Procesar cobro si viene por POST
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'charge_repair') {
             try {
-                $id_reparacion = (int)($_POST['id_reparacion'] ?? 0);
-                $metodo = trim($_POST['metodo_pago'] ?? 'Efectivo');
-                
-                $repair = $workshop_model->find_repair_by_id($id_reparacion);
-                if (!$repair) {
-                    throw new Exception("Reparación no encontrada.");
+                // Validación Anti-CSRF
+                $token = $_POST['csrf_token'] ?? '';
+                if (empty($_SESSION['session_token']) || !hash_equals($_SESSION['session_token'], (string)$token)) {
+                    throw new Exception("Token de seguridad inválido o expirado.");
                 }
 
-                $presupuesto_base = floatval($repair['presupuesto']);
-                $costo_repuestos = floatval($repair['costo_total'] ?? 0);
-                $total_a_cobrar = $presupuesto_base + $costo_repuestos;
-                
-                // Actualizamos estado en Taller y registramos el pago
-                // NOTA: mantenemos el presupuesto base intacto en la tabla reparación
-                $workshop_model->update_repair_status_and_budget($id_reparacion, 'Entregado', $presupuesto_base, 'Cobrado y entregado desde Ventas', $_SESSION['user_id']);
-                
-                // Registramos el pago por el TOTAL (presupuesto + repuestos)
-                $workshop_model->register_repair_payment($id_reparacion, $total_a_cobrar, $metodo, $_SESSION['user_id']);
+                $id_reparacion = (int)($_POST['id_reparacion'] ?? 0);
+                $metodo = trim($_POST['metodo_pago'] ?? 'Efectivo');
+                if (!in_array($metodo, self::METODOS_PAGO, true)) {
+                    throw new Exception("Método de pago no válido.");
+                }
 
-                $this->redirect("index.php?action=repairs_to_charge&success=" . urlencode("Reparación cobrada y entregada correctamente."));
+                // Ejecuta verificación de estado, bloqueo por concurrencia y registro de cobro en una transacción atómica
+                $id_venta = $workshop_model->charge_and_deliver_repair($id_reparacion, $metodo, (int)$_SESSION['user_id']);
+
+                $this->redirect("index.php?action=repairs_to_charge&success=" . urlencode("Reparación cobrada y entregada correctamente.") . "&charged_id=" . $id_reparacion . "&id_venta=" . $id_venta);
             } catch (Exception $e) {
                 $this->redirect("index.php?action=repairs_to_charge&error=" . urlencode($e->getMessage()));
             }
@@ -158,7 +168,7 @@ class SalesController extends BaseController
 
     public function credit_note()
     {
-        $this->check_auth();
+        $this->check_any_access(['ventas', 'venta']);
 
         $id_venta = isset($_GET['id']) ? intval($_GET['id']) : 0;
         if ($id_venta === 0) {
@@ -205,7 +215,7 @@ class SalesController extends BaseController
 
     public function export_sales()
     {
-        $this->check_auth();
+        $this->check_any_access(['ventas', 'venta']);
 
         header('Content-Type: text/csv; charset=utf-8');
         header('Content-Disposition: attachment; filename=ventas_' . date('Y-m-d') . '.csv');
@@ -234,13 +244,21 @@ class SalesController extends BaseController
 
     public function rollback()
     {
-        $this->check_auth();
-        $this->check_access('ventas'); // Requiere acceso al módulo de ventas
+        header('Content-Type: application/json');
+        // Admin usa 'ventas' y empleados 'venta': se aceptan ambos y se responde en JSON si se deniega
+        $this->check_any_access(['ventas', 'venta'], true);
         
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $input = json_decode(file_get_contents('php://input'), true);
             
             if ($input && isset($input['id_venta'])) {
+                // Validación Anti-CSRF
+                $token = $input['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+                if (empty($_SESSION['session_token']) || !hash_equals($_SESSION['session_token'], (string)$token)) {
+                    echo json_encode(['success' => false, 'message' => 'Token de seguridad inválido o expirado.']);
+                    exit;
+                }
+
                 $id_venta = intval($input['id_venta']);
                 
                 try {
@@ -255,5 +273,57 @@ class SalesController extends BaseController
         echo json_encode(['success' => false, 'message' => 'Petición inválida']);
         exit;
     }
+
+    public function check_ready_repairs()
+    {
+        $this->check_auth(true);
+        header('Content-Type: application/json; charset=utf-8');
+
+        // Los usuarios invitados no acceden a reparaciones
+        if (isset($_SESSION['role']) && $_SESSION['role'] === 'guest') {
+            echo json_encode(['success' => false, 'count' => 0, 'repairs' => []]);
+            exit();
+        }
+
+        // Solo quien tenga acceso a taller, cobro de reparaciones o ventas ve montos y órdenes
+        require_once __DIR__ . '/../../../classes/Layout.php';
+        $allowed = false;
+        foreach (['taller', 'cobrar_reparaciones', 'ventas', 'venta'] as $mod) {
+            if (Layout::hasAccess($mod)) { $allowed = true; break; }
+        }
+        if (!$allowed) {
+            echo json_encode(['success' => false, 'count' => 0, 'repairs' => []]);
+            exit();
+        }
+
+        require_once __DIR__ . '/../../workshop/Models/WorkshopModel.php';
+        $workshop_model = new WorkshopModel();
+
+        $repairs = $workshop_model->get_chargeable_repairs();
+        $count = count($repairs);
+
+        $summary = [];
+        foreach ($repairs as $r) {
+            $presupuesto = floatval($r['presupuesto']);
+            $repuestos = floatval($r['costo_total'] ?? 0);
+            $total = $presupuesto + $repuestos;
+            $summary[] = [
+                'id' => (int)$r['id_reparacion'],
+                'codigo' => $r['codigo_orden'],
+                'cliente' => $r['cliente_nombre'],
+                'equipo' => $r['equipo_marca'] . ' ' . $r['equipo_modelo'],
+                'total' => $total,
+                'total_formatted' => '$' . number_format($total, 2)
+            ];
+        }
+
+        echo json_encode([
+            'success' => true,
+            'count' => $count,
+            'repairs' => $summary,
+            'latest_id' => !empty($summary) ? $summary[count($summary) - 1]['id'] : 0
+        ]);
+        exit();
+    }
 }
-?>
+

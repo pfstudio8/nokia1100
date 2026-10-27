@@ -2,12 +2,13 @@
 // modules/suppliers/Controllers/SuppliersController.php
 
 require_once __DIR__ . '/../../../classes/BaseController.php';
+require_once __DIR__ . '/../../../config/audit.php';
 require_once __DIR__ . '/../Models/SupplierModel.php';
 require_once __DIR__ . '/../../inventory/Models/InventoryModel.php';
 
 class SuppliersController extends BaseController
 {
-    private $supplier_model;
+    private SupplierModel $supplier_model;
 
     public function __construct()
     {
@@ -18,12 +19,12 @@ class SuppliersController extends BaseController
     public function suppliers()
     {
         $this->check_access('proveedores');
-        if ($_SESSION['role'] !== 'admin') {
-            $this->redirect(BASE_URL . "/index.php");
-        }
 
         // Gestionar añadir proveedor
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add') {
+            if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+                $this->redirect(BASE_URL . "/modules/suppliers/index.php?error=" . urlencode("Token CSRF inválido."));
+            }
             $nombre = $_POST['nombre'] ?? '';
             $domicilio = $_POST['domicilio'] ?? '';
             $telefono = $_POST['telefono'] ?? '';
@@ -31,20 +32,26 @@ class SuppliersController extends BaseController
             $email = $_POST['email'] ?? '';
 
             if ($this->supplier_model->create_supplier($nombre, $domicilio, $telefono, $atencion, $email)) {
+                $new_id = $this->conn->insert_id;
+                audit_log($this->conn, 'SUPPLIER_CREATE', $_SESSION['user_id'] ?? null, 'proveedor', $new_id, "Creado proveedor: $nombre");
                 $this->redirect(BASE_URL . "/modules/suppliers/index.php?success=created");
             } else {
                 $this->redirect(BASE_URL . "/modules/suppliers/index.php?error=" . urlencode("Error al crear el proveedor."));
             }
         }
 
-        // Gestiona la eliminación del proveedor
-        if (isset($_GET['delete'])) {
-            $id = intval($_GET['delete']);
+        // Gestiona la eliminación del proveedor (solo POST)
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_supplier') {
+            if (!$this->verify_csrf($_POST['csrf_token'] ?? '')) {
+                $this->redirect(BASE_URL . "/modules/suppliers/index.php?error=" . urlencode("Token CSRF inválido."));
+            }
+            $id = intval($_POST['id_proveedor'] ?? 0);
             $count = $this->supplier_model->count_supplier_purchases($id);
             if ($count > 0) {
                 $this->redirect(BASE_URL . "/modules/suppliers/index.php?error=has_purchases");
             } else {
                 $this->supplier_model->delete_supplier($id);
+                audit_log($this->conn, 'SUPPLIER_DELETE', $_SESSION['user_id'] ?? null, 'proveedor', $id, "Eliminado proveedor ID: $id");
                 $this->redirect(BASE_URL . "/modules/suppliers/index.php?success=deleted");
             }
         }
@@ -70,19 +77,19 @@ class SuppliersController extends BaseController
     public function edit_supplier()
     {
         $this->check_access('proveedores');
-        if ($_SESSION['role'] !== 'admin') {
-            $this->redirect(BASE_URL . "/index.php");
-        }
 
         $id_proveedor = isset($_GET['id']) ? (int) $_GET['id'] : 0;
         if ($id_proveedor === 0) {
-            $this->redirect("suppliers.php");
+            $this->redirect("index.php");
         }
 
         $error = '';
         $success = '';
 
         if ($_SERVER["REQUEST_METHOD"] === "POST") {
+            if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+                $this->redirect("index.php?action=edit_supplier&id=$id_proveedor&error=" . urlencode("Token CSRF inválido."));
+            }
             $nombre = trim($_POST['nombre'] ?? '');
             $domicilio = trim($_POST['domicilio'] ?? '');
             $telefono = trim($_POST['telefono'] ?? '');
@@ -104,7 +111,7 @@ class SuppliersController extends BaseController
 
         $supplier = $this->supplier_model->find_supplier_by_id($id_proveedor);
         if (!$supplier) {
-            $this->redirect("suppliers.php");
+            $this->redirect("index.php");
         }
 
         $this->render_view(__DIR__ . '/../Views/edit.php', [
@@ -121,14 +128,16 @@ class SuppliersController extends BaseController
 
     public function new_purchase()
     {
-        $this->check_auth();
-        if ($_SESSION['role'] !== 'admin') {
-            $this->redirect(BASE_URL . "/index.php");
-        }
+        $this->check_access('proveedores');
 
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $input = json_decode(file_get_contents('php://input'), true);
             if ($input) {
+                $csrf_token = $input['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+                if (!$this->verify_csrf($csrf_token)) {
+                    echo json_encode(['success' => false, 'message' => 'Token CSRF inválido']);
+                    exit;
+                }
                 $id_proveedor = $input['id_proveedor'] ?? 0;
                 $items = $input['items'] ?? [];
                 $descripcion = $input['descripcion'] ?? '';
@@ -142,7 +151,8 @@ class SuppliersController extends BaseController
                 }
 
                 try {
-                    $this->supplier_model->create_purchase_transaction($id_proveedor, $items, $descripcion, $tiempo_entrega, $iva, $autorizado_por);
+                    $id_compra = $this->supplier_model->create_purchase_transaction($id_proveedor, $items, $descripcion, $tiempo_entrega, $iva, $autorizado_por);
+                    audit_log($this->conn, 'PURCHASE_CREATE', $_SESSION['user_id'] ?? null, 'compra', $id_compra, "Registrada orden de compra #$id_compra para proveedor #$id_proveedor");
                     echo json_encode(['success' => true, 'message' => 'Compra registrada con éxito']);
                 } catch (Exception $e) {
                     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
@@ -164,10 +174,7 @@ class SuppliersController extends BaseController
 
     public function purchase_history()
     {
-        $this->check_auth();
-        if ($_SESSION['role'] !== 'admin') {
-            $this->redirect(BASE_URL . "/index.php");
-        }
+        $this->check_access('proveedores');
 
         $purchases = $this->supplier_model->get_purchases();
 
@@ -185,14 +192,15 @@ class SuppliersController extends BaseController
 
     public function receive_purchase()
     {
-        $this->check_auth();
-        if ($_SESSION['role'] !== 'admin') {
-            echo json_encode(['success' => false, 'message' => 'No autorizado']);
-            exit;
-        }
+        $this->check_access('proveedores', true);
 
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $input = json_decode(file_get_contents('php://input'), true);
+            $csrf_token = $input['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+            if (!$this->verify_csrf($csrf_token)) {
+                echo json_encode(['success' => false, 'message' => 'Token CSRF inválido']);
+                exit;
+            }
             $id_compra = $input['id_compra'] ?? 0;
 
             if (!$id_compra) {
@@ -202,6 +210,7 @@ class SuppliersController extends BaseController
 
             try {
                 $this->supplier_model->receive_purchase($id_compra);
+                audit_log($this->conn, 'PURCHASE_RECEIVE', $_SESSION['user_id'] ?? null, 'compra', $id_compra, "Recepción de pedido #$id_compra y stock acreditado");
                 echo json_encode(['success' => true, 'message' => 'Pedido recibido y stock actualizado con éxito']);
             } catch (Exception $e) {
                 echo json_encode(['success' => false, 'message' => $e->getMessage()]);
@@ -212,14 +221,15 @@ class SuppliersController extends BaseController
 
     public function cancel_purchase()
     {
-        $this->check_auth();
-        if ($_SESSION['role'] !== 'admin') {
-            echo json_encode(['success' => false, 'message' => 'No autorizado']);
-            exit;
-        }
+        $this->check_access('proveedores', true);
 
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $input = json_decode(file_get_contents('php://input'), true);
+            $csrf_token = $input['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+            if (!$this->verify_csrf($csrf_token)) {
+                echo json_encode(['success' => false, 'message' => 'Token CSRF inválido']);
+                exit;
+            }
             $id_compra = $input['id_compra'] ?? 0;
 
             if (!$id_compra) {
@@ -229,6 +239,7 @@ class SuppliersController extends BaseController
 
             try {
                 if ($this->supplier_model->cancel_purchase($id_compra)) {
+                    audit_log($this->conn, 'PURCHASE_CANCEL', $_SESSION['user_id'] ?? null, 'compra', $id_compra, "Cancelación de orden de compra #$id_compra");
                     echo json_encode(['success' => true, 'message' => 'Pedido cancelado con éxito']);
                 } else {
                     echo json_encode(['success' => false, 'message' => 'No se pudo cancelar el pedido. Verifique su estado.']);
@@ -240,4 +251,3 @@ class SuppliersController extends BaseController
         }
     }
 }
-?>

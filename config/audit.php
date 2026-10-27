@@ -15,34 +15,41 @@
 function audit_log(
     mysqli $conn,
     string $accion,
-    ?int   $id_usuario    = null,
+    int|string|null $id_usuario = null,
     ?string $tabla        = null,
     ?int   $id_registro   = null,
     ?string $desc         = null,
     ?string $username_intent = null
 ): void {
+    // Solo IDs enteros positivos: 0, 'guest' o null se guardan como NULL (evita violar la FK hacia usuario)
+    $id_user_int = (is_numeric($id_usuario) && (int)$id_usuario > 0) ? (int)$id_usuario : null;
     $ip         = $_SERVER['REMOTE_ADDR']     ?? 'unknown';
     $user_agent = substr($_SERVER['HTTP_USER_AGENT'] ?? '', 0, 255);
 
-    $stmt = $conn->prepare(
-        "INSERT INTO audit_log
-            (id_usuario, accion, tabla_afectada, id_registro, descripcion, ip, user_agent, username_intent)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    );
+    try {
+        $stmt = $conn->prepare(
+            "INSERT INTO audit_log
+                (id_usuario, accion, tabla_afectada, id_registro, descripcion, ip, user_agent, username_intent)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        );
 
-    if (!$stmt) return; // tabla no existe aún (antes de migración)
+        if (!$stmt) return; // tabla no existe aún (antes de migración)
 
-    $stmt->bind_param(
-        'ississss',
-        $id_usuario,
-        $accion,
-        $tabla,
-        $id_registro,
-        $desc,
-        $ip,
-        $user_agent,
-        $username_intent
-    );
-    $stmt->execute();
-    $stmt->close();
+        $stmt->bind_param(
+            'ississss',
+            $id_user_int,
+            $accion,
+            $tabla,
+            $id_registro,
+            $desc,
+            $ip,
+            $user_agent,
+            $username_intent
+        );
+        $stmt->execute();
+        $stmt->close();
+    } catch (\Throwable $e) {
+        // La auditoría nunca debe abortar la operación de negocio que la invoca
+        error_log("audit_log fallido ($accion): " . $e->getMessage());
+    }
 }

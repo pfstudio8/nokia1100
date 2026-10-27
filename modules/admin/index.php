@@ -3,9 +3,12 @@
 require_once __DIR__ . '/Controllers/AdminController.php';
 $controller = new AdminController();
 
-$action = $_GET['action'] ?? 'dashboard';
+$action = $_POST['action'] ?? ($_GET['action'] ?? 'dashboard');
 
 switch ($action) {
+    case 'dashboard':
+        $controller->dashboard();
+        break;
     case 'users':
         $controller->users();
         break;
@@ -27,12 +30,13 @@ switch ($action) {
     case 'profile':
         $controller->profile();
         break;
+    case 'audit':
+        $controller->audit();
+        break;
     case 'get_dashboard_data':
         $controller->get_dashboard_data();
         break;
-    case 'dashboard':
     default:
-        $controller->dashboard();
-        break;
+        http_response_code(404);
+        exit('Acción no encontrada');
 }
-?>

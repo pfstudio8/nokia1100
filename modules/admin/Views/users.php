@@ -13,10 +13,10 @@ Layout::renderAdminSidebar('usuarios');
 <link rel="stylesheet" href="<?php echo BASE_URL; ?>/modules/admin/admin_users.css?v=<?php echo time(); ?>">
 
 <main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen">
-    <!-- Contenedor Grid para permitir vista en dos columnas cuando se abre la gestión de permisos -->
+    <?php // Contenedor Grid para permitir vista en dos columnas cuando se abre la gestión de permisos ?>
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         
-        <!-- Columna de la Tabla de Usuarios -->
+        <?php // Columna de la Tabla de Usuarios ?>
         <div class="col-span-1 lg:col-span-3 transition-all duration-500 w-full" id="users-table-container">
             <div class="glass-card mb-8">
                 <div class="dashboard-header" style="flex-wrap:wrap; gap:1rem;">
@@ -25,21 +25,21 @@ Layout::renderAdminSidebar('usuarios');
                         <p>Gestión de personal y accesos</p>
                     </div>
                     <div style="display:flex; gap:1rem; align-items:center; justify-content:flex-end; flex:1; flex-wrap:wrap;">
-                        <input type="text" id="search-input" placeholder="Buscar usuario..."
-                            style="width:200px; padding:.5rem 1rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text-main); font-size:.9rem;">
+                        <input type="text" id="search-input" placeholder="Buscar usuario..." class="w-full sm:w-[200px]"
+                            style="padding:.5rem 1rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text-main); font-size:.9rem;">
 
-                        <!-- Filtro activos / inactivos -->
+                        <?php // Filtro activos / inactivos ?>
                         <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
                             <a href="?filtro=activos"
                                style="padding:.4rem .8rem; border-radius:8px; font-size:.8rem; font-weight:600;
                                       border:1px solid var(--border);
                                       background: <?php echo $filtro==='activos'?'var(--primary-color)':'var(--surface)'; ?>;
-                                      color: <?php echo $filtro==='activos'?'#0A0A0B':'var(--text-muted)'; ?>">Activos</a>
+                                      color: <?php echo $filtro==='activos'?'#ffffff':'var(--text-muted)'; ?>">Activos</a>
                             <a href="?filtro=inactivos"
                                style="padding:.4rem .8rem; border-radius:8px; font-size:.8rem; font-weight:600;
                                       border:1px solid var(--border);
-                                      background: <?php echo $filtro==='inactivos'?'#ef4444':'var(--surface)'; ?>;
-                                      color: <?php echo $filtro==='inactivos'?'#fff':'var(--text-muted)'; ?>">Inactivos</a>
+                                      background: <?php echo $filtro==='inactivos'?'var(--error)':'var(--surface)'; ?>;
+                                      color: <?php echo $filtro==='inactivos'?'#ffffff':'var(--text-muted)'; ?>">Inactivos</a>
                             <a href="?filtro=todos"
                                style="padding:.4rem .8rem; border-radius:8px; font-size:.8rem; font-weight:600;
                                       border:1px solid var(--border);
@@ -48,18 +48,18 @@ Layout::renderAdminSidebar('usuarios');
                         </div>
 
                         <!-- Botones de Exportación -->
-                        <button type="button" onclick="exportTableToExcel('users-table', 'usuarios', this)" class="px-3 py-1.5 rounded-lg border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5">
+                        <button type="button" onclick="exportTableToExcel('users-table', 'usuarios', this)" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5 cursor-pointer">
                             <span class="material-symbols-outlined text-[16px]">download</span> Excel
                         </button>
-                        <button type="button" onclick="exportTableToPDF('users-table', 'Listado de Usuarios', 'usuarios', this)" class="px-3 py-1.5 rounded-lg border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5">
+                        <button type="button" onclick="exportTableToPDF('users-table', 'Listado de Usuarios', 'usuarios', this)" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer">
                             <span class="material-symbols-outlined text-[16px]">download</span> PDF
                         </button>
 
-                        <button type="button" onclick="openAddUserModal()" style="width:max-content; padding:.45rem .9rem; border-radius:8px; font-size:.8rem; font-weight:600; background:var(--primary-color); color:#0A0A0B; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem; transition: all 0.2s; white-space:nowrap; flex-shrink:0;">
+                        <button type="button" onclick="openAddUserModal()" style="width:max-content; padding:.45rem .9rem; border-radius:8px; font-size:.8rem; font-weight:600; background:var(--primary-color); color:#ffffff; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem; transition: all 0.2s; white-space:nowrap; flex-shrink:0;">
                             <span class="material-symbols-outlined" style="font-size:1.1rem; font-weight:600;">person_add</span>
                             Nuevo
                         </button>
-                        <a href="<?php echo BASE_URL; ?>/modules/admin/dashboard.php" class="btn-back">Volver</a>
+                        <a href="<?php echo BASE_URL; ?>/modules/admin/index.php" class="btn-back">Volver</a>
                     </div>
                 </div>
 
@@ -97,10 +97,11 @@ Layout::renderAdminSidebar('usuarios');
                                         <td>
                                             <?php if ($row['is_active']): ?>
                                                 <div style="display:flex; align-items:center; gap:1.25rem; flex-wrap:wrap; justify-content: flex-start;">
-                                                    <!-- Cambio de rol -->
-                                                    <form action="<?php echo BASE_URL; ?>/modules/admin/update_user_role.php"
+                                                    <?php // Cambio de rol ?>
+                                                    <form action="<?php echo BASE_URL; ?>/modules/admin/index.php?action=update_user_role"
                                                           method="POST" style="display:inline-flex; gap:.5rem; align-items:center; margin-bottom:0;">
                                                         <input type="hidden" name="id_usuario" value="<?php echo (int)$row['id_usuario']; ?>">
+                                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                                         <div class="relative inline-block">
                                                             <select name="rol" style="min-width: 110px; padding:.35rem 1.8rem .35rem .6rem; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text-main); font-size:.8rem; appearance: none; cursor: pointer; transition: border-color 0.2s;" onchange="this.form.submit()">
                                                                 <option value="empleado" <?php echo $row['rol']==='empleado'?'selected':''; ?>>Empleado</option>
@@ -124,7 +125,7 @@ Layout::renderAdminSidebar('usuarios');
                                                          'rol' => $row['rol']
                                                      ], JSON_HEX_APOS | JSON_HEX_QUOT);
                                                      ?>
-                                                     <!-- Editar datos personales -->
+                                                     <?php // Editar datos personales ?>
                                                      <a href="javascript:void(0)" 
                                                         onclick='openEditUserModal(<?php echo htmlspecialchars($user_data, ENT_QUOTES); ?>)'
                                                         class="text-primary hover:underline text-sm font-medium inline-flex items-center gap-1 transition-colors hover:text-primary/80"
@@ -134,7 +135,7 @@ Layout::renderAdminSidebar('usuarios');
                                                          Editar
                                                      </a>
 
-                                                     <!-- Módulos de Acceso -->
+                                                     <?php // Módulos de Acceso ?>
                                                     <?php if ($row['rol'] !== 'admin'): ?>
                                                     <a href="javascript:void(0)" 
                                                        onclick="openModulePermissions(<?php echo $row['id_usuario']; ?>, '<?php echo htmlspecialchars($row['nombre'] . ' ' . $row['apellido'], ENT_QUOTES); ?>', '<?php echo $row['rol']; ?>', '<?php echo htmlspecialchars($row['modulos_permitidos'] ?? 'DEFAULT', ENT_QUOTES); ?>')"
@@ -145,27 +146,33 @@ Layout::renderAdminSidebar('usuarios');
                                                         Módulos
                                                     </a>
                                                     <?php else: ?>
-                                                    <div style="width: 85px;"></div>
+                                                    <span class="text-[11px] px-2 py-0.5 rounded-full border border-primary/30 text-primary bg-primary/10 font-semibold inline-block text-center" style="width: 85px;">Acceso Total</span>
                                                     <?php endif; ?>
 
-                                                    <!-- Baja lógica -->
-                                                    <a class="btn-delete text-red-500 font-medium hover:underline text-sm inline-flex items-center gap-1 transition-colors hover:text-red-400"
-                                                       href="delete_user.php?id=<?php echo $row['id_usuario']; ?>"
-                                                       data-confirm="¿Desactivar a este usuario? Podrá restaurarse luego."
-                                                       data-confirm-title="Baja Lógica">
-                                                        <span class="material-symbols-outlined" style="font-size:1.1rem;">block</span>
-                                                        Desactivar
-                                                    </a>
+                                                    <?php // Baja lógica vía POST ?>
+                                                    <form method="POST" action="index.php?action=delete_user" style="display:inline;">
+                                                        <input type="hidden" name="id" value="<?php echo (int)$row['id_usuario']; ?>">
+                                                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                                        <button type="submit" class="btn-delete text-red-500 font-medium hover:underline text-sm inline-flex items-center gap-1 transition-colors hover:text-red-400 bg-transparent border-0 cursor-pointer p-0"
+                                                                data-confirm="¿Desactivar a este usuario? Podrá restaurarse luego."
+                                                                data-confirm-title="Baja Lógica">
+                                                            <span class="material-symbols-outlined" style="font-size:1.1rem;">block</span>
+                                                            Desactivar
+                                                        </button>
+                                                    </form>
                                                 </div>
                                             <?php else: ?>
-                                                <!-- Restaurar -->
-                                                <a class="font-medium text-sm hover:underline"
-                                                   href="delete_user.php?id=<?php echo $row['id_usuario']; ?>"
-                                                   data-confirm="¿Restaurar la cuenta de este usuario?"
-                                                   data-confirm-title="Restaurar Usuario"
-                                                   style="color:var(--primary-color);">
-                                                    Restaurar
-                                                </a>
+                                                <?php // Restaurar vía POST ?>
+                                                <form method="POST" action="index.php?action=delete_user" style="display:inline;">
+                                                    <input type="hidden" name="id" value="<?php echo (int)$row['id_usuario']; ?>">
+                                                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <button type="submit" class="font-medium text-sm hover:underline bg-transparent border-0 cursor-pointer p-0"
+                                                            data-confirm="¿Restaurar la cuenta de este usuario?"
+                                                            data-confirm-title="Restaurar Usuario"
+                                                            style="color:var(--primary-color);">
+                                                        Restaurar
+                                                    </button>
+                                                </form>
                                             <?php endif; ?>
                                         </td>
                                     </tr>
@@ -186,45 +193,46 @@ Layout::renderAdminSidebar('usuarios');
     </div>
 </main>
 
-<!-- Modal/Overlay de Permisos de Módulos -->
+<?php // Modal/Overlay de Permisos de Módulos ?>
 <div id="permission-overlay" class="fixed inset-0 bg-background/50 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300" onclick="closeModulePermissions()"></div>
 
-<!-- Tarjeta de Permisos de Módulos (Off-canvas Drawer) -->
+<?php // Tarjeta de Permisos de Módulos (Off-canvas Drawer) ?>
 <div id="permission-card" class="fixed top-0 right-0 h-full w-full max-w-md bg-surface border-l border-border z-50 transform translate-x-full transition-transform duration-300 shadow-2xl flex flex-col hidden" style="border-left: 4px solid var(--secondary-color);">
     
-    <div class="p-6 overflow-y-auto flex-grow">
-        <div class="flex justify-between items-start mb-5">
-            <div>
-                <h3 class="text-xl font-display font-medium text-text-main flex items-center gap-2">
-                    <span class="material-symbols-outlined text-secondary" style="color:var(--secondary-color); font-size:1.6rem;">shield_person</span>
-                    Accesos de Módulos
-                </h3>
-                <p class="text-text-muted text-xs mt-1">Configurar visibilidad para: <span id="perm-user-name" class="text-text-main font-semibold"></span></p>
-                <div class="mt-2 inline-block text-[10px] uppercase font-bold tracking-widest bg-surface border border-border px-2 py-0.5 rounded text-primary" id="perm-user-role"></div>
-            </div>
-            <button onclick="closeModulePermissions()" style="width: auto; padding: 0.5rem; background: transparent; height: auto; box-shadow: none;" class="text-text-muted hover:text-text-main transition-colors bg-transparent border-none cursor-pointer">
-                <span class="material-symbols-outlined">close</span>
-            </button>
+    <div class="p-6 border-b border-border flex justify-between items-start flex-shrink-0 bg-surface">
+        <div>
+            <h3 class="text-xl font-display font-medium text-text-main flex items-center gap-2">
+                <span class="material-symbols-outlined text-secondary" style="color:var(--secondary-color); font-size:1.6rem;">shield_person</span>
+                Accesos de Módulos
+            </h3>
+            <p class="text-text-muted text-xs mt-1">Configurar visibilidad para: <span id="perm-user-name" class="text-text-main font-semibold"></span></p>
+            <div class="mt-2 inline-block text-[10px] uppercase font-bold tracking-widest bg-surface border border-border px-2 py-0.5 rounded text-primary" id="perm-user-role"></div>
         </div>
+        <button type="button" onclick="closeModulePermissions()" style="width: auto; padding: 0.5rem; background: transparent; height: auto; box-shadow: none;" class="text-text-muted hover:text-text-main transition-colors bg-transparent border-none cursor-pointer">
+            <span class="material-symbols-outlined">close</span>
+        </button>
+    </div>
 
-        <form id="permission-form" action="save_user_modules.php" method="POST" class="space-y-4">
-            <input type="hidden" name="id_usuario" id="perm-user-id" value="0">
-            
+    <form id="permission-form" action="index.php?action=save_user_modules" method="POST" class="flex flex-col flex-grow overflow-hidden m-0">
+        <input type="hidden" name="id_usuario" id="perm-user-id" value="0">
+        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+        
+        <div class="p-6 overflow-y-auto flex-grow custom-scrollbar space-y-4">
             <div id="perm-note"></div>
 
-            <div id="modules-list" class="space-y-2.5 mt-4">
-                <!-- Insertado dinámicamente vía JS -->
+            <div id="modules-list" class="space-y-2.5">
+                <?php // Insertado dinámicamente vía JS ?>
             </div>
+        </div>
 
-            <div class="flex gap-3 pt-6 border-t border-border mt-8">
-                <button type="button" onclick="closeModulePermissions()" class="btn-back flex-1 text-center py-2" style="margin:0; width:auto;">Cancelar</button>
-                <button type="submit" class="btn-primary flex-1 text-center py-2" style="margin:0; width:auto; background:var(--primary-color); color:#0A0A0B;">Guardar</button>
-            </div>
-        </form>
-    </div>
+        <div class="p-4 px-6 border-t border-border flex gap-3 flex-shrink-0 bg-surface">
+            <button type="button" onclick="closeModulePermissions()" class="btn-back flex-1 text-center py-2.5" style="margin:0; width:auto;">Cancelar</button>
+            <button type="submit" class="btn-primary flex-1 text-center py-2.5" style="margin:0; width:auto; background:var(--primary-color); color:#ffffff;">Guardar</button>
+        </div>
+    </form>
 </div>
 
-<!-- Modal para agregar usuario -->
+<?php // Modal para agregar usuario ?>
 <div id="add-user-modal" class="fixed inset-0 bg-background/80 backdrop-blur-[8px] z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
     <div class="glass-card max-w-2xl w-full mx-4 my-2 shadow-2xl relative border border-border/80 transform scale-95 transition-all duration-300 premium-modal-card max-h-[95vh] overflow-y-auto scrollbar-hide" style="padding: 1.5rem; border-top: 4px solid var(--primary-color);">
         <button onclick="closeAddUserModal()" style="width: auto; background: transparent; padding: 0.5rem; height: auto; box-shadow: none;" class="absolute top-4 right-4 text-text-muted hover:text-text-main transition-colors bg-transparent border-none cursor-pointer">
@@ -239,8 +247,9 @@ Layout::renderAdminSidebar('usuarios');
             <p class="text-text-muted text-xs mt-0.5">Registrar una nueva persona y su cuenta de acceso</p>
         </div>
 
-        <form id="add-user-form" action="add_user.php" method="POST" class="space-y-3" style="display: flex; flex-direction: column; gap: 0.5rem;" novalidate>
-            <!-- Datos Personales -->
+        <form id="add-user-form" action="index.php?action=add_user" method="POST" class="space-y-3" style="display: flex; flex-direction: column; gap: 0.5rem;" novalidate>
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+            <?php // Datos Personales ?>
             <div style="border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
                 <h4 class="text-[10px] font-bold text-primary uppercase tracking-wider mb-2" style="color:var(--primary-color);">Datos Personales</h4>
                 
@@ -296,7 +305,7 @@ Layout::renderAdminSidebar('usuarios');
                 </div>
             </div>
 
-            <!-- Datos de la Cuenta -->
+            <?php // Datos de la Cuenta ?>
             <div>
                 <h4 class="text-[10px] font-bold text-primary uppercase tracking-wider mb-2" style="color:var(--primary-color);">Datos de la Cuenta</h4>
                 
@@ -341,7 +350,7 @@ Layout::renderAdminSidebar('usuarios');
 
             <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
                 <button type="button" onclick="closeAddUserModal()" class="btn-back" style="width: auto; margin: 0;">Cancelar</button>
-                <button type="submit" class="btn-primary" style="width: auto; margin: 0; background: var(--primary-color); color: #0A0A0B;">
+                <button type="submit" class="btn-primary" style="width: auto; margin: 0; background: var(--primary-color); color: #ffffff;">
                     Registrar Usuario
                 </button>
             </div>
@@ -349,7 +358,7 @@ Layout::renderAdminSidebar('usuarios');
     </div>
 </div>
 
-<!-- Modal para editar usuario -->
+<?php // Modal para editar usuario ?>
 <div id="edit-user-modal" class="fixed inset-0 bg-background/80 backdrop-blur-[8px] z-50 flex items-center justify-center opacity-0 pointer-events-none transition-all duration-300">
     <div class="glass-card max-w-2xl w-full mx-4 my-2 shadow-2xl relative border border-border/80 transform scale-95 transition-all duration-300 premium-modal-card max-h-[95vh] overflow-y-auto scrollbar-hide" style="padding: 1.5rem; border-top: 4px solid var(--secondary-color);">
         <button onclick="closeEditUserModal()" style="width: auto; background: transparent; padding: 0.5rem; height: auto; box-shadow: none;" class="absolute top-4 right-4 text-text-muted hover:text-text-main transition-colors bg-transparent border-none cursor-pointer">
@@ -364,11 +373,12 @@ Layout::renderAdminSidebar('usuarios');
             <p class="text-text-muted text-xs mt-0.5">Modificar datos personales y de acceso</p>
         </div>
 
-        <form id="edit-user-form" action="edit_user.php" method="POST" class="space-y-3" style="display: flex; flex-direction: column; gap: 0.5rem;" novalidate>
+        <form id="edit-user-form" action="index.php?action=edit_user" method="POST" class="space-y-3" style="display: flex; flex-direction: column; gap: 0.5rem;" novalidate>
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
             <input type="hidden" id="edit-modal-id-usuario" name="id_usuario">
             <input type="hidden" id="edit-modal-id-persona" name="id_persona">
             
-            <!-- Datos Personales -->
+            <?php // Datos Personales ?>
             <div style="border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
                 <h4 class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:var(--secondary-color);">Datos Personales</h4>
                 
@@ -424,7 +434,7 @@ Layout::renderAdminSidebar('usuarios');
                 </div>
             </div>
 
-            <!-- Datos de la Cuenta -->
+            <?php // Datos de la Cuenta ?>
             <div>
                 <h4 class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:var(--secondary-color);">Datos de la Cuenta</h4>
                 
@@ -460,7 +470,7 @@ Layout::renderAdminSidebar('usuarios');
 
             <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
                 <button type="button" onclick="closeEditUserModal()" class="btn-back" style="width: auto; margin: 0;">Cancelar</button>
-                <button type="submit" class="btn-primary" style="width: auto; margin: 0; background: var(--secondary-color); color: #fff;">
+                <button type="submit" class="btn-primary" style="width: auto; margin: 0; background: var(--primary-color); color: #ffffff;">
                     Guardar Cambios
                 </button>
             </div>

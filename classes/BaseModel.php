@@ -14,4 +14,3 @@ class BaseModel
         $this->conn = $conn;
     }
 }
-?>
