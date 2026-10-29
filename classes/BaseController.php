@@ -1,5 +1,6 @@
 <?php
 // classes/BaseController.php
+require_once __DIR__ . '/../config/audit.php';
 
 class BaseController
 {
@@ -143,6 +144,9 @@ class BaseController
         }
         if (!preg_match('/[a-z]/', $password)) {
             return "La contraseña debe contener al menos una letra minúscula.";
+        }
+        if (!preg_match('/[0-9]/', $password)) {
+            return "La contraseña debe contener al menos un carácter numérico (0-9).";
         }
         if (!preg_match('/[^a-zA-Z0-9]/', $password)) {
             return "La contraseña debe contener al menos un carácter especial (ej. @, $, !, %, *, ?, &).";

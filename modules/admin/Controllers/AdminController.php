@@ -47,6 +47,9 @@ class AdminController extends BaseController
         $this->check_access('usuarios');
 
         $filtro = $_GET['filtro'] ?? 'activos';
+        if (!in_array($filtro, ['activos', 'inactivos', 'todos'], true)) {
+            $filtro = 'activos';
+        }
         $users = $this->admin_model->get_all_users($filtro);
 
         $this->render_view(__DIR__ . '/../Views/users.php', [
@@ -280,6 +283,9 @@ class AdminController extends BaseController
             }
         }
 
+        $filtro = $_POST['filtro'] ?? 'activos';
+        $filtroQuery = in_array($filtro, ['inactivos', 'todos'], true) ? "&filtro=$filtro" : '';
+
         $res = $this->admin_model->toggle_user_status($id_usuario);
 
         if ($res['success']) {
@@ -292,9 +298,9 @@ class AdminController extends BaseController
             audit_log($this->conn, $audit_action, $_SESSION['user_id'], 'usuario', $id_usuario, "Administrador $action_str al usuario: $username");
 
             $msg = $res['new_status'] ? "Usuario reactivado con éxito" : "Usuario desactivado correctamente";
-            $this->redirect("index.php?action=users&success=" . urlencode($msg));
+            $this->redirect("index.php?action=users{$filtroQuery}&success=" . urlencode($msg));
         } else {
-            $this->redirect("index.php?action=users&error=" . urlencode("Error al cambiar estado del usuario"));
+            $this->redirect("index.php?action=users{$filtroQuery}&error=" . urlencode("Error al cambiar estado del usuario"));
         }
     }
 
@@ -371,6 +377,9 @@ class AdminController extends BaseController
             }
         }
 
+        $filtro = $_POST['filtro'] ?? 'activos';
+        $filtroQuery = in_array($filtro, ['inactivos', 'todos'], true) ? "&filtro=$filtro" : '';
+
         if ($this->admin_model->update_user_role($id_usuario, $rol)) {
             $user = $this->admin_model->find_user_by_id($id_usuario);
             $username = $user ? $user['nombre_usuario'] : '';
@@ -378,9 +387,9 @@ class AdminController extends BaseController
             require_once __DIR__ . '/../../../config/audit.php';
             audit_log($this->conn, 'USER_ROLE_UPDATE', $_SESSION['user_id'], 'usuario', $id_usuario, "Actualizado rol de usuario: $username a $rol");
 
-            $this->redirect("index.php?action=users&success=" . urlencode("Rol de usuario actualizado correctamente"));
+            $this->redirect("index.php?action=users{$filtroQuery}&success=" . urlencode("Rol de usuario actualizado correctamente"));
         } else {
-            $this->redirect("index.php?action=users&error=" . urlencode("Error al actualizar rol"));
+            $this->redirect("index.php?action=users{$filtroQuery}&error=" . urlencode("Error al actualizar rol"));
         }
     }
 

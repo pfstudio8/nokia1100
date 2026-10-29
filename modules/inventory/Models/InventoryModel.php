@@ -64,6 +64,47 @@ class InventoryModel extends BaseModel
         return $items;
     }
 
+    public function get_all_products_catalog()
+    {
+        $excludeServices = ServiceProduct::excludeSql('p');
+        $sql = "SELECT p.id_producto, p.nombre, d.marca, d.modelo, d.categoria, d.codigo, d.stock_minimo, i.cantidad, p.precio, p.is_active
+                FROM inventario i
+                JOIN producto p ON i.id_producto = p.id_producto
+                JOIN producto_detalle d ON p.id_producto = d.id_producto
+                WHERE (d.categoria IS NULL OR d.categoria != 'Servicios') AND $excludeServices
+                ORDER BY p.nombre ASC";
+        $result = $this->conn->query($sql);
+        $items = [];
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $items[] = $row;
+            }
+        }
+        return $items;
+    }
+
+    public function get_inventory_stats()
+    {
+        $excludeServices = ServiceProduct::excludeSql('p');
+        $sql = "SELECT 
+                    COUNT(*) as total_count,
+                    SUM(CASE WHEN i.cantidad <= d.stock_minimo AND i.cantidad > 0 THEN 1 ELSE 0 END) as low_stock,
+                    SUM(CASE WHEN i.cantidad = 0 THEN 1 ELSE 0 END) as out_of_stock,
+                    COALESCE(SUM(i.cantidad * p.precio), 0) as total_value
+                FROM inventario i
+                JOIN producto p ON i.id_producto = p.id_producto
+                JOIN producto_detalle d ON p.id_producto = d.id_producto
+                WHERE (d.categoria IS NULL OR d.categoria != 'Servicios') AND $excludeServices";
+        $res = $this->conn->query($sql);
+        $data = $res ? $res->fetch_assoc() : null;
+        return [
+            'total_count' => (int)($data['total_count'] ?? 0),
+            'low_stock' => (int)($data['low_stock'] ?? 0),
+            'out_of_stock' => (int)($data['out_of_stock'] ?? 0),
+            'total_value' => (float)($data['total_value'] ?? 0)
+        ];
+    }
+
     public function get_inventory_count($search = '', $filter = '', $categoria = '')
     {
         $where_parts = [];
@@ -203,19 +244,33 @@ class InventoryModel extends BaseModel
     {
         $this->conn->begin_transaction();
         try {
-            $stmt = $this->conn->prepare("UPDATE producto SET nombre = ?, precio = ? WHERE id_producto = ?");
-            $stmt->bind_param("sdi", $product_data['nombre'], $product_data['precio'], $id_producto);
+            $is_active = isset($product_data['is_active']) ? (int)$product_data['is_active'] : null;
+            if ($is_active !== null) {
+                $stmt = $this->conn->prepare("UPDATE producto SET nombre = ?, precio = ?, is_active = ? WHERE id_producto = ?");
+                $stmt->bind_param("sdii", $product_data['nombre'], $product_data['precio'], $is_active, $id_producto);
+            } else {
+                $stmt = $this->conn->prepare("UPDATE producto SET nombre = ?, precio = ? WHERE id_producto = ?");
+                $stmt->bind_param("sdi", $product_data['nombre'], $product_data['precio'], $id_producto);
+            }
             if (!$stmt->execute())
                 throw new Exception("Error al actualizar producto");
             $stmt->close();
 
+            $marca = $detail_data['marca'] ?? '';
+            $modelo = $detail_data['modelo'] ?? '';
             $categoria = $detail_data['categoria'] ?? null;
-            if ($categoria !== null) {
+            $codigo = $detail_data['codigo'] ?? null;
+            $stock_minimo = isset($detail_data['stock_minimo']) ? (int)$detail_data['stock_minimo'] : null;
+
+            if ($codigo !== null && $stock_minimo !== null && $categoria !== null) {
+                $stmt = $this->conn->prepare("UPDATE producto_detalle SET marca = ?, modelo = ?, categoria = ?, codigo = ?, stock_minimo = ? WHERE id_producto = ?");
+                $stmt->bind_param("ssssii", $marca, $modelo, $categoria, $codigo, $stock_minimo, $id_producto);
+            } elseif ($categoria !== null) {
                 $stmt = $this->conn->prepare("UPDATE producto_detalle SET marca = ?, modelo = ?, categoria = ? WHERE id_producto = ?");
-                $stmt->bind_param("sssi", $detail_data['marca'], $detail_data['modelo'], $categoria, $id_producto);
+                $stmt->bind_param("sssi", $marca, $modelo, $categoria, $id_producto);
             } else {
                 $stmt = $this->conn->prepare("UPDATE producto_detalle SET marca = ?, modelo = ? WHERE id_producto = ?");
-                $stmt->bind_param("ssi", $detail_data['marca'], $detail_data['modelo'], $id_producto);
+                $stmt->bind_param("ssi", $marca, $modelo, $id_producto);
             }
             if (!$stmt->execute())
                 throw new Exception("Error al actualizar detalles");
@@ -347,11 +402,12 @@ class InventoryModel extends BaseModel
 
     public function get_critical_stock_details()
     {
+        $excludeServices = ServiceProduct::excludeSql('p', 'pd');
         $sql = "SELECT p.nombre, i.cantidad, pd.stock_minimo, pd.marca, pd.modelo 
                 FROM inventario i
                 JOIN producto_detalle pd ON i.id_producto = pd.id_producto
                 JOIN producto p ON i.id_producto = p.id_producto
-                WHERE p.is_active = 1 AND i.cantidad <= pd.stock_minimo
+                WHERE p.is_active = 1 AND i.cantidad <= pd.stock_minimo AND $excludeServices
                 ORDER BY i.cantidad ASC";
         $result = $this->conn->query($sql);
         $products = [];
@@ -365,6 +421,7 @@ class InventoryModel extends BaseModel
 
     public function get_stock_stats()
     {
+        $excludeServices = ServiceProduct::excludeSql('p', 'pd');
         $sql = "SELECT 
                 SUM(CASE WHEN i.cantidad > pd.stock_minimo THEN 1 ELSE 0 END) as sano,
                 SUM(CASE WHEN i.cantidad > 0 AND i.cantidad <= pd.stock_minimo THEN 1 ELSE 0 END) as bajo,
@@ -372,7 +429,7 @@ class InventoryModel extends BaseModel
                 FROM inventario i
                 JOIN producto_detalle pd ON i.id_producto = pd.id_producto
                 JOIN producto p ON i.id_producto = p.id_producto
-                WHERE p.is_active = 1";
+                WHERE p.is_active = 1 AND $excludeServices";
         $result = $this->conn->query($sql);
         if ($result && $row = $result->fetch_assoc()) {
             return [
@@ -386,12 +443,13 @@ class InventoryModel extends BaseModel
     
     public function get_stock_by_brand()
     {
-        $sql = "SELECT COALESCE(pd.marca, 'Otros') as marca, SUM(i.cantidad) as total_stock
+        $excludeServices = ServiceProduct::excludeSql('p', 'pd');
+        $sql = "SELECT COALESCE(NULLIF(TRIM(pd.marca), ''), 'Otros') as marca, SUM(i.cantidad) as total_stock
                 FROM inventario i
                 JOIN producto p ON i.id_producto = p.id_producto
                 JOIN producto_detalle pd ON i.id_producto = pd.id_producto
-                WHERE p.is_active = 1
-                GROUP BY pd.marca
+                WHERE p.is_active = 1 AND $excludeServices
+                GROUP BY COALESCE(NULLIF(TRIM(pd.marca), ''), 'Otros')
                 ORDER BY total_stock DESC
                 LIMIT 5";
         $result = $this->conn->query($sql);
@@ -409,11 +467,13 @@ class InventoryModel extends BaseModel
     public function get_top_value_products($limit = 5)
     {
         $limit = intval($limit);
-        $sql = "SELECT TRIM(CONCAT(d.marca, ' ', d.modelo)) as product_name, i.cantidad as stock_quantity
+        $excludeServices = ServiceProduct::excludeSql('p', 'd');
+        $sql = "SELECT COALESCE(NULLIF(TRIM(CONCAT(COALESCE(d.marca, ''), ' ', COALESCE(d.modelo, ''))), ''), p.nombre) as product_name,
+                       i.cantidad as stock_quantity
                 FROM inventario i
                 JOIN producto p ON i.id_producto = p.id_producto
                 JOIN producto_detalle d ON p.id_producto = d.id_producto
-                WHERE p.is_active = 1 AND i.cantidad > 0
+                WHERE p.is_active = 1 AND i.cantidad > 0 AND $excludeServices
                 ORDER BY i.cantidad DESC LIMIT ?";
         
         $stmt = $this->conn->prepare($sql);
@@ -426,7 +486,7 @@ class InventoryModel extends BaseModel
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $products[] = $row['product_name'];
-                $values[] = $row['stock_quantity'];
+                $values[] = (int)$row['stock_quantity'];
             }
         }
         $stmt->close();

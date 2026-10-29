@@ -25,14 +25,9 @@ if ($_SESSION['role'] === 'admin') {
                 <h2 class="text-3xl font-display font-medium text-text-main">Taller de Reparaciones</h2>
                 <p class="text-text-muted mt-1 text-sm">Gestión de órdenes, presupuestos y control de equipos</p>
             </div>
-            <div class="flex items-center gap-3 flex-wrap">
+            <div class="flex items-center gap-2.5 flex-wrap">
                 <!-- Botones de Exportación -->
-                <button type="button" onclick="exportTableToExcel('workshop-table', 'taller', this)" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-                    <span class="material-symbols-outlined text-[16px]">download</span> Excel
-                </button>
-                <button type="button" onclick="exportTableToPDF('workshop-table', 'Órdenes de Reparación', 'taller', this)" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-                    <span class="material-symbols-outlined text-[16px]">download</span> PDF
-                </button>
+                <?php echo Layout::renderExportButtons('workshop-table', 'Órdenes de Reparación', 'taller'); ?>
 
                 <a href="index.php?action=history" class="bg-surface text-text-main hover:bg-surface-hover px-4 py-2 border border-border rounded-lg font-medium text-sm transition-all flex items-center gap-2">
                     <span class="material-symbols-outlined text-[18px]">history</span> Historial de Cobros
@@ -82,13 +77,15 @@ if ($_SESSION['role'] === 'admin') {
                 <tbody class="divide-y divide-border/50">
                     <?php if (count($repairs) > 0): ?>
                         <?php foreach($repairs as $r): 
-                            $statusClass = 'bg-surface border-border text-text-muted';
-                            if ($r['estado'] === 'Recibido') $statusClass = 'bg-blue-500/10 text-blue-500 border border-blue-500/20';
-                            if ($r['estado'] === 'En diagnóstico') $statusClass = 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20';
-                            if ($r['estado'] === 'En reparación') $statusClass = 'bg-orange-500/10 text-orange-500 border border-orange-500/20';
-                            if ($r['estado'] === 'Listo') $statusClass = 'bg-green-500/10 text-green-500 border border-green-500/20';
-                            if ($r['estado'] === 'Entregado') $statusClass = 'bg-primary/10 text-primary border border-primary/20';
-                            if ($r['estado'] === 'Cancelado') $statusClass = 'bg-red-500/10 text-red-500 border border-red-500/20';
+                            $statusMap = [
+                                'Recibido'       => 'repair-status-recibido',
+                                'En diagnóstico' => 'repair-status-diagnostico',
+                                'En reparación'  => 'repair-status-reparacion',
+                                'Listo'          => 'repair-status-listo',
+                                'Entregado'      => 'repair-status-entregado',
+                                'Cancelado'      => 'repair-status-cancelado',
+                            ];
+                            $statusClass = 'repair-status ' . ($statusMap[$r['estado']] ?? 'repair-status-default');
                         ?>
                             <tr class="hover:bg-surface-hover/30 transition-colors">
                                 <td class="p-4 font-display font-medium text-primary">#<?php echo htmlspecialchars($r['codigo_orden']); ?></td>
@@ -125,76 +122,18 @@ if ($_SESSION['role'] === 'admin') {
             </table>
         </div>
 
-        <?php 
-        $total_items = $total_items ?? count($repairs ?? []);
-        $limit = $limit ?? 10;
-        $page = $page ?? 1;
-        $total_pages = $total_pages ?? max(1, ceil($total_items / $limit));
-        $count_current = count($repairs ?? []);
-        $from = ($total_items > 0) ? (($page - 1) * $limit + 1) : 0;
-        $to = ($total_items > 0) ? min($from + $count_current - 1, $total_items) : 0;
+        <?php
+        $total_items = (int)($total_items ?? count($repairs ?? []));
+        $limit = (int)($limit ?? 10);
+        $page = (int)($page ?? 1);
+        $total_pages = (int)($total_pages ?? max(1, ceil($total_items / max(1, $limit))));
 
         $query_args = [];
         if (!empty($estado_filter)) $query_args['estado'] = $estado_filter;
         if (!empty($search)) $query_args['search'] = $search;
+
+        echo Layout::renderPagination($page, $total_pages, $total_items, 'orden', 'órdenes', $query_args);
         ?>
-
-        <div class="mt-6 pt-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
-            <div>
-                <?php if ($total_items > 0): ?>
-                    Mostrando <strong class="text-text-main font-semibold"><?php echo $from; ?>–<?php echo $to; ?></strong> de <strong class="text-text-main font-semibold"><?php echo $total_items; ?></strong> órdenes
-                    <span class="mx-1.5 opacity-40">•</span>
-                    Página <strong class="text-primary font-semibold"><?php echo $page; ?></strong> de <strong class="text-text-main font-semibold"><?php echo $total_pages; ?></strong>
-                <?php else: ?>
-                    <span>No hay órdenes para mostrar</span>
-                <?php endif; ?>
-            </div>
-
-            <?php if ($total_pages > 1): ?>
-                <div class="flex items-center gap-1.5 flex-wrap justify-center">
-                    <?php if ($page > 1): 
-                        $prev_args = $query_args;
-                        $prev_args['page'] = $page - 1;
-                    ?>
-                        <a href="?<?php echo http_build_query($prev_args); ?>" class="px-2.5 py-1.5 border border-border rounded-lg bg-surface hover:bg-surface-hover text-text-main transition-colors flex items-center gap-1" title="Página anterior">
-                            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
-                            <span class="hidden md:inline">Anterior</span>
-                        </a>
-                    <?php else: ?>
-                        <span class="px-2.5 py-1.5 border border-border/40 rounded-lg bg-surface/30 text-text-muted/40 cursor-not-allowed flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
-                            <span class="hidden md:inline">Anterior</span>
-                        </span>
-                    <?php endif; ?>
-
-                    <?php for ($i = 1; $i <= $total_pages; $i++): 
-                        $num_args = $query_args;
-                        $num_args['page'] = $i;
-                        $isCurrent = ($i === $page);
-                    ?>
-                        <a href="?<?php echo http_build_query($num_args); ?>" class="min-w-[32px] h-8 flex items-center justify-center px-2.5 rounded-lg border text-xs font-semibold transition-all <?php echo $isCurrent ? 'bg-primary text-background border-primary shadow-sm shadow-primary/20' : 'bg-surface border-border text-text-muted hover:text-text-main hover:bg-surface-hover'; ?>">
-                            <?php echo $i; ?>
-                        </a>
-                    <?php endfor; ?>
-
-                    <?php if ($page < $total_pages): 
-                        $next_args = $query_args;
-                        $next_args['page'] = $page + 1;
-                    ?>
-                        <a href="?<?php echo http_build_query($next_args); ?>" class="px-2.5 py-1.5 border border-border rounded-lg bg-surface hover:bg-surface-hover text-text-main transition-colors flex items-center gap-1" title="Página siguiente">
-                            <span class="hidden md:inline">Siguiente</span>
-                            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
-                        </a>
-                    <?php else: ?>
-                        <span class="px-2.5 py-1.5 border border-border/40 rounded-lg bg-surface/30 text-text-muted/40 cursor-not-allowed flex items-center gap-1">
-                            <span class="hidden md:inline">Siguiente</span>
-                            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
-                        </span>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
-        </div>
-
     </div>
 </main>
 

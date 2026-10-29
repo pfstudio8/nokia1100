@@ -28,32 +28,21 @@ Layout::renderAdminSidebar('usuarios');
                         <input type="text" id="search-input" placeholder="Buscar usuario..." class="w-full sm:w-[200px]"
                             style="padding:.5rem 1rem; background:var(--surface); border:1px solid var(--border); border-radius:8px; color:var(--text-main); font-size:.9rem;">
 
-                        <?php // Filtro activos / inactivos ?>
-                        <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
-                            <a href="?filtro=activos"
-                               style="padding:.4rem .8rem; border-radius:8px; font-size:.8rem; font-weight:600;
-                                      border:1px solid var(--border);
-                                      background: <?php echo $filtro==='activos'?'var(--primary-color)':'var(--surface)'; ?>;
-                                      color: <?php echo $filtro==='activos'?'#ffffff':'var(--text-muted)'; ?>">Activos</a>
-                            <a href="?filtro=inactivos"
-                               style="padding:.4rem .8rem; border-radius:8px; font-size:.8rem; font-weight:600;
-                                      border:1px solid var(--border);
-                                      background: <?php echo $filtro==='inactivos'?'var(--error)':'var(--surface)'; ?>;
-                                      color: <?php echo $filtro==='inactivos'?'#ffffff':'var(--text-muted)'; ?>">Inactivos</a>
-                            <a href="?filtro=todos"
-                               style="padding:.4rem .8rem; border-radius:8px; font-size:.8rem; font-weight:600;
-                                      border:1px solid var(--border);
-                                      background: <?php echo $filtro==='todos'?'var(--surface-hover)':'var(--surface)'; ?>;
-                                      color:var(--text-muted)">Todos</a>
+                        <?php // Filtro activos / inactivos / todos ?>
+                        <div class="user-filter-group" role="group" aria-label="Filtrar usuarios por estado">
+                            <a href="<?php echo BASE_URL; ?>/modules/admin/index.php?action=users&amp;filtro=activos"
+                               class="user-filter-btn <?php echo $filtro === 'activos' ? 'is-active' : ''; ?>"
+                               <?php echo $filtro === 'activos' ? 'aria-current="page"' : ''; ?>>Activos</a>
+                            <a href="<?php echo BASE_URL; ?>/modules/admin/index.php?action=users&amp;filtro=inactivos"
+                               class="user-filter-btn <?php echo $filtro === 'inactivos' ? 'is-active-danger' : ''; ?>"
+                               <?php echo $filtro === 'inactivos' ? 'aria-current="page"' : ''; ?>>Inactivos</a>
+                            <a href="<?php echo BASE_URL; ?>/modules/admin/index.php?action=users&amp;filtro=todos"
+                               class="user-filter-btn <?php echo $filtro === 'todos' ? 'is-active' : ''; ?>"
+                               <?php echo $filtro === 'todos' ? 'aria-current="page"' : ''; ?>>Todos</a>
                         </div>
 
                         <!-- Botones de Exportación -->
-                        <button type="button" onclick="exportTableToExcel('users-table', 'usuarios', this)" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-                            <span class="material-symbols-outlined text-[16px]">download</span> Excel
-                        </button>
-                        <button type="button" onclick="exportTableToPDF('users-table', 'Listado de Usuarios', 'usuarios', this)" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-                            <span class="material-symbols-outlined text-[16px]">download</span> PDF
-                        </button>
+                        <?php echo Layout::renderExportButtons('users-table', 'Listado de Usuarios', 'usuarios'); ?>
 
                         <button type="button" onclick="openAddUserModal()" style="width:max-content; padding:.45rem .9rem; border-radius:8px; font-size:.8rem; font-weight:600; background:var(--primary-color); color:#ffffff; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem; transition: all 0.2s; white-space:nowrap; flex-shrink:0;">
                             <span class="material-symbols-outlined" style="font-size:1.1rem; font-weight:600;">person_add</span>
@@ -64,7 +53,7 @@ Layout::renderAdminSidebar('usuarios');
                 </div>
 
                 <div class="table-container">
-                    <table id="users-table">
+                    <table id="users-table" data-paginate="10" data-entity-singular="usuario" data-entity-plural="usuarios">
                         <thead>
                             <tr>
                                 <th>Nombre</th>
@@ -89,7 +78,7 @@ Layout::renderAdminSidebar('usuarios');
                                         </td>
                                         <td>
                                             <?php if ($row['is_active']): ?>
-                                                <span class="role-badge" style="background:rgba(34,197,94,.1); color:#4ade80; border:1px solid rgba(34,197,94,.2);">Activo</span>
+                                                <span class="role-badge badge-active">Activo</span>
                                             <?php else: ?>
                                                 <span class="badge-inactive role-badge" title="Baja: <?php echo $row['fecha_baja'] ?? ''; ?>">Inactivo</span>
                                             <?php endif; ?>
@@ -101,6 +90,7 @@ Layout::renderAdminSidebar('usuarios');
                                                     <form action="<?php echo BASE_URL; ?>/modules/admin/index.php?action=update_user_role"
                                                           method="POST" style="display:inline-flex; gap:.5rem; align-items:center; margin-bottom:0;">
                                                         <input type="hidden" name="id_usuario" value="<?php echo (int)$row['id_usuario']; ?>">
+                                                        <input type="hidden" name="filtro" value="<?php echo htmlspecialchars($filtro, ENT_QUOTES, 'UTF-8'); ?>">
                                                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                                         <div class="relative inline-block">
                                                             <select name="rol" style="min-width: 110px; padding:.35rem 1.8rem .35rem .6rem; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text-main); font-size:.8rem; appearance: none; cursor: pointer; transition: border-color 0.2s;" onchange="this.form.submit()">
@@ -152,6 +142,7 @@ Layout::renderAdminSidebar('usuarios');
                                                     <?php // Baja lógica vía POST ?>
                                                     <form method="POST" action="index.php?action=delete_user" style="display:inline;">
                                                         <input type="hidden" name="id" value="<?php echo (int)$row['id_usuario']; ?>">
+                                                        <input type="hidden" name="filtro" value="<?php echo htmlspecialchars($filtro, ENT_QUOTES, 'UTF-8'); ?>">
                                                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                                         <button type="submit" class="btn-delete text-red-500 font-medium hover:underline text-sm inline-flex items-center gap-1 transition-colors hover:text-red-400 bg-transparent border-0 cursor-pointer p-0"
                                                                 data-confirm="¿Desactivar a este usuario? Podrá restaurarse luego."
@@ -165,6 +156,7 @@ Layout::renderAdminSidebar('usuarios');
                                                 <?php // Restaurar vía POST ?>
                                                 <form method="POST" action="index.php?action=delete_user" style="display:inline;">
                                                     <input type="hidden" name="id" value="<?php echo (int)$row['id_usuario']; ?>">
+                                                    <input type="hidden" name="filtro" value="<?php echo htmlspecialchars($filtro, ENT_QUOTES, 'UTF-8'); ?>">
                                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                                     <button type="submit" class="font-medium text-sm hover:underline bg-transparent border-0 cursor-pointer p-0"
                                                             data-confirm="¿Restaurar la cuenta de este usuario?"
@@ -346,6 +338,35 @@ Layout::renderAdminSidebar('usuarios');
                         </div>
                     </div>
                 </div>
+                <!-- Recordatorio de requisitos de contraseña -->
+                <div class="mt-3 p-3 rounded-xl border border-border/80 bg-surface/50 text-xs text-text-muted">
+                    <div class="flex items-center gap-1.5 font-semibold text-text-main mb-2 text-[11px] uppercase tracking-wider">
+                        <span class="material-symbols-outlined text-[16px] text-primary" style="color:var(--primary-color);">verified_user</span>
+                        <span>Requisitos de la contraseña:</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]" id="add-user-password-rules">
+                        <div class="rule-item flex items-center gap-1.5 text-text-muted transition-colors" data-rule="minlength">
+                            <span class="material-symbols-outlined text-[15px] rule-icon">radio_button_unchecked</span>
+                            <span>Mínimo 8 caracteres</span>
+                        </div>
+                        <div class="rule-item flex items-center gap-1.5 text-text-muted transition-colors" data-rule="uppercase">
+                            <span class="material-symbols-outlined text-[15px] rule-icon">radio_button_unchecked</span>
+                            <span>Al menos 1 mayúscula (A-Z)</span>
+                        </div>
+                        <div class="rule-item flex items-center gap-1.5 text-text-muted transition-colors" data-rule="lowercase">
+                            <span class="material-symbols-outlined text-[15px] rule-icon">radio_button_unchecked</span>
+                            <span>Al menos 1 minúscula (a-z)</span>
+                        </div>
+                        <div class="rule-item flex items-center gap-1.5 text-text-muted transition-colors" data-rule="number">
+                            <span class="material-symbols-outlined text-[15px] rule-icon">radio_button_unchecked</span>
+                            <span>Al menos 1 carácter numérico (0-9)</span>
+                        </div>
+                        <div class="rule-item flex items-center gap-1.5 text-text-muted transition-colors col-span-2" data-rule="special">
+                            <span class="material-symbols-outlined text-[15px] rule-icon">radio_button_unchecked</span>
+                            <span>Al menos 1 carácter especial (ej. ! @ # $ % * ? &)</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
@@ -367,7 +388,7 @@ Layout::renderAdminSidebar('usuarios');
         
         <div class="mb-4">
             <h3 class="text-xl font-display font-medium text-text-main flex items-center gap-2">
-                <span class="material-symbols-outlined" style="color:var(--secondary-color); font-size: 1.5rem;">manage_accounts</span>
+                <span class="material-symbols-outlined" style="color:var(--primary-color); font-size: 1.5rem;">manage_accounts</span>
                 Editar Usuario
             </h3>
             <p class="text-text-muted text-xs mt-0.5">Modificar datos personales y de acceso</p>
@@ -380,7 +401,7 @@ Layout::renderAdminSidebar('usuarios');
             
             <?php // Datos Personales ?>
             <div style="border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
-                <h4 class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:var(--secondary-color);">Datos Personales</h4>
+                <h4 class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:var(--primary-color);">Datos Personales</h4>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.5rem;">
                     <div class="premium-input-container">
@@ -436,7 +457,7 @@ Layout::renderAdminSidebar('usuarios');
 
             <?php // Datos de la Cuenta ?>
             <div>
-                <h4 class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:var(--secondary-color);">Datos de la Cuenta</h4>
+                <h4 class="text-[10px] font-bold uppercase tracking-wider mb-2" style="color:var(--primary-color);">Datos de la Cuenta</h4>
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.5rem;">
                     <div class="premium-input-container">
@@ -464,6 +485,35 @@ Layout::renderAdminSidebar('usuarios');
                     <div class="relative">
                         <span class="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted text-[18px] pointer-events-none">lock</span>
                         <input type="password" id="edit-modal-password" name="password" placeholder="Min. 8 caracteres si se modifica" minlength="8">
+                    </div>
+                </div>
+                <!-- Recordatorio de requisitos de contraseña -->
+                <div class="mt-2.5 p-3 rounded-xl border border-border/80 bg-surface/50 text-xs text-text-muted">
+                    <div class="flex items-center gap-1.5 font-semibold text-text-main mb-2 text-[11px] uppercase tracking-wider">
+                        <span class="material-symbols-outlined text-[16px] text-primary" style="color:var(--primary-color);">verified_user</span>
+                        <span>Si se modifica, la contraseña debe contener:</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-1.5 text-[11px]" id="edit-user-password-rules">
+                        <div class="rule-item flex items-center gap-1.5 text-text-muted transition-colors" data-rule="minlength">
+                            <span class="material-symbols-outlined text-[15px] rule-icon">radio_button_unchecked</span>
+                            <span>Mínimo 8 caracteres</span>
+                        </div>
+                        <div class="rule-item flex items-center gap-1.5 text-text-muted transition-colors" data-rule="uppercase">
+                            <span class="material-symbols-outlined text-[15px] rule-icon">radio_button_unchecked</span>
+                            <span>Al menos 1 mayúscula (A-Z)</span>
+                        </div>
+                        <div class="rule-item flex items-center gap-1.5 text-text-muted transition-colors" data-rule="lowercase">
+                            <span class="material-symbols-outlined text-[15px] rule-icon">radio_button_unchecked</span>
+                            <span>Al menos 1 minúscula (a-z)</span>
+                        </div>
+                        <div class="rule-item flex items-center gap-1.5 text-text-muted transition-colors" data-rule="number">
+                            <span class="material-symbols-outlined text-[15px] rule-icon">radio_button_unchecked</span>
+                            <span>Al menos 1 carácter numérico (0-9)</span>
+                        </div>
+                        <div class="rule-item flex items-center gap-1.5 text-text-muted transition-colors col-span-2" data-rule="special">
+                            <span class="material-symbols-outlined text-[15px] rule-icon">radio_button_unchecked</span>
+                            <span>Al menos 1 carácter especial (ej. ! @ # $ % * ? &)</span>
+                        </div>
                     </div>
                 </div>
             </div>

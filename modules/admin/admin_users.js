@@ -15,6 +15,7 @@ function closeAddUserModal() {
     card.classList.add('scale-95');
     modal.classList.add('opacity-0', 'pointer-events-none');
     document.getElementById('add-user-form').reset();
+    updatePasswordRuleIndicators('', 'add-user-password-rules');
 }
 
 // Validación de contraseñas coincidentes
@@ -23,6 +24,17 @@ if (addUserForm) {
     addUserForm.addEventListener('submit', function(e) {
         const pass = document.getElementById('modal-password').value;
         const passConfirm = document.getElementById('modal-password-confirm').value;
+        
+        if (pass.length < 8 || !/[A-Z]/.test(pass) || !/[a-z]/.test(pass) || !/[0-9]/.test(pass) || !/[^a-zA-Z0-9]/.test(pass)) {
+            e.preventDefault();
+            if (typeof showToast === 'function') {
+                showToast('La contraseña debe tener mínimo 8 caracteres e incluir mayúscula, minúscula, número y carácter especial.', 'warning');
+            } else {
+                alert('La contraseña debe tener mínimo 8 caracteres e incluir mayúscula, minúscula, número y carácter especial.');
+            }
+            return;
+        }
+
         if (pass !== passConfirm) {
             e.preventDefault();
             if (typeof showToast === 'function') {
@@ -30,9 +42,80 @@ if (addUserForm) {
             } else {
                 alert('Las contraseñas no coinciden');
             }
+            return;
         }
     });
 }
+
+const editUserForm = document.getElementById('edit-user-form');
+if (editUserForm) {
+    editUserForm.addEventListener('submit', function(e) {
+        const pass = document.getElementById('edit-modal-password').value;
+        if (pass && (pass.length < 8 || !/[A-Z]/.test(pass) || !/[a-z]/.test(pass) || !/[0-9]/.test(pass) || !/[^a-zA-Z0-9]/.test(pass))) {
+            e.preventDefault();
+            if (typeof showToast === 'function') {
+                showToast('La nueva contraseña debe tener mínimo 8 caracteres e incluir mayúscula, minúscula, número y carácter especial.', 'warning');
+            } else {
+                alert('La nueva contraseña debe tener mínimo 8 caracteres e incluir mayúscula, minúscula, número y carácter especial.');
+            }
+            return;
+        }
+    });
+}
+
+// Actualización dinámica de los indicadores de requisitos de contraseña
+function updatePasswordRuleIndicators(password, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const rules = {
+        minlength: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /[0-9]/.test(password),
+        special: /[^a-zA-Z0-9]/.test(password)
+    };
+
+    for (const [rule, isValid] of Object.entries(rules)) {
+        const item = container.querySelector('[data-rule="' + rule + '"]');
+        if (!item) continue;
+        const icon = item.querySelector('.rule-icon');
+        if (isValid) {
+            item.classList.remove('text-text-muted');
+            item.style.color = '#156835';
+            item.style.fontWeight = '600';
+            if (icon) {
+                icon.textContent = 'check_circle';
+                icon.style.color = '#156835';
+            }
+        } else {
+            item.classList.add('text-text-muted');
+            item.style.color = '';
+            item.style.fontWeight = '';
+            if (icon) {
+                icon.textContent = 'radio_button_unchecked';
+                icon.style.color = '';
+            }
+        }
+    }
+}
+
+// Escuchar escritura en el campo de contraseña de creación
+const addPasswordInput = document.getElementById('modal-password');
+if (addPasswordInput) {
+    addPasswordInput.addEventListener('input', function() {
+        updatePasswordRuleIndicators(this.value, 'add-user-password-rules');
+    });
+}
+
+// Escuchar escritura en el campo de contraseña de edición
+const editPasswordInput = document.getElementById('edit-modal-password');
+if (editPasswordInput) {
+    editPasswordInput.addEventListener('input', function() {
+        updatePasswordRuleIndicators(this.value, 'edit-user-password-rules');
+    });
+}
+
 
 // --- Módulos y Permisos ---
 const allSystemModules = [
@@ -199,4 +282,5 @@ function closeEditUserModal() {
     card.classList.add('scale-95');
     modal.classList.add('opacity-0', 'pointer-events-none');
     document.getElementById('edit-user-form').reset();
+    updatePasswordRuleIndicators('', 'edit-user-password-rules');
 }

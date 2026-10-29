@@ -3,6 +3,7 @@
 session_start();
 require_once __DIR__ . '/config/db.php';
 require_once __DIR__ . '/classes/Layout.php';
+require_once __DIR__ . '/classes/ServiceProduct.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "/index.php");
@@ -16,15 +17,17 @@ $realSales = [];
 $totalProds = 0;
 
 if (isset($conn)) {
-    $resCount = $conn->query("SELECT COUNT(*) as c FROM producto WHERE is_active = 1");
+    $excludeServices = ServiceProduct::excludeSql('p', 'pd');
+    $resCount = $conn->query("SELECT COUNT(*) as c FROM producto p LEFT JOIN producto_detalle pd ON p.id_producto = pd.id_producto WHERE p.is_active = 1 AND $excludeServices");
     if ($resCount) {
         $totalProds = (int)$resCount->fetch_assoc()['c'];
     }
 
     $queryProds = "SELECT p.id_producto, p.nombre, p.precio, COALESCE(i.cantidad, 0) as cantidad 
                    FROM producto p 
+                   LEFT JOIN producto_detalle pd ON p.id_producto = pd.id_producto
                    LEFT JOIN inventario i ON p.id_producto = i.id_producto 
-                   WHERE p.is_active = 1 
+                   WHERE p.is_active = 1 AND $excludeServices
                    ORDER BY i.cantidad DESC 
                    LIMIT 4";
     $resProds = $conn->query($queryProds);
@@ -102,9 +105,6 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
         
         <?php // HERO HEADER: Ayuda Rápida ?>
         <div class="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-b from-card to-surface p-6 md:p-10 shadow-lg">
-            <div class="absolute -right-20 -top-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="absolute right-40 bottom-0 w-64 h-64 bg-secondary/10 rounded-full blur-2xl pointer-events-none"></div>
-            
             <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div class="space-y-3 max-w-3xl">
                     <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-bold uppercase tracking-wider">
@@ -124,27 +124,27 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
         <?php // MODULES FILTER TABS ?>
         <div class="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none" id="help-tabs-bar">
             <?php // Tab 1: Inventario ?>
-            <button onclick="switchTab('inventario')" id="tab-btn-inventario" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-primary/10 border border-primary/40 text-primary shadow-[0_0_12px_rgba(14,165,160,0.15)] font-display" type="button">
+            <button onclick="switchTab('inventario')" id="tab-btn-inventario" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-primary border border-primary text-white shadow-sm font-display" type="button">
                 <span class="material-symbols-outlined text-[18px]">inventory_2</span>
                 <span>1. Inventario y Stock</span>
             </button>
             <?php // Tab 2: Taller ?>
-            <button onclick="switchTab('taller')" id="tab-btn-taller" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-border/80 font-display" type="button">
+            <button onclick="switchTab('taller')" id="tab-btn-taller" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-primary font-display" type="button">
                 <span class="material-symbols-outlined text-[18px]">home_repair_service</span>
                 <span>2. Taller y Reparaciones</span>
             </button>
             <?php // Tab 3: Ventas ?>
-            <button onclick="switchTab('ventas')" id="tab-btn-ventas" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-border/80 font-display" type="button">
+            <button onclick="switchTab('ventas')" id="tab-btn-ventas" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-primary font-display" type="button">
                 <span class="material-symbols-outlined text-[18px]">point_of_sale</span>
                 <span>3. Ventas y Cobros</span>
             </button>
             <?php // Tab 4: Clientes ?>
-            <button onclick="switchTab('clientes')" id="tab-btn-clientes" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-border/80 font-display" type="button">
+            <button onclick="switchTab('clientes')" id="tab-btn-clientes" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-primary font-display" type="button">
                 <span class="material-symbols-outlined text-[18px]">group</span>
                 <span>4. Clientes y Cuentas</span>
             </button>
             <?php // Tab 5: Proveedores ?>
-            <button onclick="switchTab('proveedores')" id="tab-btn-proveedores" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-border/80 font-display" type="button">
+            <button onclick="switchTab('proveedores')" id="tab-btn-proveedores" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-primary font-display" type="button">
                 <span class="material-symbols-outlined text-[18px]">local_shipping</span>
                 <span>5. Proveedores y Reportes</span>
             </button>
@@ -162,7 +162,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                         <?php // Step Header Bar ?>
                         <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl shadow-[0_0_16px_rgba(14,165,160,0.15)]">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl">
                                     01
                                 </div>
                                 <div>
@@ -198,9 +198,9 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     </div>
                                 </div>
 
-                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-secondary/40 transition-colors">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-[#9db82a] transition-colors">
                                     <div class="flex items-start gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                        <div class="w-9 h-9 rounded-xl bg-[#eef6cf] border border-[#c6e24a] flex items-center justify-center text-[#4d5e0a] shrink-0">
                                             <span class="material-symbols-outlined text-[20px]">edit_note</span>
                                         </div>
                                         <div>
@@ -212,9 +212,9 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     </div>
                                 </div>
 
-                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-yellow-500/40 transition-colors">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-[#d4b54a] transition-colors">
                                     <div class="flex items-start gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 shrink-0">
+                                        <div class="w-9 h-9 rounded-xl bg-[#fcf3cf] border border-[#e6cf7a] flex items-center justify-center text-[#7a5600] shrink-0">
                                             <span class="material-symbols-outlined text-[20px]">toggle_on</span>
                                         </div>
                                         <div>
@@ -268,8 +268,8 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             </div>
 
                             <?php // MOCKUP PREVIEW CONTAINER ?>
-                            <div class="rounded-2xl border border-border bg-[#0f141c] overflow-hidden shadow-inner">
-                                <div class="px-4 py-3 bg-[#151b24] border-b border-border flex items-center justify-between">
+                            <div class="rounded-2xl border border-border-dark bg-background overflow-hidden shadow-inner">
+                                <div class="px-4 py-3 bg-sunk border-b border-border-dark flex items-center justify-between">
                                     <div class="flex items-center gap-2">
                                         <span class="w-2.5 h-2.5 rounded-full bg-error"></span>
                                         <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
@@ -291,19 +291,19 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                         <?php foreach ($realProducts as $idx => $p): 
                                             $cant = (int)$p['cantidad'];
                                             if ($cant > 5) {
-                                                $badgeClass = 'bg-primary/10 border-primary/30 text-primary';
+                                                $badgeClass = 'bg-[#e3f6ea] border-[#9adbb3] text-[#156835]';
                                                 $badgeText = 'Disponible';
                                             } elseif ($cant > 0) {
-                                                $badgeClass = 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400';
+                                                $badgeClass = 'bg-[#fcf3cf] border-[#e6cf7a] text-[#7a5600]';
                                                 $badgeText = 'Crítico';
                                             } else {
                                                 $badgeClass = 'bg-error/10 border-error/30 text-error';
                                                 $badgeText = 'Agotado';
                                             }
                                         ?>
-                                        <div class="flex items-center justify-between p-3 rounded-xl bg-surface/60 border border-border/70 hover:border-primary/40 transition-colors">
+                                        <div class="flex items-center justify-between p-3 rounded-xl bg-surface border border-border hover:border-primary/40 transition-colors">
                                             <div class="flex items-center gap-3">
-                                                <div class="w-8 h-8 rounded-lg bg-card flex items-center justify-center text-primary text-xs font-mono font-bold">
+                                                <div class="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center text-primary text-xs font-mono font-bold">
                                                     #<?php echo htmlspecialchars($p['id_producto']); ?>
                                                 </div>
                                                 <div>
@@ -331,7 +331,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
                                 <span>Tip: Presiona <kbd class="px-1.5 py-0.5 rounded bg-card border border-border text-[11px] font-mono text-text-main">F3</kbd> en cualquier pantalla para saltar al inventario.</span>
                             </div>
-                            <a href="<?php echo BASE_URL; ?>/modules/inventory/index.php" class="px-4 py-2 rounded-xl bg-primary text-[#0c141b] font-bold text-xs hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                            <a href="<?php echo BASE_URL; ?>/modules/inventory/index.php" class="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
                                 <span>Ir al Inventario</span>
                                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </a>
@@ -369,7 +369,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                     <article class="rounded-3xl border border-border bg-card overflow-hidden shadow-lg transition-all">
                         <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl shadow-[0_0_16px_rgba(14,165,160,0.15)]">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl">
                                     02
                                 </div>
                                 <div>
@@ -407,9 +407,9 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     </div>
                                 </div>
 
-                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-secondary/40 transition-colors">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-[#9db82a] transition-colors">
                                     <div class="flex items-start gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                        <div class="w-9 h-9 rounded-xl bg-[#eef6cf] border border-[#c6e24a] flex items-center justify-center text-[#4d5e0a] shrink-0">
                                             <span class="material-symbols-outlined text-[20px]">extension</span>
                                         </div>
                                         <div>
@@ -423,8 +423,8 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             </div>
 
                             <?php // MOCKUP PREVIEW TALLER ?>
-                            <div class="rounded-2xl border border-border bg-[#0f141c] overflow-hidden shadow-inner">
-                                <div class="px-4 py-3 bg-[#151b24] border-b border-border flex items-center justify-between">
+                            <div class="rounded-2xl border border-border-dark bg-background overflow-hidden shadow-inner">
+                                <div class="px-4 py-3 bg-sunk border-b border-border-dark flex items-center justify-between">
                                     <div class="flex items-center gap-2">
                                         <span class="w-2.5 h-2.5 rounded-full bg-error"></span>
                                         <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
@@ -437,15 +437,17 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     <?php foreach ($realRepairs as $r): 
                                         $st = $r['estado'];
                                         $color = match($st) {
-                                            'Listo' => 'text-success bg-success/10 border-success/30',
-                                            'Entregado' => 'text-primary bg-primary/10 border-primary/30',
-                                            'En reparación' => 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
-                                            default => 'text-secondary bg-secondary/10 border-secondary/30'
+                                            'Listo' => 'repair-status repair-status-listo',
+                                            'Entregado' => 'repair-status repair-status-entregado',
+                                            'En reparación' => 'repair-status repair-status-reparacion',
+                                            'En diagnóstico' => 'repair-status repair-status-diagnostico',
+                                            'Cancelado' => 'repair-status repair-status-cancelado',
+                                            default => 'repair-status repair-status-recibido'
                                         };
                                     ?>
-                                    <div class="flex items-center justify-between p-3 rounded-xl bg-surface/60 border border-border/70 hover:border-primary/40 transition-colors">
+                                    <div class="flex items-center justify-between p-3 rounded-xl bg-surface border border-border hover:border-primary/40 transition-colors">
                                         <div class="flex items-center gap-3">
-                                            <div class="w-8 h-8 rounded-lg bg-card flex items-center justify-center text-primary text-xs font-mono font-bold">
+                                            <div class="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center text-primary text-xs font-mono font-bold">
                                                 #<?php echo htmlspecialchars(substr($r['codigo_orden'], -4)); ?>
                                             </div>
                                             <div>
@@ -472,7 +474,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
                                 <span>Tip: Presiona <kbd class="px-1.5 py-0.5 rounded bg-card border border-border text-[11px] font-mono text-text-main">F4</kbd> en cualquier pantalla para saltar a Taller.</span>
                             </div>
-                            <a href="<?php echo BASE_URL; ?>/modules/workshop/index.php" class="px-4 py-2 rounded-xl bg-primary text-[#0c141b] font-bold text-xs hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                            <a href="<?php echo BASE_URL; ?>/modules/workshop/index.php" class="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
                                 <span>Ir a Taller</span>
                                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </a>
@@ -485,7 +487,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                     <article class="rounded-3xl border border-border bg-card overflow-hidden shadow-lg transition-all">
                         <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl shadow-[0_0_16px_rgba(14,165,160,0.15)]">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl">
                                     03
                                 </div>
                                 <div>
@@ -520,23 +522,23 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     </div>
                                 </div>
 
-                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-blue-500/40 transition-colors">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-blue-300 transition-colors">
                                     <div class="flex items-start gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                                        <div class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700 shrink-0">
                                             <span class="material-symbols-outlined text-[20px]">build</span>
                                         </div>
                                         <div>
                                             <h3 class="text-sm font-display font-bold text-text-main mb-1">¿Dónde está el cobro de Taller?</h3>
                                             <p class="text-xs text-text-muted leading-relaxed">
-                                                En <strong class="text-text-main">Ventas</strong>, botón azul superior <strong class="text-blue-400 font-semibold">"Cobrar Reparaciones"</strong> junto a "+ Nueva Venta".
+                                                En <strong class="text-text-main">Ventas</strong>, botón azul superior <strong class="text-blue-700 font-semibold">"Cobrar Reparaciones"</strong> junto a "+ Nueva Venta".
                                             </p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-secondary/40 transition-colors">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-[#9db82a] transition-colors">
                                     <div class="flex items-start gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                        <div class="w-9 h-9 rounded-xl bg-[#eef6cf] border border-[#c6e24a] flex items-center justify-center text-[#4d5e0a] shrink-0">
                                             <span class="material-symbols-outlined text-[20px]">payments</span>
                                         </div>
                                         <div>
@@ -550,10 +552,10 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             </div>
 
                             <?php // ACCORDION: Cobro de Reparaciones Paso a Paso ?>
-                            <div class="rounded-2xl border border-blue-500/30 bg-surface/80 overflow-hidden shadow-sm">
+                            <div class="rounded-2xl border border-blue-200 bg-surface/80 overflow-hidden shadow-sm">
                                 <button onclick="toggleAccordion('acc-step-ventas-reparacion')" class="w-full p-4 md:p-5 flex items-center justify-between text-left hover:bg-card/50 transition-colors" type="button">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                                        <div class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700">
                                             <span class="material-symbols-outlined text-[20px]">handyman</span>
                                         </div>
                                         <div>
@@ -571,18 +573,18 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                         <div class="flex-1">
                                             <p class="text-sm font-semibold text-text-main">La orden debe estar en estado "Listo" en Taller</p>
                                             <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
-                                                En el módulo <strong class="text-text-main">Taller</strong>, el técnico debe marcar la orden como <span class="px-2 py-0.5 rounded text-[11px] font-bold border border-success/30 bg-success/10 text-success">Listo</span>. Mientras la orden esté en <em>Recibido</em>, <em>En diagnóstico</em> o <em>En reparación</em> no figurará en la bandeja de cobro.
+                                                En el módulo <strong class="text-text-main">Taller</strong>, el técnico debe marcar la orden como <span class="px-2 py-0.5 rounded text-[11px] font-bold border border-[#92d5e8] bg-[#e0f4fa] text-[#0d5c73]">Listo</span>. Mientras la orden esté en <em>Recibido</em>, <em>En diagnóstico</em> o <em>En reparación</em> no figurará en la bandeja de cobro.
                                             </p>
                                         </div>
                                     </div>
 
                                     <?php // Paso 2 ?>
                                     <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
-                                        <div class="w-7 h-7 rounded-full bg-card border border-blue-400 text-blue-400 flex items-center justify-center text-xs font-bold shrink-0 z-10">2</div>
+                                        <div class="w-7 h-7 rounded-full bg-card border border-blue-600 text-blue-700 flex items-center justify-center text-xs font-bold shrink-0 z-10">2</div>
                                         <div class="flex-1">
                                             <p class="text-sm font-semibold text-text-main">Abrir "Cobrar Reparaciones" desde el módulo Ventas</p>
                                             <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
-                                                Ve al menú lateral y haz clic en <strong class="text-text-main">Ventas</strong>. En la esquina superior derecha, junto al botón verde "+ Nueva Venta", pulsa en el botón azul <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border border-blue-500/30 bg-blue-500/10 text-blue-400"><span class="material-symbols-outlined text-[13px]">build</span> Cobrar Reparaciones</span>.
+                                                Ve al menú lateral y haz clic en <strong class="text-text-main">Ventas</strong>. En la esquina superior derecha, junto al botón verde "+ Nueva Venta", pulsa en el botón azul <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border border-blue-200 bg-blue-50 text-blue-700"><span class="material-symbols-outlined text-[13px]">build</span> Cobrar Reparaciones</span>.
                                             </p>
                                         </div>
                                     </div>
@@ -605,7 +607,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                         <div class="flex-1">
                                             <p class="text-sm font-semibold text-text-main">Seleccionar Método de Pago y confirmar</p>
                                             <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
-                                                Elige el medio de pago acordado (<strong class="text-text-main">Efectivo</strong>, <strong class="text-text-main">Transferencia</strong> o <strong class="text-text-main">Tarjeta</strong>) y haz clic en el botón verde <span class="px-2.5 py-0.5 rounded text-[11px] font-bold bg-primary text-[#0c141b]">Cobrar y Entregar</span>.
+                                                Elige el medio de pago acordado (<strong class="text-text-main">Efectivo</strong>, <strong class="text-text-main">Transferencia</strong> o <strong class="text-text-main">Tarjeta</strong>) y haz clic en el botón verde <span class="px-2.5 py-0.5 rounded text-[11px] font-bold bg-primary text-white">Cobrar y Entregar</span>.
                                             </p>
                                         </div>
                                     </div>
@@ -616,9 +618,9 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                         <div class="flex-1">
                                             <p class="text-sm font-semibold text-text-main">Entrega y Cierre Contable Automático</p>
                                             <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
-                                                Al confirmar, el sistema asienta el ingreso en el historial de ventas bajo el concepto de <em>Servicio Técnico Taller</em> y cambia automáticamente la orden a <span class="px-2 py-0.5 rounded text-[11px] font-bold border border-primary/30 bg-primary/10 text-primary">Entregado</span> con la fecha y hora exacta del retiro.
+                                                Al confirmar, el sistema asienta el ingreso en el historial de ventas bajo el concepto de <em>Servicio Técnico Taller</em> y cambia automáticamente la orden a <span class="px-2 py-0.5 rounded text-[11px] font-bold border border-[#9adbb3] bg-[#e3f6ea] text-[#156835]">Entregado</span> con la fecha y hora exacta del retiro.
                                             </p>
-                                            <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=repairs_to_charge" class="inline-flex items-center gap-1.5 mt-3 px-3.5 py-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-xs font-bold transition-colors">
+                                            <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=repairs_to_charge" class="inline-flex items-center gap-1.5 mt-3 px-3.5 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold transition-colors">
                                                 <span class="material-symbols-outlined text-[16px]">build</span>
                                                 <span>Ir directo a la Bandeja de Cobrar Reparaciones</span>
                                             </a>
@@ -628,7 +630,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             </div>
 
                             <?php // MOCKUP LISTADO DE VENTAS ?>
-                            <div class="rounded-2xl border border-border bg-[#0f141c] overflow-hidden p-4 space-y-3">
+                            <div class="rounded-2xl border border-border-dark bg-background overflow-hidden p-4 space-y-3">
                                 <div class="flex items-center justify-between pb-2 border-b border-border/50">
                                     <span class="text-xs font-semibold text-text-main flex items-center gap-2">
                                         <span class="material-symbols-outlined text-primary text-[18px]">receipt</span>
@@ -637,14 +639,17 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 </div>
                                 <div class="space-y-2">
                                     <?php foreach ($realSales as $s): ?>
-                                    <div class="flex items-center justify-between p-3 rounded-xl bg-surface/60 border border-border/70">
+                                    <div class="flex items-center justify-between p-3 rounded-xl bg-surface border border-border">
                                         <div class="flex items-center gap-3">
-                                            <div class="w-8 h-8 rounded-lg bg-card flex items-center justify-center text-primary text-xs font-mono font-bold">
+                                            <div class="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center text-primary text-xs font-mono font-bold">
                                                 #<?php echo $s['id_venta']; ?>
                                             </div>
                                             <div>
-                                                <p class="text-xs font-medium text-text-main">Venta Registrada • <?php echo htmlspecialchars($s['metodo_de_pago']); ?></p>
-                                                <p class="text-[11px] text-text-muted"><?php echo htmlspecialchars($s['fecha']); ?></p>
+                                                <div class="flex items-center gap-2 flex-wrap">
+                                                    <span class="text-xs font-medium text-text-main">Venta Registrada</span>
+                                                    <?php echo Layout::renderPaymentBadge($s['metodo_de_pago'] ?? 'N/A'); ?>
+                                                </div>
+                                                <p class="text-[11px] text-text-muted mt-0.5"><?php echo htmlspecialchars($s['fecha']); ?></p>
                                             </div>
                                         </div>
                                         <span class="text-xs md:text-sm font-mono font-bold text-primary">$<?php echo number_format((float)$s['total'], 2, ',', '.'); ?></span>
@@ -660,11 +665,11 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <span>Tip: Presiona <kbd class="px-1.5 py-0.5 rounded bg-card border border-border text-[11px] font-mono text-text-main">F2</kbd> en cualquier pantalla para abrir Nueva Venta.</span>
                             </div>
                             <div class="flex items-center gap-2.5">
-                                <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=repairs_to_charge" class="px-3.5 py-2 rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-xs font-bold transition-colors flex items-center gap-1.5">
+                                <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=repairs_to_charge" class="px-3.5 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold transition-colors flex items-center gap-1.5">
                                     <span class="material-symbols-outlined text-[16px]">build</span>
                                     <span>Cobrar Reparaciones</span>
                                 </a>
-                                <a href="<?php echo BASE_URL; ?>/modules/sales/index.php" class="px-4 py-2 rounded-xl bg-primary text-[#0c141b] font-bold text-xs hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                                <a href="<?php echo BASE_URL; ?>/modules/sales/index.php" class="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
                                     <span>Ir a Ventas</span>
                                     <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                                 </a>
@@ -678,7 +683,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                     <article class="rounded-3xl border border-border bg-card overflow-hidden shadow-lg transition-all">
                         <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl shadow-[0_0_16px_rgba(14,165,160,0.15)]">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl">
                                     04
                                 </div>
                                 <div>
@@ -716,9 +721,9 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     </div>
                                 </div>
 
-                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-secondary/40 transition-colors">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-[#9db82a] transition-colors">
                                     <div class="flex items-start gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                        <div class="w-9 h-9 rounded-xl bg-[#eef6cf] border border-[#c6e24a] flex items-center justify-center text-[#4d5e0a] shrink-0">
                                             <span class="material-symbols-outlined text-[20px]">history</span>
                                         </div>
                                         <div>
@@ -737,7 +742,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
                                 <span>Tip: Presiona <kbd class="px-1.5 py-0.5 rounded bg-card border border-border text-[11px] font-mono text-text-main">Ctrl + B</kbd> para abrir el módulo Clientes.</span>
                             </div>
-                            <a href="<?php echo BASE_URL; ?>/modules/clients/index.php" class="px-4 py-2 rounded-xl bg-primary text-[#0c141b] font-bold text-xs hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                            <a href="<?php echo BASE_URL; ?>/modules/clients/index.php" class="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
                                 <span>Ir a Clientes</span>
                                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </a>
@@ -750,7 +755,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                     <article class="rounded-3xl border border-border bg-card overflow-hidden shadow-lg transition-all">
                         <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl shadow-[0_0_16px_rgba(14,165,160,0.15)]">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl">
                                     05
                                 </div>
                                 <div>
@@ -788,9 +793,9 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     </div>
                                 </div>
 
-                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-secondary/40 transition-colors">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-[#9db82a] transition-colors">
                                     <div class="flex items-start gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                        <div class="w-9 h-9 rounded-xl bg-[#eef6cf] border border-[#c6e24a] flex items-center justify-center text-[#4d5e0a] shrink-0">
                                             <span class="material-symbols-outlined text-[20px]">query_stats</span>
                                         </div>
                                         <div>
@@ -809,7 +814,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
                                 <span>Tip: Los administradores pueden consultar el historial de actividades desde el Dashboard de administración.</span>
                             </div>
-                            <a href="<?php echo BASE_URL; ?>/modules/suppliers/index.php" class="px-4 py-2 rounded-xl bg-primary text-[#0c141b] font-bold text-xs hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                            <a href="<?php echo BASE_URL; ?>/modules/suppliers/index.php" class="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
                                 <span>Ir a Proveedores</span>
                                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </a>
@@ -846,12 +851,12 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                         </a>
 
                         <?php // F3: Inventario ?>
-                        <a href="<?php echo BASE_URL; ?>/modules/inventory/index.php" class="flex items-center justify-between p-3 rounded-2xl bg-surface border border-border hover:border-secondary/50 transition-all group">
+                        <a href="<?php echo BASE_URL; ?>/modules/inventory/index.php" class="flex items-center justify-between p-3 rounded-2xl bg-surface border border-border hover:border-[#9db82a] transition-all group">
                             <div class="flex items-center gap-2.5">
-                                <span class="material-symbols-outlined text-text-muted group-hover:text-secondary transition-colors text-[18px]">search</span>
-                                <span class="text-xs font-medium text-text-main group-hover:text-secondary transition-colors">Buscar Repuesto / Stock</span>
+                                <span class="material-symbols-outlined text-text-muted group-hover:text-[#4d5e0a] transition-colors text-[18px]">search</span>
+                                <span class="text-xs font-medium text-text-main group-hover:text-[#4d5e0a] transition-colors">Buscar Repuesto / Stock</span>
                             </div>
-                            <kbd class="px-2 py-1 rounded-lg bg-card border border-border font-mono text-xs text-secondary font-bold shadow-sm">F3</kbd>
+                            <kbd class="px-2 py-1 rounded-lg bg-card border border-border font-mono text-xs text-[#4d5e0a] font-bold shadow-sm">F3</kbd>
                         </a>
 
                         <?php // F4: Taller ?>
@@ -877,7 +882,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                 <?php // CARD: PREGUNTAS FRECUENTES (FAQ) ?>
                 <div class="rounded-3xl border border-border bg-card p-6 space-y-4 shadow-lg">
                     <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-lg bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary">
+                        <div class="w-8 h-8 rounded-lg bg-[#eef6cf] border border-[#c6e24a] flex items-center justify-center text-[#4d5e0a]">
                             <span class="material-symbols-outlined text-[18px]">quiz</span>
                         </div>
                         <h3 class="text-base font-display font-bold text-text-main">Preguntas Frecuentes</h3>
@@ -948,7 +953,7 @@ function switchTab(tabId) {
         
         if (t === tabId) {
             if (btn) {
-                btn.className = 'help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-primary/10 border border-primary/40 text-primary shadow-[0_0_12px_rgba(14,165,160,0.15)] font-display';
+                btn.className = 'help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-primary border border-primary text-white shadow-sm font-display';
             }
             if (pane) {
                 pane.classList.remove('hidden');
@@ -956,7 +961,7 @@ function switchTab(tabId) {
             }
         } else {
             if (btn) {
-                btn.className = 'help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-border/80 font-display';
+                btn.className = 'help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-primary font-display';
             }
             if (pane) {
                 pane.classList.remove('block');

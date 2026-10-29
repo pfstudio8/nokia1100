@@ -2,6 +2,7 @@
 // modules/admin/Models/AdminModel.php
 
 require_once __DIR__ . '/../../../classes/BaseModel.php';
+require_once __DIR__ . '/../../../classes/ServiceProduct.php';
 
 class AdminModel extends BaseModel
 {
@@ -27,14 +28,15 @@ class AdminModel extends BaseModel
 
     public function get_low_stock_count()
     {
-        $res = $this->conn->query("SELECT COUNT(*) as bajo_stock FROM inventario i INNER JOIN producto p ON i.id_producto = p.id_producto WHERE i.cantidad <= 5 AND p.is_active = 1");
+        $excludeServices = ServiceProduct::excludeSql('p', 'd');
+        $res = $this->conn->query("SELECT COUNT(*) as bajo_stock FROM inventario i INNER JOIN producto p ON i.id_producto = p.id_producto LEFT JOIN producto_detalle d ON p.id_producto = d.id_producto WHERE i.cantidad <= COALESCE(d.stock_minimo, 5) AND p.is_active = 1 AND $excludeServices");
         return ($res && $res->num_rows > 0) ? (int) $res->fetch_assoc()['bajo_stock'] : 0;
     }
 
     public function get_recent_sales($limit = 5)
     {
         $limit = (int) $limit;
-        $stmt = $this->conn->prepare("SELECT id_venta, fecha, total, metodo_de_pago FROM venta WHERE estado != 'anulada' ORDER BY fecha DESC LIMIT ?");
+        $stmt = $this->conn->prepare("SELECT v.id_venta, v.fecha, v.total, COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), m.metodo) AS metodo_de_pago FROM venta v LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago WHERE v.estado != 'anulada' ORDER BY v.fecha DESC, v.id_venta DESC LIMIT ?");
         $stmt->bind_param("i", $limit);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -381,22 +383,15 @@ class AdminModel extends BaseModel
     public function get_audit_logs($limit = 100, $modulo = '')
     {
         $limit = (int) $limit;
+        // La auditoría del sistema está dedicada exclusivamente al inventario
         $sql = "SELECT a.*, u.nombre_usuario 
                 FROM audit_log a 
-                LEFT JOIN usuario u ON a.id_usuario = u.id_usuario ";
-                
-        if (!empty($modulo)) {
-            $sql .= "WHERE a.tabla_afectada = ? ";
-        }
-        
-        $sql .= "ORDER BY a.fecha DESC LIMIT ?";
+                LEFT JOIN usuario u ON a.id_usuario = u.id_usuario 
+                WHERE (LOWER(a.tabla_afectada) IN ('inventario', 'producto') OR a.accion LIKE 'INVENTORY_%')
+                ORDER BY a.fecha DESC LIMIT ?";
         
         $stmt = $this->conn->prepare($sql);
-        if (!empty($modulo)) {
-            $stmt->bind_param("si", $modulo, $limit);
-        } else {
-            $stmt->bind_param("i", $limit);
-        }
+        $stmt->bind_param("i", $limit);
         
         $stmt->execute();
         $result = $stmt->get_result();

@@ -6,28 +6,48 @@ class Layout
         return file_exists($fullPath) ? filemtime($fullPath) : time();
     }
 
-    public static function renderHead($title = "NOKIA1100")
+    public static function renderHead($title = "NOKIA1100", array $extraCss = [])
     {
         $currentUser = $_SESSION['username'] ?? '';
+        $csrfToken = $_SESSION['session_token'] ?? '';
+        $extraLinks = '';
+        foreach ($extraCss as $cssPath) {
+            $ver = self::getAssetVersion($cssPath);
+            $extraLinks .= "\n    " . '<link rel="stylesheet" href="' . BASE_URL . htmlspecialchars($cssPath, ENT_QUOTES, 'UTF-8') . '?v=' . $ver . '">';
+        }
+
         echo '<!DOCTYPE html>
-<html class="dark" lang="es">
+<html lang="es">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <meta name="current-user" content="' . htmlspecialchars($currentUser) . '"/>
+    <meta name="current-user" content="' . htmlspecialchars($currentUser, ENT_QUOTES, 'UTF-8') . '"/>
+    <meta name="csrf-token" content="' . htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') . '"/>
     <title>' . htmlspecialchars($title) . '</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="' . BASE_URL . '/assets/css/style.css?v=' . self::getAssetVersion('/assets/css/style.css') . '">
+    <link rel="stylesheet" href="' . BASE_URL . '/assets/css/style.css?v=' . self::getAssetVersion('/assets/css/style.css') . '">' . $extraLinks . '
     <script>window.BASE_URL = "' . BASE_URL . '";</script>
     <script src="' . BASE_URL . '/assets/js/tailwind_config.js?v=' . self::getAssetVersion('/assets/js/tailwind_config.js') . '"></script>
     <script src="' . BASE_URL . '/assets/js/session-cache.js?v=' . self::getAssetVersion('/assets/js/session-cache.js') . '"></script>
 </head>
-<body class="font-sans antialiased text-text-main selection:bg-primary/20 selection:text-primary">
-    <div id="top-right-user" class="absolute top-4 right-6 z-50 hidden md:flex items-center gap-3 bg-surface/80 backdrop-blur-md border border-border px-4 py-2 rounded-xl shadow-lg opacity-0 transition-opacity duration-300">
-        <div class="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center font-bold text-sm" id="tr-initial"></div>
-        <span id="tr-username" class="text-sm font-medium text-text-main"></span>
+<body class="font-sans antialiased text-[#15171a] bg-[#eeebe3] selection:bg-[#c6e24a] selection:text-[#15171a]">
+    <script>
+        (function() {
+            try {
+                document.body.classList.add("sidebar-preload");
+                if (localStorage.getItem("sidebarCollapsed") === "true") {
+                    document.body.classList.add("sidebar-collapsed");
+                }
+            } catch (e) {}
+        })();
+    </script>
+    <div id="top-right-user" class="fixed top-[9px] right-6 z-40 hidden md:flex items-center gap-3 bg-[#f8f6f0] border border-[#d3cebf] px-3.5 py-1.5 rounded-[2px] opacity-0 transition-opacity duration-300">
+        <div class="w-7 h-7 rounded-[2px] bg-[#15181a] text-[#c6e24a] flex items-center justify-center font-mono font-bold text-xs" id="tr-initial"></div>
+        <span id="tr-username" class="text-xs font-mono font-semibold text-[#15171a]"></span>
     </div>';
     }
 
@@ -72,12 +92,12 @@ class Layout
     {
         try {
             $modelPath = __DIR__ . '/../modules/workshop/Models/WorkshopModel.php';
-            if (file_exists($modelPath)) {
+            if (!class_exists('WorkshopModel') && file_exists($modelPath)) {
                 require_once $modelPath;
-                if (class_exists('WorkshopModel')) {
-                    $wm = new WorkshopModel();
-                    return $wm->get_ready_to_charge_count();
-                }
+            }
+            if (class_exists('WorkshopModel')) {
+                $wm = new WorkshopModel();
+                return $wm->get_ready_to_charge_count();
             }
         } catch (\Throwable $e) {
             // Silencioso para evitar romper layout en caso de error
@@ -181,6 +201,58 @@ class Layout
         }
     }
 
+    private static function resolveModuleLabel(string $activePage): string
+    {
+        $role = $_SESSION['role'] ?? 'admin';
+        $map = [
+            'dashboard'           => ($role === 'admin') ? 'DASHBOARD' : 'INICIO',
+            'inventario'          => 'INVENTARIO',
+            'usuarios'            => 'USUARIOS',
+            'taller'              => 'TALLER',
+            'cobrar_reparaciones' => 'COBRAR REPARACIONES',
+            'ventas'              => 'VENTAS',
+            'venta'               => 'VENTAS',
+            'clientes'            => 'CLIENTES',
+            'reportes'            => 'REPORTES',
+            'graficos'            => 'REPORTES',
+            'proveedores'         => 'PROVEEDORES',
+            'auditoria'           => 'AUDITORÍA',
+            'perfil'              => 'MI PERFIL',
+            'ayuda'               => 'AYUDA',
+        ];
+
+        $key = strtolower(trim($activePage));
+        if (isset($map[$key])) {
+            return $map[$key];
+        }
+        return $key !== '' ? mb_strtoupper(str_replace('_', ' ', $key), 'UTF-8') : 'SISTEMA';
+    }
+
+    private static function renderModuleTopBar(string $activePage): string
+    {
+        $moduleLabel = htmlspecialchars(self::resolveModuleLabel($activePage), ENT_QUOTES, 'UTF-8');
+
+        return '
+<!-- Barra Superior Unificada con Indicador de Módulo -->
+<header id="moduleTopBar" class="sys-topbar">
+    <div class="sys-topbar-left">
+        <button id="sidebarToggle" type="button" class="sys-topbar-btn" aria-label="Alternar menú lateral" title="Mostrar / ocultar menú">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
+                <path d="M4 7h16M4 12h16M4 17h16"/>
+            </svg>
+        </button>
+        <nav class="sys-breadcrumb" aria-label="Ubicación actual">
+            <span class="sys-crumb-root">NOKIA 1100</span>
+            <span class="sys-crumb-sep" aria-hidden="true">/</span>
+            <span class="sys-crumb-current">' . $moduleLabel . '</span>
+        </nav>
+    </div>
+</header>
+
+<!-- Telón de fondo móvil (Backdrop) -->
+<div id="sidebarBackdrop" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden md:hidden" aria-hidden="true"></div>';
+    }
+
     public static function renderAdminSidebar($activePage = '')
     {
         if (($_SESSION['role'] ?? 'admin') !== 'admin') {
@@ -209,48 +281,20 @@ class Layout
             ['id' => 'perfil', 'url' => BASE_URL . '/modules/admin/index.php?action=profile', 'icon' => 'person', 'label' => 'Mi Perfil'],
         ];
 
-        echo '
-<!-- Encabezado Móvil RWD -->
-<header id="mobileTopBar" class="md:hidden border-b border-border bg-surface/95 backdrop-blur-md px-4 py-3 flex justify-between items-center fixed top-0 left-0 right-0 z-40 shadow-md">
-    <div class="flex items-center gap-3">
-        <button id="mobileSidebarToggle" type="button" aria-label="Abrir menú" class="w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center text-text-main hover:text-primary active:scale-95 transition-all">
-            <span class="material-symbols-outlined text-[24px]">menu</span>
-        </button>
-        <div class="flex items-center gap-2">
-            <span class="font-display font-bold text-lg tracking-tight text-text-main">NOKIA<span class="text-primary">1100</span></span>
-            <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-primary/30 text-primary bg-primary/10">Admin</span>
-        </div>
-    </div>
-    <div class="flex items-center gap-2">
-        <a href="' . BASE_URL . '/help.php" class="w-9 h-9 rounded-lg bg-card/60 border border-border flex items-center justify-center text-text-muted hover:text-primary transition-colors" title="Ayuda">
-            <span class="material-symbols-outlined text-[18px]">help</span>
-        </a>
-        <a href="' . BASE_URL . '/modules/auth/index.php?action=logout" class="w-9 h-9 rounded-lg bg-card/60 border border-border flex items-center justify-center text-text-muted hover:text-red-400 transition-colors" title="Cerrar Sesión">
-            <span class="material-symbols-outlined text-[18px]">logout</span>
-        </a>
-    </div>
-</header>
+        echo self::renderModuleTopBar((string)$activePage) . '
 
-<!-- Telón de fondo móvil (Backdrop) -->
-<div id="sidebarBackdrop" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden transition-opacity duration-300 md:hidden" aria-hidden="true"></div>
-
-<!-- Botón de colapso para escritorio -->
-<button id="sidebarToggle" class="fixed top-7 z-50 items-center justify-center w-10 h-10 rounded-lg bg-surface/90 backdrop-blur-md border border-border shadow-lg text-text-main hover:text-primary transition-colors hidden md:flex hover:scale-105 active:scale-95">
-    <span class="material-symbols-outlined">menu</span>
-</button>
-
-<aside id="mainSidebar" class="fixed left-0 top-0 h-screen w-64 border-r border-border bg-background flex flex-col z-50 md:z-40 transition-transform duration-300 -translate-x-full md:translate-x-0">
-    <div class="p-6 md:p-8 flex items-center justify-between border-b border-border/50 md:border-b-0">
+<aside id="mainSidebar" class="fixed left-0 top-0 h-screen w-64 border-r border-[#222729] bg-[#15181a] flex flex-col z-50 md:z-40">
+    <div class="sys-sidebar-header flex items-center justify-between border-b border-[#222729]">
         <div>
-            <h1 class="text-2xl font-bold font-display tracking-tight text-text-main">NOKIA<span class="text-primary">1100</span></h1>
-            <p class="text-[10px] text-text-muted mt-1 uppercase tracking-widest font-medium">Administración</p>
+            <h1 class="sys-sidebar-brand font-bold font-display tracking-tight text-[#e9e6db]">NOKIA<span class="text-[#c6e24a] font-mono ml-1">1100</span></h1>
+            <p class="sys-sidebar-role text-[#9ba19f] font-mono mt-0.5 uppercase">Administración</p>
         </div>
-        <button id="closeSidebarMobile" type="button" aria-label="Cerrar menú" class="md:hidden w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-text-muted hover:text-text-main active:scale-95 transition-colors">
-            <span class="material-symbols-outlined text-[20px]">close</span>
+        <button id="closeSidebarMobile" type="button" aria-label="Cerrar menú" class="md:hidden w-8 h-8 rounded-[2px] bg-[#222729] border border-[#30363a] flex items-center justify-center text-[#9ba19f] hover:text-[#e9e6db] transition-colors">
+            <span class="material-symbols-outlined text-[19px]">close</span>
         </button>
     </div>
     
-    <nav class="flex-1 px-4 space-y-1 mt-4 overflow-y-auto custom-scrollbar">';
+    <nav class="sys-sidebar-nav flex-1 overflow-y-auto custom-scrollbar">';
 
         foreach ($links as $l) {
             $perm = $l['permission'] ?? $l['id'];
@@ -260,42 +304,39 @@ class Layout
             $isActive = ($activePage === $l['id']);
             $badgeCount = (int)($l['badge'] ?? 0);
             $badgeAttr = isset($l['badge']) ? ' data-badge="ready-repairs"' : '';
-            $badgeHidden = ($badgeCount <= 0) ? 'hidden' : '';
+            $badgeHidden = ($badgeCount <= 0) ? ' hidden' : '';
+            $badgeColors = $isActive ? 'bg-[#15171a] text-[#c6e24a]' : 'bg-[#c6e24a] text-[#15171a]';
             $badgeHtml = isset($l['badge'])
-                ? '<span' . $badgeAttr . ' class="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse ' . $badgeHidden . '" title="' . ($l['badge_title'] ?? 'Pendientes') . '">' . $badgeCount . '</span>'
+                ? '<span' . $badgeAttr . ' class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-[2px] text-[11px] font-mono font-bold ' . $badgeColors . $badgeHidden . '" title="' . ($l['badge_title'] ?? 'Pendientes') . '">' . $badgeCount . '</span>'
                 : '';
-            if ($isActive) {
-                echo '<a href="' . $l['url'] . '" class="flex items-center gap-3 px-4 py-3 bg-card rounded-lg border border-border text-primary transition-colors">
-                        <span class="material-symbols-outlined">' . $l['icon'] . '</span>
-                        <span class="text-sm font-medium">' . $l['label'] . '</span>' . $badgeHtml . '
-                      </a>';
-            } else {
-                echo '<a href="' . $l['url'] . '" class="flex items-center gap-3 px-4 py-3 text-text-muted hover:text-text-main hover:bg-surface/50 rounded-lg transition-colors">
-                        <span class="material-symbols-outlined">' . $l['icon'] . '</span>
-                        <span class="text-sm font-medium">' . $l['label'] . '</span>' . $badgeHtml . '
-                      </a>';
-            }
+
+            echo '<a href="' . $l['url'] . '" class="sys-sidebar-link' . ($isActive ? ' is-active' : '') . '">
+                    <span class="material-symbols-outlined">' . $l['icon'] . '</span>
+                    <span class="truncate">' . $l['label'] . '</span>' . $badgeHtml . '
+                  </a>';
         }
+
+        $isHelpActive = ($activePage === 'ayuda');
 
         echo '
     </nav>
     
-    <div class="p-6 border-t border-border mt-auto">
-        <a href="' . BASE_URL . '/help.php" class="flex items-center gap-3 text-primary hover:text-primary/80 transition-colors mb-4 font-medium text-sm w-full">
+    <div class="sys-sidebar-footer border-t border-[#222729] mt-auto">
+        <a href="' . BASE_URL . '/help.php" class="sys-sidebar-help' . ($isHelpActive ? ' is-active' : '') . '">
             <span class="material-symbols-outlined">help</span>
-            Ayuda
+            <span>Ayuda</span>
         </a>
-        <a href="' . BASE_URL . '/modules/auth/index.php?action=logout" class="flex items-center gap-3 text-red-500 hover:text-red-400 transition-colors mb-6 font-medium text-sm">
+        <a href="' . BASE_URL . '/modules/auth/index.php?action=logout" class="sys-sidebar-logout">
             <span class="material-symbols-outlined">logout</span>
-            Cerrar Sesión
+            <span>Cerrar Sesión</span>
         </a>
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-primary font-display font-medium">
+        <div class="sys-sidebar-user flex items-center gap-3 border-t border-[#222729]">
+            <div class="w-9 h-9 flex-shrink-0 rounded-[2px] bg-[#222729] border border-[#30363a] flex items-center justify-center text-[#c6e24a] font-mono font-bold text-sm">
                 ' . $initial . '
             </div>
-            <div>
-                <p class="text-sm font-medium text-text-main">' . $username . '</p>
-                <p class="text-[10px] text-text-muted uppercase tracking-widest font-medium">Administrador</p>
+            <div class="min-w-0">
+                <p class="text-[13.5px] font-semibold text-[#e9e6db] truncate leading-tight">' . $username . '</p>
+                <p class="text-[10.5px] text-[#9ba19f] font-mono uppercase tracking-wider mt-0.5 leading-none">Administrador</p>
             </div>
         </div>
     </div>
@@ -331,60 +372,20 @@ class Layout
             });
         }
 
-        echo '
-<!-- Encabezado Móvil RWD -->
-<header id="mobileTopBar" class="md:hidden border-b border-border bg-surface/95 backdrop-blur-md px-4 py-3 flex justify-between items-center fixed top-0 left-0 right-0 z-40 shadow-md">
-    <div class="flex items-center gap-3">
-        <button id="mobileSidebarToggle" type="button" aria-label="Abrir menú" class="w-10 h-10 rounded-xl bg-card border border-border flex items-center justify-center text-text-main hover:text-primary active:scale-95 transition-all">
-            <span class="material-symbols-outlined text-[24px]">menu</span>
-        </button>
-        <div class="flex items-center gap-2">
-            <span class="font-display font-bold text-lg tracking-tight text-text-main">NOKIA<span class="text-primary">1100</span></span>
-            <span class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border border-primary/30 text-primary bg-primary/10">' . ($role === 'guest' ? 'Invitado' : 'Operario') . '</span>
-        </div>
-    </div>
-    <div class="flex items-center gap-2">
-        <a href="' . BASE_URL . '/help.php" class="w-9 h-9 rounded-lg bg-card/60 border border-border flex items-center justify-center text-text-muted hover:text-primary transition-colors" title="Ayuda">
-            <span class="material-symbols-outlined text-[18px]">help</span>
-        </a>
-        <a href="' . BASE_URL . '/modules/auth/index.php?action=logout" class="w-9 h-9 rounded-lg bg-card/60 border border-border flex items-center justify-center text-text-muted hover:text-red-400 transition-colors" title="Cerrar Sesión">
-            <span class="material-symbols-outlined text-[18px]">logout</span>
-        </a>
-    </div>
-</header>
+        echo self::renderModuleTopBar((string)$activePage) . '
 
-<!-- Telón de fondo móvil (Backdrop) -->
-<div id="sidebarBackdrop" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 hidden transition-opacity duration-300 md:hidden" aria-hidden="true"></div>
-
-<!-- Botón de colapso para escritorio -->
-<button id="sidebarToggle" class="fixed top-7 z-50 items-center justify-center w-10 h-10 rounded-lg bg-surface/90 backdrop-blur-md border border-border shadow-lg text-text-main hover:text-primary transition-colors hidden md:flex hover:scale-105 active:scale-95">
-    <span class="material-symbols-outlined">menu</span>
-</button>
-
-<nav id="mainSidebar" class="fixed left-0 top-0 h-screen w-64 border-r border-border bg-background flex flex-col z-50 md:z-40 transition-transform duration-300 -translate-x-full md:translate-x-0">
-    <div class="p-6 md:p-8 pb-4 flex items-center justify-between border-b border-border/50 md:border-b-0">
+<aside id="mainSidebar" class="fixed left-0 top-0 h-screen w-64 border-r border-[#222729] bg-[#15181a] flex flex-col z-50 md:z-40">
+    <div class="sys-sidebar-header flex items-center justify-between border-b border-[#222729]">
         <div>
-            <h1 class="text-2xl font-bold font-display tracking-tight text-text-main">NOKIA<span class="text-primary">1100</span></h1>
-            <p class="text-[10px] text-text-muted mt-1 uppercase tracking-widest font-medium">' . ($role === 'guest' ? 'Invitado' : 'Operario') . '</p>
+            <h1 class="sys-sidebar-brand font-bold font-display tracking-tight text-[#e9e6db]">NOKIA<span class="text-[#c6e24a] font-mono ml-1">1100</span></h1>
+            <p class="sys-sidebar-role text-[#9ba19f] font-mono mt-0.5 uppercase">' . ($role === 'guest' ? 'Invitado' : 'Operario') . '</p>
         </div>
-        <button id="closeSidebarMobile" type="button" aria-label="Cerrar menú" class="md:hidden w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-text-muted hover:text-text-main active:scale-95 transition-colors">
-            <span class="material-symbols-outlined text-[20px]">close</span>
+        <button id="closeSidebarMobile" type="button" aria-label="Cerrar menú" class="md:hidden w-8 h-8 rounded-[2px] bg-[#222729] border border-[#30363a] flex items-center justify-center text-[#9ba19f] hover:text-[#e9e6db] transition-colors">
+            <span class="material-symbols-outlined text-[19px]">close</span>
         </button>
     </div>
     
-    <div class="px-6 mb-6 mt-4">
-        <div class="flex items-center gap-3 p-3 rounded-xl border border-border bg-surface">
-            <div class="w-10 h-10 flex-shrink-0 rounded-full bg-border flex items-center justify-center text-primary font-display font-medium">
-                ' . $initial . '
-            </div>
-            <div class="overflow-hidden">
-                <div class="text-sm font-medium text-text-main truncate">' . $username . '</div>
-                <div class="text-[10px] text-text-muted uppercase tracking-widest font-semibold">' . ($role === 'guest' ? 'Invitado' : 'Operario') . '</div>
-            </div>
-        </div>
-    </div>
-    
-    <div class="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">';
+    <nav class="sys-sidebar-nav flex-1 overflow-y-auto custom-scrollbar">';
 
         foreach ($links as $l) {
             if (!self::hasAccess($l['id'])) {
@@ -393,36 +394,42 @@ class Layout
             $isActive = ($activePage === $l['id'] || ($activePage === 'ventas' && $l['id'] === 'venta') || ($activePage === 'venta' && $l['id'] === 'ventas'));
             $badgeCount = (int)($l['badge'] ?? 0);
             $badgeAttr = isset($l['badge']) ? ' data-badge="ready-repairs"' : '';
-            $badgeHidden = ($badgeCount <= 0) ? 'hidden' : '';
+            $badgeHidden = ($badgeCount <= 0) ? ' hidden' : '';
+            $badgeColors = $isActive ? 'bg-[#15171a] text-[#c6e24a]' : 'bg-[#c6e24a] text-[#15171a]';
             $badgeHtml = isset($l['badge'])
-                ? '<span' . $badgeAttr . ' class="ml-auto inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 animate-pulse ' . $badgeHidden . '" title="' . ($l['badge_title'] ?? 'Pendientes') . '">' . $badgeCount . '</span>'
+                ? '<span' . $badgeAttr . ' class="ml-auto inline-flex items-center px-1.5 py-0.5 rounded-[2px] text-[11px] font-mono font-bold ' . $badgeColors . $badgeHidden . '" title="' . ($l['badge_title'] ?? 'Pendientes') . '">' . $badgeCount . '</span>'
                 : '';
-            if ($isActive) {
-                echo '<a href="' . $l['url'] . '" class="flex items-center gap-3 px-4 py-3 bg-card rounded-lg border border-border text-primary transition-colors">
-                        <span class="material-symbols-outlined">' . $l['icon'] . '</span>
-                        <span class="text-sm font-medium">' . $l['label'] . '</span>' . $badgeHtml . '
-                      </a>';
-            } else {
-                echo '<a href="' . $l['url'] . '" class="flex items-center gap-3 px-4 py-3 text-text-muted hover:text-text-main hover:bg-surface/50 rounded-lg transition-colors">
-                        <span class="material-symbols-outlined">' . $l['icon'] . '</span>
-                        <span class="text-sm font-medium">' . $l['label'] . '</span>' . $badgeHtml . '
-                      </a>';
-            }
+
+            echo '<a href="' . $l['url'] . '" class="sys-sidebar-link' . ($isActive ? ' is-active' : '') . '">
+                    <span class="material-symbols-outlined">' . $l['icon'] . '</span>
+                    <span class="truncate">' . $l['label'] . '</span>' . $badgeHtml . '
+                  </a>';
         }
 
+        $isHelpActive = ($activePage === 'ayuda');
+
         echo '
-    </div>
-    <div class="p-6 border-t border-border mt-auto space-y-4">
-        <a href="' . BASE_URL . '/help.php" class="flex items-center justify-center gap-2 w-full py-2.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors bg-primary/10 rounded-lg">
+    </nav>
+    <div class="sys-sidebar-footer border-t border-[#222729] mt-auto">
+        <a href="' . BASE_URL . '/help.php" class="sys-sidebar-help' . ($isHelpActive ? ' is-active' : '') . '">
             <span class="material-symbols-outlined">help</span>
-            Ayuda
+            <span>Ayuda</span>
         </a>
-        <a href="' . BASE_URL . '/modules/auth/index.php?action=logout" class="flex items-center justify-center gap-2 w-full py-2.5 text-sm font-medium text-red-500 hover:text-red-400 transition-colors">
+        <a href="' . BASE_URL . '/modules/auth/index.php?action=logout" class="sys-sidebar-logout">
             <span class="material-symbols-outlined">logout</span>
-            Cerrar Sesión
+            <span>Cerrar Sesión</span>
         </a>
+        <div class="sys-sidebar-user flex items-center gap-3 border-t border-[#222729]">
+            <div class="w-9 h-9 flex-shrink-0 rounded-[2px] bg-[#222729] border border-[#30363a] flex items-center justify-center text-[#c6e24a] font-mono font-bold text-sm">
+                ' . $initial . '
+            </div>
+            <div class="min-w-0">
+                <p class="text-[13.5px] font-semibold text-[#e9e6db] truncate leading-tight">' . $username . '</p>
+                <p class="text-[10.5px] text-[#9ba19f] font-mono uppercase tracking-wider mt-0.5 leading-none">' . ($role === 'guest' ? 'Invitado' : 'Operario') . '</p>
+            </div>
+        </div>
     </div>
-</nav>';
+</aside>';
     }
 
     /**
@@ -433,13 +440,14 @@ class Layout
         $tableIdEsc = htmlspecialchars($tableId, ENT_QUOTES, 'UTF-8');
         $titleEsc = htmlspecialchars($title, ENT_QUOTES, 'UTF-8');
         $filenameEsc = htmlspecialchars($filename, ENT_QUOTES, 'UTF-8');
+        $svgDown = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>';
 
         return '
-        <button type="button" onclick="exportTableToExcel(\'' . $tableIdEsc . '\', \'' . $filenameEsc . '\', this)" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-            <span class="material-symbols-outlined text-[16px]">download</span> Excel
+        <button type="button" onclick="exportTableToExcel(\'' . $tableIdEsc . '\', \'' . $filenameEsc . '\', this)" class="btn-export" title="Exportar a Excel">
+            ' . $svgDown . 'Excel
         </button>
-        <button type="button" onclick="exportTableToPDF(\'' . $tableIdEsc . '\', \'' . $titleEsc . '\', \'' . $filenameEsc . '\', this)" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-            <span class="material-symbols-outlined text-[16px]">download</span> PDF
+        <button type="button" onclick="exportTableToPDF(\'' . $tableIdEsc . '\', \'' . $titleEsc . '\', \'' . $filenameEsc . '\', this)" class="btn-export" title="Exportar a PDF">
+            ' . $svgDown . 'PDF
         </button>';
     }
 
@@ -449,6 +457,144 @@ class Layout
     public static function renderExportSplitButton(string $tableId, string $title, string $filename): string
     {
         return self::renderExportButtons($tableId, $title, $filename);
+    }
+
+    /**
+     * Devuelve la clase CSS sutil correspondiente a cada medio de pago.
+     */
+    public static function getPaymentBadgeClass(?string $method): string
+    {
+        $raw = trim((string)($method ?? ''));
+        $m = mb_strtolower($raw, 'UTF-8');
+
+        if (str_contains($m, 'efectivo') || str_contains($m, 'contado')) {
+            return 'badge-payment badge-payment-efectivo';
+        }
+        if (
+            str_contains($m, 'tarjeta') ||
+            str_contains($m, 'debito') ||
+            str_contains($m, 'débito') ||
+            str_contains($m, 'credito') ||
+            str_contains($m, 'crédito') ||
+            str_contains($m, 'posnet')
+        ) {
+            return 'badge-payment badge-payment-tarjeta';
+        }
+        if (
+            str_contains($m, 'transf') ||
+            str_contains($m, 'banco') ||
+            str_contains($m, 'deposito') ||
+            str_contains($m, 'depósito') ||
+            str_contains($m, 'cbu') ||
+            str_contains($m, 'cvu') ||
+            str_contains($m, 'alias')
+        ) {
+            return 'badge-payment badge-payment-transferencia';
+        }
+        if (
+            str_contains($m, 'mercado') ||
+            preg_match('/\bmp\b/u', $m) === 1 ||
+            str_contains($m, 'qr') ||
+            str_contains($m, 'billetera')
+        ) {
+            return 'badge-payment badge-payment-mp';
+        }
+        return 'badge-payment badge-payment-default';
+    }
+
+    /**
+     * Renderiza la insignia HTML con colores sutiles para diferenciar medios de pago en tablas.
+     */
+    public static function renderPaymentBadge(?string $method): string
+    {
+        $raw = trim((string)($method ?? ''));
+        if ($raw === '') {
+            $raw = 'N/A';
+        }
+        $cls = self::getPaymentBadgeClass($raw);
+        return '<span class="' . $cls . '">' . htmlspecialchars($raw, ENT_QUOTES, 'UTF-8') . '</span>';
+    }
+
+    public static function renderPagination(
+        int $page,
+        int $totalPages,
+        int $totalItems,
+        string $singularLabel,
+        string $pluralLabel,
+        array $queryArgs = []
+    ): string {
+        $totalItems = max(0, $totalItems);
+        $totalPages = max(1, $totalPages);
+        $page = max(1, min($page, $totalPages));
+        $entity = ($totalItems === 1) ? $singularLabel : $pluralLabel;
+
+        $infoHtml = '<span class="sys-pagination-info">Página ' . $page . ' de ' . $totalPages . ' - ' . $totalItems . ' ' . htmlspecialchars($entity, ENT_QUOTES, 'UTF-8') . '</span>';
+
+        if ($totalPages <= 1) {
+            return '<div class="sys-pagination">' . $infoHtml . '</div>';
+        }
+
+        $items = [];
+        if ($totalPages <= 7) {
+            for ($i = 1; $i <= $totalPages; $i++) {
+                $items[] = $i;
+            }
+        } else {
+            $items[] = 1;
+            $start = max(2, $page - 1);
+            $end = min($totalPages - 1, $page + 1);
+            if ($page <= 3) {
+                $start = 2;
+                $end = 4;
+            } elseif ($page >= $totalPages - 2) {
+                $start = $totalPages - 3;
+                $end = $totalPages - 1;
+            }
+            if ($start > 2) {
+                $items[] = '...';
+            }
+            for ($i = $start; $i <= $end; $i++) {
+                $items[] = $i;
+            }
+            if ($end < $totalPages - 1) {
+                $items[] = '...';
+            }
+            $items[] = $totalPages;
+        }
+
+        $navHtml = '<nav class="sys-pagination-nav" aria-label="Paginación">';
+
+        if ($page > 1) {
+            $prevArgs = $queryArgs;
+            $prevArgs['page'] = $page - 1;
+            $navHtml .= '<a href="?' . htmlspecialchars(http_build_query($prevArgs), ENT_QUOTES, 'UTF-8') . '" class="sys-page-btn" aria-label="Página anterior" title="Página anterior">&lsaquo;</a>';
+        } else {
+            $navHtml .= '<span class="sys-page-btn is-disabled" aria-disabled="true">&lsaquo;</span>';
+        }
+
+        foreach ($items as $item) {
+            if ($item === '...') {
+                $navHtml .= '<span class="sys-page-ellipsis">&hellip;</span>';
+            } else {
+                $numArgs = $queryArgs;
+                $numArgs['page'] = $item;
+                $activeCls = ($item === $page) ? ' is-active' : '';
+                $ariaCurrent = ($item === $page) ? ' aria-current="page"' : '';
+                $navHtml .= '<a href="?' . htmlspecialchars(http_build_query($numArgs), ENT_QUOTES, 'UTF-8') . '" class="sys-page-btn' . $activeCls . '"' . $ariaCurrent . '>' . $item . '</a>';
+            }
+        }
+
+        if ($page < $totalPages) {
+            $nextArgs = $queryArgs;
+            $nextArgs['page'] = $page + 1;
+            $navHtml .= '<a href="?' . htmlspecialchars(http_build_query($nextArgs), ENT_QUOTES, 'UTF-8') . '" class="sys-page-btn" aria-label="Página siguiente" title="Página siguiente">&rsaquo;</a>';
+        } else {
+            $navHtml .= '<span class="sys-page-btn is-disabled" aria-disabled="true">&rsaquo;</span>';
+        }
+
+        $navHtml .= '</nav>';
+
+        return '<div class="sys-pagination">' . $infoHtml . $navHtml . '</div>';
     }
 
     public static function renderFooter()
@@ -462,32 +608,85 @@ class Layout
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const toggleBtn = document.getElementById("sidebarToggle");
-        if (toggleBtn) {
-            // Restore desktop state
-            if (localStorage.getItem("sidebarCollapsed") === "true") {
-                document.body.classList.add("sidebar-collapsed");
-            }
-            toggleBtn.addEventListener("click", function() {
-                document.body.classList.toggle("sidebar-collapsed");
-                localStorage.setItem("sidebarCollapsed", document.body.classList.contains("sidebar-collapsed"));
-            });
-        }
-
-        // Control del Drawer Móvil RWD
-        const mobileToggle = document.getElementById("mobileSidebarToggle");
         const mobileClose = document.getElementById("closeSidebarMobile");
         const backdrop = document.getElementById("sidebarBackdrop");
 
         function openMobileMenu() {
+            document.body.classList.remove("sidebar-preload");
             document.body.classList.add("mobile-sidebar-open");
         }
         function closeMobileMenu() {
             document.body.classList.remove("mobile-sidebar-open");
         }
 
-        if (mobileToggle) {
-            mobileToggle.addEventListener("click", openMobileMenu);
+        function syncSidebarToggleState() {
+            const isCollapsed = document.body.classList.contains("sidebar-collapsed");
+            if (toggleBtn) {
+                toggleBtn.setAttribute("aria-expanded", String(!isCollapsed));
+                toggleBtn.setAttribute("title", isCollapsed ? "Desplegar menú lateral" : "Ocultar menú lateral");
+            }
         }
+
+        if (toggleBtn) {
+            if (localStorage.getItem("sidebarCollapsed") === "true") {
+                document.body.classList.add("sidebar-collapsed");
+            }
+            syncSidebarToggleState();
+
+            toggleBtn.addEventListener("click", function() {
+                document.body.classList.remove("sidebar-preload");
+                if (window.innerWidth < 768) {
+                    if (document.body.classList.contains("mobile-sidebar-open")) {
+                        closeMobileMenu();
+                    } else {
+                        openMobileMenu();
+                    }
+                    return;
+                }
+                document.body.classList.toggle("sidebar-collapsed");
+                const collapsed = document.body.classList.contains("sidebar-collapsed");
+                try {
+                    localStorage.setItem("sidebarCollapsed", String(collapsed));
+                } catch (e) {}
+                syncSidebarToggleState();
+            });
+        }
+
+        // Habilitar transiciones suaves tras el primer pintado para evitar saltos entre módulos
+        requestAnimationFrame(function() {
+            requestAnimationFrame(function() {
+                document.body.classList.remove("sidebar-preload");
+            });
+        });
+
+        // Reloj en tiempo real para paneles con [data-live-clock] y [data-live-date]
+        const clockNodes = document.querySelectorAll("[data-live-clock]");
+        const dateNodes = document.querySelectorAll("[data-live-date]");
+        if (clockNodes.length > 0 || dateNodes.length > 0) {
+            const timeFmt = new Intl.DateTimeFormat("es-AR", {
+                timeZone: "America/Argentina/Buenos_Aires",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false
+            });
+            const dateFmt = new Intl.DateTimeFormat("es-AR", {
+                timeZone: "America/Argentina/Buenos_Aires",
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric"
+            });
+            const tickClock = function() {
+                const now = new Date();
+                const tStr = timeFmt.format(now);
+                const dStr = dateFmt.format(now);
+                clockNodes.forEach(function(el) { el.textContent = tStr; });
+                dateNodes.forEach(function(el) { el.textContent = dStr; });
+            };
+            tickClock();
+            setInterval(tickClock, 1000);
+        }
+
         if (mobileClose) {
             mobileClose.addEventListener("click", closeMobileMenu);
         }
@@ -517,27 +716,6 @@ class Layout
                 closeMobileMenu();
             }
         });
-        
-        // Global Toast Notification Interceptor for CRUD actions
-        const urlParams = new URLSearchParams(window.location.search);
-        let msgShowed = false;
-        
-        if (urlParams.has("success")) {
-            if (typeof showToast === "function") showToast(urlParams.get("success"), "success");
-            urlParams.delete("success");
-            msgShowed = true;
-        }
-        if (urlParams.has("error")) {
-            if (typeof showToast === "function") showToast(urlParams.get("error"), "error");
-            urlParams.delete("error");
-            msgShowed = true;
-        }
-        
-        // Clean URL if messages were shown
-        if (msgShowed) {
-            const newUrl = window.location.pathname + (urlParams.toString() ? "?" + urlParams.toString() : "");
-            window.history.replaceState({}, document.title, newUrl);
-        }
     });
 </script>
 </body></html>';

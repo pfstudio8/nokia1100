@@ -96,3 +96,272 @@
     width: 24px;
     height: 24px;
 }
+
+/* ============================================================
+   Tabla del Módulo de Ventas (#sales-table) + Métodos de Pago
+   Alineado con Dashboard -> Ventas Recientes (Nokia 1100)
+   ============================================================ */
+.sales-table-wrap {
+    background: #f8f6f0 !important;
+    border: 1px solid #b5af9c !important;
+    border-radius: 2px !important;
+}
+
+#sales-table thead tr {
+    background: #e5e1d6 !important;
+    border-bottom: 1px solid #b5af9c !important;
+}
+
+#sales-table thead th {
+    background: #e5e1d6 !important;
+    padding: 0.875rem 1.5rem !important;
+    font-family: var(--f-mono, 'IBM Plex Mono', monospace) !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    color: #5c6165 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    border-bottom: 1px solid #b5af9c !important;
+}
+
+#sales-table tbody tr {
+    background: #f8f6f0;
+    border-bottom: 1px solid #d3cebf;
+    transition: background-color 0.16s ease;
+    opacity: 1 !important;
+}
+
+#sales-table tbody tr:hover {
+    background: rgba(229, 225, 214, 0.5) !important;
+}
+
+#sales-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+#sales-table tbody td {
+    padding: 0.875rem 1.5rem;
+    border-bottom: 1px solid #d3cebf;
+    vertical-align: middle;
+}
+
+/* Insignias de Método de Pago (idénticas a Ventas Recientes del Dashboard) */
+#sales-table .badge-payment,
+.badge-payment {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    padding: 4px 10px !important;
+    border-radius: 3px !important;
+    font-family: var(--f-mono, 'IBM Plex Mono', monospace) !important;
+    font-size: 10.5px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.06em !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+}
+
+#sales-table .badge-payment::before,
+.badge-payment::before {
+    content: "" !important;
+    width: 6px !important;
+    height: 6px !important;
+    border-radius: 50% !important;
+    flex-shrink: 0 !important;
+    display: inline-block !important;
+}
+
+/* TARJETA: Azul sutil (#e5effe / #a6c4f7 / #3b76e6 / #1a4396) */
+#sales-table .badge-payment-tarjeta,
+.badge-payment-tarjeta {
+    background: #e5effe !important;
+    border: 1px solid #a6c4f7 !important;
+    color: #1a4396 !important;
+}
+#sales-table .badge-payment-tarjeta::before,
+.badge-payment-tarjeta::before {
+    background: #3b76e6 !important;
+}
+
+/* EFECTIVO: Verde sutil (#e3f6ea / #9adbb3 / #1fa855 / #156835) */
+#sales-table .badge-payment-efectivo,
+.badge-payment-efectivo {
+    background: #e3f6ea !important;
+    border: 1px solid #9adbb3 !important;
+    color: #156835 !important;
+}
+#sales-table .badge-payment-efectivo::before,
+.badge-payment-efectivo::before {
+    background: #1fa855 !important;
+}
+
+/* TRANSFERENCIA: Violeta sutil (#f1ebfe / #ccb6fa / #8b5cf6 / #5b2199) */
+#sales-table .badge-payment-transferencia,
+.badge-payment-transferencia {
+    background: #f1ebfe !important;
+    border: 1px solid #ccb6fa !important;
+    color: #5b2199 !important;
+}
+#sales-table .badge-payment-transferencia::before,
+.badge-payment-transferencia::before {
+    background: #8b5cf6 !important;
+}
+
+/* MERCADO PAGO / QR: Celeste sutil (#e0f4fa / #92d5e8 / #0ea5c6 / #0d5c73) */
+#sales-table .badge-payment-mp,
+#sales-table .badge-payment-qr,
+.badge-payment-mp,
+.badge-payment-qr {
+    background: #e0f4fa !important;
+    border: 1px solid #92d5e8 !important;
+    color: #0d5c73 !important;
+}
+#sales-table .badge-payment-mp::before,
+#sales-table .badge-payment-qr::before,
+.badge-payment-mp::before,
+.badge-payment-qr::before {
+    background: #0ea5c6 !important;
+}
+
+/* OTROS / N/A */
+#sales-table .badge-payment-default,
+.badge-payment-default {
+    background: #ece9e0 !important;
+    border: 1px solid #c8c2b2 !important;
+    color: #4a4f55 !important;
+}
+#sales-table .badge-payment-default::before,
+.badge-payment-default::before {
+    background: #858b92 !important;
+}
+
+/* Estado de venta y grilla alineada de acciones en modo claro */
+.sale-status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 94px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 3px;
+    font-family: var(--f-mono, 'IBM Plex Mono', monospace);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    line-height: 1;
+}
+
+.sale-status-completed {
+    background: #ecf5ee;
+    border: 1px solid #b7dcc0;
+    color: #1c6b39;
+}
+
+.sale-status-voided {
+    background: #fde8e8;
+    border: 1px solid #f2b4b4;
+    color: #b42318;
+}
+
+#sales-table th.sale-actions-head,
+#sales-table td.sale-actions-cell {
+    width: 266px;
+    min-width: 266px;
+    text-align: right !important;
+    white-space: nowrap !important;
+}
+
+#sales-table .sale-actions-grid {
+    display: inline-grid !important;
+    grid-template-columns: 106px 144px !important;
+    gap: 8px !important;
+    align-items: center !important;
+    justify-content: end !important;
+    vertical-align: middle !important;
+}
+
+#sales-table .sale-action-btn {
+    appearance: none;
+    -webkit-appearance: none;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    max-height: 32px !important;
+    padding: 0 10px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    border-radius: 2px !important;
+    font-family: var(--f-body, 'IBM Plex Sans', sans-serif) !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.04em !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+    transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease, transform 0.08s ease !important;
+}
+
+#sales-table .sale-action-btn:active {
+    transform: translateY(1px);
+}
+
+#sales-table .sale-action-btn .material-symbols-outlined {
+    font-size: 15px !important;
+    width: 15px !important;
+    height: 15px !important;
+    line-height: 1 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+}
+
+#sales-table .sale-btn-invoice {
+    background: #f8f6f0 !important;
+    border: 1px solid #b5af9c !important;
+    color: #15171a !important;
+}
+
+#sales-table .sale-btn-invoice:hover {
+    background: #e5e1d6 !important;
+    border-color: #15171a !important;
+    color: #15171a !important;
+}
+
+#sales-table .sale-btn-rollback,
+#sales-table .sale-btn-creditnote {
+    background: #fdecec !important;
+    border: 1px solid #ea9f9f !important;
+    color: #b42318 !important;
+}
+
+#sales-table .sale-btn-rollback:hover,
+#sales-table .sale-btn-creditnote:hover {
+    background: #dc2626 !important;
+    border-color: #dc2626 !important;
+    color: #ffffff !important;
+}
+
+/* Venta anulada: solo Nota de Crédito, alineada con la columna de "Anular" */
+#sales-table .sale-actions-grid .sale-btn-solo {
+    grid-column: 2 !important;
+}
+
+/* Venta anulada: línea de tachado en rojo suave */
+#sales-table tr.sale-row-voided .line-through {
+    text-decoration-line: line-through !important;
+    text-decoration-color: #e88b8b !important;
+    text-decoration-thickness: 1.5px !important;
+}

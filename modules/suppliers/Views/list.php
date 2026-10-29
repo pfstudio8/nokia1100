@@ -32,12 +32,7 @@ Layout::renderAdminSidebar('proveedores');
         <div class="dashboard-header flex justify-between items-center mb-8" style="flex-wrap: wrap; gap: 1rem;">
             <div style="display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap;">
                 <input type="text" id="search-input" placeholder="Buscar proveedor..." class="w-full sm:w-[220px]" style="padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 0.9rem;">
-                <button type="button" onclick="exportTableToExcel('suppliers-table', 'proveedores', this)" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-                    <span class="material-symbols-outlined text-[16px]">download</span> Excel
-                </button>
-                <button type="button" onclick="exportTableToPDF('suppliers-table', 'Listado de Proveedores', 'proveedores', this)" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-                    <span class="material-symbols-outlined text-[16px]">download</span> PDF
-                </button>
+                <?php echo Layout::renderExportButtons('suppliers-table', 'Listado de Proveedores', 'proveedores'); ?>
                 <a href="<?php echo BASE_URL; ?>/modules/admin/index.php" class="btn-back">Volver</a>
             </div>
         </div>
@@ -75,7 +70,7 @@ Layout::renderAdminSidebar('proveedores');
         </form>
 
         <div class="table-container">
-            <table id="suppliers-table">
+            <table id="suppliers-table" data-paginate="10" data-entity-singular="proveedor" data-entity-plural="proveedores">
                 <thead>
                     <tr>
                         <th>Empresa</th>

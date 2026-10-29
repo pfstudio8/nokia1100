@@ -1,11 +1,11 @@
 // assets/js/pages/sales_charts.js
 
 (function () {
-    const computedStyle = getComputedStyle(document.body);
-    const textMain = computedStyle.getPropertyValue('--tw-text-opacity') ? `rgba(250, 250, 250, 1)` : '#FAFAFA';
-    const primary = '#0EA5A0';
-    const border = 'rgba(255, 255, 255, 0.1)';
-    const textMuted = '#9CA3AF';
+    const textMain = '#15171a';
+    const primary = '#0f766e';
+    const border = 'rgba(21, 23, 26, 0.08)';
+    const textMuted = '#4a4f55';
+    const surfaceBg = '#f8f6f0';
 
     // Obtiene los datos pasados desde la vista
     const dates = window.salesData?.dates || [];
@@ -56,10 +56,10 @@
                         labels: { color: textMain, font: { family: 'Inter', size: 13 } }
                     },
                     tooltip: {
-                        backgroundColor: '#1F2937',
-                        titleColor: textMain,
-                        bodyColor: primary,
-                        borderColor: '#374151',
+                        backgroundColor: '#15181a',
+                        titleColor: '#f8f6f0',
+                        bodyColor: '#c6e24a',
+                        borderColor: '#2d3339',
                         borderWidth: 1,
                         padding: 12,
                         displayColors: false,
@@ -96,36 +96,41 @@
                 datasets: [{
                     data: methodAmounts,
                     backgroundColor: [
-                        'rgba(14, 165, 160, 0.9)',
-                        'rgba(94, 234, 212, 0.9)',
-                        'rgba(129, 140, 248, 0.9)',
-                        'rgba(251, 191, 36, 0.9)',
-                        'rgba(74, 222, 128, 0.9)'
+                        '#1fa855',
+                        '#3b76e6',
+                        '#8b5cf6',
+                        '#d97706',
+                        '#0ea5c6'
                     ],
-                    borderColor: '#181E26', // Darker border matching background
-                    borderWidth: 6,
-                    hoverOffset: 8,
-                    borderRadius: 5
+                    borderColor: surfaceBg,
+                    borderWidth: 3,
+                    spacing: 2,
+                    hoverOffset: 6,
+                    borderRadius: 4
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '70%',
+                cutout: '66%',
                 plugins: {
                     legend: {
                         position: 'bottom',
                         labels: {
-                            color: textMuted,
-                            font: { family: 'Inter', size: 12 },
-                            padding: 20
+                            color: textMain,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            boxWidth: 9,
+                            boxHeight: 9,
+                            font: { family: "'IBM Plex Sans', sans-serif", size: 12, weight: '600' },
+                            padding: 18
                         }
                     },
                     tooltip: {
-                        backgroundColor: '#1F2937',
-                        titleColor: textMain,
-                        bodyColor: '#fff',
-                        borderColor: '#374151',
+                        backgroundColor: '#15181a',
+                        titleColor: '#f8f6f0',
+                        bodyColor: '#ffffff',
+                        borderColor: '#2d3339',
                         borderWidth: 1,
                         padding: 12,
                         callbacks: {
@@ -185,9 +190,9 @@
                         display: false
                     },
                     tooltip: {
-                        backgroundColor: '#1F2937',
-                        titleColor: textMuted,
-                        bodyColor: '#fff',
+                        backgroundColor: '#15181a',
+                        titleColor: '#f8f6f0',
+                        bodyColor: '#ffffff',
                         titleFont: { family: 'Inter', size: 12 },
                         bodyFont: { family: 'Inter', size: 14, weight: 'bold' },
                         borderColor: '#374151',
@@ -330,94 +335,17 @@
         }
     };
 
-    // Helper para delay cancelable de 1.5s
+    // Delay cancelable unificado (>= 1s, clic de nuevo para cancelar)
     const setupCancellableExport = (btn, exportFn) => {
         if (!btn) return;
-
-        btn.addEventListener('click', async () => {
-            // 1. Segundo clic durante los 1.5s: cancelar
-            if (btn._exportTimerId) {
-                clearTimeout(btn._exportTimerId);
-                btn._exportTimerId = null;
-
-                if (typeof btn._cancelResolve === 'function') {
-                    btn._cancelResolve(false);
-                    btn._cancelResolve = null;
-                }
-
-                if (btn._initToast && typeof btn._initToast.dismiss === 'function') {
-                    btn._initToast.dismiss();
-                    btn._initToast = null;
-                }
-
-                btn.innerHTML = '<span class="material-symbols-outlined text-[16px]">cancel</span> Cancelado';
-                btn.style.pointerEvents = 'none';
-
-                if (typeof showToast === 'function') {
-                    showToast('Exportación cancelada', 'baja');
-                }
-
-                setTimeout(() => {
-                    if (btn && btn._originalHtml) {
-                        btn.innerHTML = btn._originalHtml;
-                    }
-                    if (btn) {
-                        btn.style.pointerEvents = 'auto';
-                        delete btn._originalHtml;
-                        delete btn._exportTimerId;
-                        delete btn._cancelResolve;
-                        delete btn._isProcessingFile;
-                        delete btn._initToast;
-                    }
-                }, 1000);
-
-                return;
-            }
-
-            if (btn._isProcessingFile) return;
-
-            // 2. Primer clic: guardar estado e iniciar espera de 1.5s
-            btn._originalHtml = btn.innerHTML;
-            btn.innerHTML = '<span class="material-symbols-outlined text-[16px] spin" style="animation: spin 1s linear infinite;">autorenew</span> Cancelar...';
-
-            if (typeof showToast === 'function') {
-                btn._initToast = showToast('Iniciando exportación...', 'info');
-            }
-
-            const shouldProceed = await new Promise((resolve) => {
-                btn._cancelResolve = resolve;
-                btn._exportTimerId = setTimeout(() => {
-                    btn._exportTimerId = null;
-                    btn._cancelResolve = null;
-                    resolve(true);
-                }, 1500);
-            });
-
-            if (!shouldProceed) return;
-
-            // 3. Ejecutar exportación
-            btn._isProcessingFile = true;
-            btn.style.pointerEvents = 'none';
-            btn.innerHTML = '<span class="material-symbols-outlined text-[16px] spin" style="animation: spin 1s linear infinite;">autorenew</span> Generando...';
-
-            try {
-                await exportFn();
-                if (btn && btn._initToast && typeof btn._initToast.dismiss === 'function') {
-                    btn._initToast.dismiss();
-                    btn._initToast = null;
-                }
-            } finally {
-                if (btn && btn._originalHtml) {
-                    btn.innerHTML = btn._originalHtml;
-                }
-                if (btn) {
-                    btn.style.pointerEvents = 'auto';
-                    delete btn._originalHtml;
-                    delete btn._exportTimerId;
-                    delete btn._cancelResolve;
-                    delete btn._isProcessingFile;
-                    delete btn._initToast;
-                }
+        btn.addEventListener('click', () => {
+            if (typeof window.runCancelableExport === 'function') {
+                window.runCancelableExport(btn, async ({ dismissInitToast }) => {
+                    dismissInitToast();
+                    await exportFn();
+                });
+            } else {
+                exportFn();
             }
         });
     };

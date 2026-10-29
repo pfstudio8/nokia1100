@@ -123,7 +123,7 @@ if ($_SESSION['role'] === 'admin') {
                     <div class="space-y-4">
                         <div>
                             <label class="block text-xs font-medium text-text-muted mb-1">Presupuesto Estimado ($)</label>
-                            <input type="number" step="0.01" name="presupuesto" placeholder="Dejar en blanco si se debe presupuestar luego" class="w-full bg-surface border border-border px-4 py-2.5 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
+                            <input type="number" step="0.01" min="0" name="presupuesto" placeholder="Dejar en blanco si se debe presupuestar luego" onwheel="this.blur()" class="w-full bg-surface border border-border px-4 py-2.5 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-text-muted mb-1">Observaciones (Rayones, roturas previas, etc)</label>

@@ -3,7 +3,7 @@
 require_once __DIR__ . '/Controllers/AuthController.php';
 $controller = new AuthController();
 
-$action = $_POST['action'] ?? ($_GET['action'] ?? 'login');
+$action = $_GET['action'] ?? ($_POST['action'] ?? 'login');
 
 switch ($action) {
     case 'logout':

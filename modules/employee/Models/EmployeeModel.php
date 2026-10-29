@@ -2,6 +2,7 @@
 // modules/employee/Models/EmployeeModel.php
 
 require_once __DIR__ . '/../../../classes/BaseModel.php';
+require_once __DIR__ . '/../../../classes/ServiceProduct.php';
 
 class EmployeeModel extends BaseModel
 {
@@ -22,7 +23,7 @@ class EmployeeModel extends BaseModel
     public function get_recent_sales(int $limit = 5): array
     {
         $limit = (int) $limit;
-        $stmt = $this->conn->prepare("SELECT id_venta, fecha, total, metodo_de_pago FROM venta ORDER BY fecha DESC LIMIT ?");
+        $stmt = $this->conn->prepare("SELECT v.id_venta, v.fecha, v.total, COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), m.metodo) AS metodo_de_pago FROM venta v LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago WHERE v.estado != 'anulada' ORDER BY v.fecha DESC, v.id_venta DESC LIMIT ?");
         $stmt->bind_param("i", $limit);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -39,16 +40,18 @@ class EmployeeModel extends BaseModel
     public function get_featured_products(int $limit = 4): array
     {
         $limit = (int) $limit;
+        $excludeServices = ServiceProduct::excludeSql('p', 'd');
         $stmt = $this->conn->prepare("
             SELECT p.id_producto, p.nombre, p.precio,
                    COALESCE(d.marca, '') as marca,
                    COALESCE(d.modelo, '') as modelo,
                    COALESCE(d.categoria, 'General') as categoria,
+                   COALESCE(d.stock_minimo, 5) as stock_minimo,
                    COALESCE(i.cantidad, 0) as stock
             FROM producto p
             LEFT JOIN producto_detalle d ON p.id_producto = d.id_producto
             LEFT JOIN inventario i ON p.id_producto = i.id_producto
-            WHERE p.is_active = 1
+            WHERE p.is_active = 1 AND $excludeServices
             ORDER BY i.cantidad DESC, p.id_producto ASC
             LIMIT ?
         ");

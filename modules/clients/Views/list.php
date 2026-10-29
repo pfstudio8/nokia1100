@@ -29,12 +29,7 @@ if ($_SESSION['role'] === 'admin') {
 
             <div class="flex items-center gap-3 flex-wrap">
                 <!-- Botones de Exportación -->
-                <button type="button" onclick="exportTableToExcel('clients-table', 'clientes', this)" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-                    <span class="material-symbols-outlined text-[16px]">download</span> Excel
-                </button>
-                <button type="button" onclick="exportTableToPDF('clients-table', 'Listado de Clientes', 'clientes', this)" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-                    <span class="material-symbols-outlined text-[16px]">download</span> PDF
-                </button>
+                <?php echo Layout::renderExportButtons('clients-table', 'Listado de Clientes', 'clientes'); ?>
 
                 <button onclick="openAddClientModal()"
                     class="bg-primary text-background hover:bg-primary-hover px-4 py-2 rounded-xl font-medium text-sm transition-all flex items-center gap-2">
@@ -56,13 +51,13 @@ if ($_SESSION['role'] === 'admin') {
             <button type="submit"
                 class="bg-surface hover:bg-surface-hover border border-border px-4 py-2.5 rounded-xl text-sm font-medium transition-colors text-text-main">Buscar</button>
             <?php if ($search): ?>
-                <a href="clients.php"
+                <a href="index.php"
                     class="text-red-400 hover:text-red-300 text-sm font-medium ml-2 transition-colors">Limpiar</a>
             <?php endif; ?>
         </form>
 
         <div class="table-container rounded-2xl border border-border overflow-x-auto">
-            <table class="w-full text-left" id="clients-table">
+            <table class="w-full text-left" id="clients-table" data-paginate="10" data-entity-singular="cliente" data-entity-plural="clientes">
                 <thead class="bg-surface/50 border-b border-border text-xs uppercase text-text-muted tracking-wider">
                     <tr>
                         <th class="p-4 font-semibold">ID</th>

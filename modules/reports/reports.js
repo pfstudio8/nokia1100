@@ -1,163 +1,773 @@
+// modules/reports/reports.js - Nokia 1100 Tactile Analytics Suite
+
 document.addEventListener('DOMContentLoaded', () => {
     try {
-        const computedStyle = getComputedStyle(document.body);
-        const textMain = computedStyle.getPropertyValue('--tw-text-opacity') ? `rgba(250, 250, 250, 1)` : '#FAFAFA';
-        const primary = '#0EA5A0'; // Acento
-        const primaryAlpha = 'rgba(14, 165, 160, 0.8)';
-        const secondary = '#5EEAD4'; // Acento 2
-        const secondaryAlpha = 'rgba(94, 234, 212, 0.8)';
-        const cardBg = '#263347';
-        const border = 'rgba(255, 255, 255, 0.05)';
-        const textMuted = '#9CA3AF';
-        
-        // Colores para gráficos circulares
-        const doughnutColors = ['#0EA5A0', '#5EEAD4', '#4ADE80', '#FBBF24', '#F87171'];
+        const INK = '#15171a';
+        const TEXT_MUTED = '#4a4f55';
+        const TEXT_SOFT = '#6b7075';
+        const SURFACE = '#f8f6f0';
+        const GRID_LINE = 'rgba(21, 23, 26, 0.08)';
+        const FONT_BODY = "'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif";
+        const FONT_MONO = "'IBM Plex Mono', monospace";
+        const FONT_DISPLAY = "'Bricolage Grotesque', 'IBM Plex Sans', sans-serif";
 
-        const data = window.reportsData;
-        console.log("Reports Data:", data);
+        // Paleta editorial de alto contraste sobre crema cálido (#f8f6f0)
+        const PALETTE = [
+            '#0f766e', // Teal profundo
+            '#2563eb', // Azul cobalto
+            '#7c9a14', // Verde oliva Nokia
+            '#d97706', // Ámbar dorado
+            '#7c3aed', // Violeta
+            '#dc2626', // Rojo vivo
+            '#0891b2'  // Cian pizarra
+        ];
 
-        // --- LOGICA DE TABS ---
+        const arsFull = new Intl.NumberFormat('es-AR', {
+            style: 'currency',
+            currency: 'ARS',
+            maximumFractionDigits: 0
+        });
+
+        const arsCompact = new Intl.NumberFormat('es-AR', {
+            style: 'currency',
+            currency: 'ARS',
+            notation: 'compact',
+            maximumFractionDigits: 1
+        });
+
+        const numFmt = new Intl.NumberFormat('es-AR');
+
+        // Plugin para mostrar total central limpio dentro de gráficos de dona
+        const centerDoughnutPlugin = {
+            id: 'nokiaCenterText',
+            afterDraw(chart) {
+                const cfg = chart.options?.plugins?.nokiaCenterText;
+                if (!cfg || !cfg.value) return;
+                const meta = chart.getDatasetMeta(0);
+                if (!meta || !meta.data || !meta.data.length) return;
+
+                const { ctx } = chart;
+                const centerX = meta.data[0].x;
+                const centerY = meta.data[0].y;
+
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                if (cfg.label) {
+                    ctx.font = `600 9.5px ${FONT_MONO}`;
+                    ctx.fillStyle = TEXT_SOFT;
+                    ctx.fillText(String(cfg.label).toUpperCase(), centerX, centerY - 12);
+                }
+
+                ctx.font = `700 18px ${FONT_DISPLAY}`;
+                ctx.fillStyle = INK;
+                ctx.fillText(String(cfg.value), centerX, cfg.label ? centerY + 8 : centerY);
+                ctx.restore();
+            }
+        };
+
+        const baseTooltip = {
+            backgroundColor: '#15181a',
+            titleColor: '#f8f6f0',
+            bodyColor: '#e5e7eb',
+            borderColor: '#2d3339',
+            borderWidth: 1,
+            cornerRadius: 4,
+            padding: 11,
+            boxPadding: 5,
+            usePointStyle: true,
+            titleFont: { family: FONT_BODY, size: 12, weight: '700' },
+            bodyFont: { family: FONT_MONO, size: 11.5, weight: '500' }
+        };
+
+        function hasNonZeroData(arr) {
+            return Array.isArray(arr) && arr.some(v => Number(v) > 0);
+        }
+
+        function renderEmptyState(canvasId, message) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas || !canvas.parentElement) return;
+            const parent = canvas.parentElement;
+            canvas.style.display = 'none';
+            if (!parent.querySelector('.chart-empty-msg')) {
+                const div = document.createElement('div');
+                div.className = 'chart-empty-msg flex flex-col items-center justify-center h-full text-center text-xs font-mono text-[#6b7075] py-8';
+                div.innerHTML = `<span class="material-symbols-outlined text-[28px] mb-1.5 opacity-50">bar_chart</span><span>${message}</span>`;
+                parent.appendChild(div);
+            }
+        }
+
+        function truncateLabel(str, maxLen = 24) {
+            const clean = String(str || '').trim();
+            return clean.length > maxLen ? clean.slice(0, maxLen - 1) + '…' : clean;
+        }
+
+        function formatMonthLabel(ym) {
+            const parts = String(ym || '').split('-');
+            if (parts.length !== 2) return ym;
+            const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            const mIdx = parseInt(parts[1], 10) - 1;
+            return (months[mIdx] || parts[1]) + ' ' + parts[0].slice(-2);
+        }
+
+        function getPaymentMethodColor(methodName, idx) {
+            const m = String(methodName || '').toLowerCase();
+            if (m.includes('efectivo') || m.includes('contado')) return '#1fa855';
+            if (m.includes('tarjeta') || m.includes('debito') || m.includes('débito') || m.includes('credito') || m.includes('crédito')) return '#3b76e6';
+            if (m.includes('transf') || m.includes('banco') || m.includes('deposito') || m.includes('depósito')) return '#8b5cf6';
+            if (m.includes('mercado') || m.includes('mp') || m.includes('qr')) return '#0ea5c6';
+            return PALETTE[idx % PALETTE.length];
+        }
+
+        function buildDoughnutOptions({ centerLabel, centerValue, formatValue }) {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '66%',
+                layout: { padding: { top: 6, bottom: 4, left: 6, right: 6 } },
+                plugins: {
+                    nokiaCenterText: {
+                        label: centerLabel,
+                        value: centerValue
+                    },
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            color: INK,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            boxWidth: 9,
+                            boxHeight: 9,
+                            padding: 16,
+                            font: { family: FONT_BODY, size: 12, weight: '600' },
+                            generateLabels(chart) {
+                                const ds = chart.data.datasets[0] || { data: [], backgroundColor: [] };
+                                const total = (ds.data || []).reduce((acc, n) => acc + (Number(n) || 0), 0);
+                                return (chart.data.labels || []).map((lbl, i) => {
+                                    const val = Number(ds.data[i]) || 0;
+                                    const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+                                    const hidden = !chart.getDataVisibility(i);
+                                    return {
+                                        text: `${lbl} (${pct}%)`,
+                                        fillStyle: Array.isArray(ds.backgroundColor) ? ds.backgroundColor[i] : ds.backgroundColor,
+                                        strokeStyle: 'transparent',
+                                        lineWidth: 0,
+                                        pointStyle: 'circle',
+                                        hidden,
+                                        index: i,
+                                        fontColor: INK
+                                    };
+                                });
+                            }
+                        }
+                    },
+                    tooltip: {
+                        ...baseTooltip,
+                        callbacks: {
+                            label(context) {
+                                const raw = Number(context.raw) || 0;
+                                const total = (context.dataset.data || []).reduce((a, b) => a + (Number(b) || 0), 0);
+                                const pct = total > 0 ? ((raw / total) * 100).toFixed(1) : '0.0';
+                                const formatted = typeof formatValue === 'function' ? formatValue(raw) : numFmt.format(raw);
+                                return ` ${context.label}: ${formatted} (${pct}%)`;
+                            }
+                        }
+                    }
+                }
+            };
+        }
+
+        const data = window.reportsData || {};
         const tabBtns = document.querySelectorAll('.tab-btn');
         const tabContents = document.querySelectorAll('.tab-content');
-
-        // Almacenar instancias de gráficos
         const charts = {};
 
+        // 1. FINANCIERO
         function renderFinancial() {
-            if (charts.revenueCategory) return;
-            
-            if (document.getElementById('revenueCategoryChart') && data.revenueCategory && data.revenueCategory.labels) {
-                charts.revenueCategory = new Chart(document.getElementById('revenueCategoryChart').getContext('2d'), {
-                    type: 'bar',
-                    data: { 
-                        labels: data.revenueCategory.labels, 
-                        datasets: [{ 
-                            label: 'Ingresos', 
-                            data: data.revenueCategory.values, 
-                            backgroundColor: primaryAlpha, 
-                            borderColor: primary, 
-                            borderWidth: 1, 
-                            borderRadius: 6 
-                        }] 
-                    },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1F2937', titleColor: '#FAFAFA', bodyColor: secondary, borderColor: '#374151', borderWidth: 1, padding: 12, callbacks: { label: function(context) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(context.raw); } } } }, scales: { y: { grid: { color: border }, ticks: { color: textMuted, callback: function(value) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', notation: 'compact' }).format(value); } } }, x: { grid: { display: false }, ticks: { color: textMuted, font: { family: 'Outfit, sans-serif' } } } } }
-                });
+            if (!charts.financialBalance && document.getElementById('financialBalanceChart')) {
+                const fin = data.financial || {};
+                const ingresos = (fin.ingresos || []).map(Number);
+                const gastos = (fin.gastos || []).map(Number);
+
+                if (Array.isArray(fin.labels) && fin.labels.length > 0 && (hasNonZeroData(ingresos) || hasNonZeroData(gastos))) {
+                    charts.financialBalance = new Chart(document.getElementById('financialBalanceChart').getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: fin.labels.map(formatMonthLabel),
+                            datasets: [
+                                {
+                                    label: 'Ingresos por Ventas',
+                                    data: ingresos,
+                                    backgroundColor: 'rgba(15, 118, 110, 0.85)',
+                                    hoverBackgroundColor: '#0f766e',
+                                    borderColor: '#0f766e',
+                                    borderWidth: 1,
+                                    borderRadius: 4,
+                                    maxBarThickness: 34
+                                },
+                                {
+                                    label: 'Compras a Proveedores',
+                                    data: gastos,
+                                    backgroundColor: 'rgba(217, 119, 6, 0.78)',
+                                    hoverBackgroundColor: '#d97706',
+                                    borderColor: '#b45309',
+                                    borderWidth: 1,
+                                    borderRadius: 4,
+                                    maxBarThickness: 34
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: {
+                                legend: {
+                                    position: 'top',
+                                    align: 'end',
+                                    labels: {
+                                        color: INK,
+                                        usePointStyle: true,
+                                        pointStyle: 'circle',
+                                        boxWidth: 8,
+                                        boxHeight: 8,
+                                        padding: 16,
+                                        font: { family: FONT_BODY, size: 12, weight: '600' }
+                                    }
+                                },
+                                tooltip: {
+                                    ...baseTooltip,
+                                    callbacks: {
+                                        label: (ctx) => ` ${ctx.dataset.label}: ${arsFull.format(Number(ctx.raw) || 0)}`
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    border: { display: false },
+                                    grid: { color: GRID_LINE },
+                                    ticks: {
+                                        color: TEXT_MUTED,
+                                        font: { family: FONT_MONO, size: 11 },
+                                        callback: (v) => arsCompact.format(v)
+                                    }
+                                },
+                                x: {
+                                    border: { color: 'rgba(21, 23, 26, 0.14)' },
+                                    grid: { display: false },
+                                    ticks: {
+                                        color: INK,
+                                        font: { family: FONT_BODY, size: 12, weight: '600' }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    renderEmptyState('financialBalanceChart', 'Sin movimientos financieros recientes para graficar.');
+                }
             }
 
-            if (document.getElementById('topProfitableChart') && data.topProfitable && data.topProfitable.names) {
-                charts.topProfitable = new Chart(document.getElementById('topProfitableChart').getContext('2d'), {
-                    type: 'bar',
-                    data: { 
-                        labels: data.topProfitable.names, 
-                        datasets: [{ 
-                            label: 'Rentabilidad', 
-                            data: data.topProfitable.values, 
-                            backgroundColor: secondaryAlpha, 
-                            borderColor: secondary, 
-                            borderWidth: 1, 
-                            borderRadius: 6 
-                        }] 
-                    },
-                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1F2937', titleColor: '#FAFAFA', bodyColor: secondary, borderColor: '#374151', borderWidth: 1, padding: 12, callbacks: { label: function(context) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(context.raw); } } } }, scales: { x: { grid: { color: border }, ticks: { maxRotation: 0, minRotation: 0, color: textMuted, callback: function(value) { return new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS', notation: 'compact' }).format(value); } } }, y: { grid: { display: false }, ticks: { color: textMuted, font: { family: 'Outfit, sans-serif' } } } } }
-                });
+            if (!charts.revenueCategory && document.getElementById('revenueCategoryChart')) {
+                const labels = data.revenueCategory?.labels || [];
+                const values = (data.revenueCategory?.values || []).map(Number);
+
+                if (labels.length > 0 && hasNonZeroData(values)) {
+                    charts.revenueCategory = new Chart(document.getElementById('revenueCategoryChart').getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels,
+                            datasets: [{
+                                label: 'Ingresos',
+                                data: values,
+                                backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length] + 'D9'),
+                                hoverBackgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length]),
+                                borderColor: labels.map((_, i) => PALETTE[i % PALETTE.length]),
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                maxBarThickness: 44
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    ...baseTooltip,
+                                    callbacks: {
+                                        label: (ctx) => ` Ingresos: ${arsFull.format(Number(ctx.raw) || 0)}`
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    border: { display: false },
+                                    grid: { color: GRID_LINE },
+                                    ticks: {
+                                        color: TEXT_MUTED,
+                                        font: { family: FONT_MONO, size: 11 },
+                                        callback: (v) => arsCompact.format(v)
+                                    }
+                                },
+                                x: {
+                                    border: { color: 'rgba(21, 23, 26, 0.14)' },
+                                    grid: { display: false },
+                                    ticks: {
+                                        color: INK,
+                                        font: { family: FONT_BODY, size: 12, weight: '600' }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    renderEmptyState('revenueCategoryChart', 'No hay ingresos por categoría registrados.');
+                }
+            }
+
+            if (!charts.topProfitable && document.getElementById('topProfitableChart')) {
+                const fullNames = data.topProfitable?.names || [];
+                const values = (data.topProfitable?.values || []).map(Number);
+
+                if (fullNames.length > 0 && hasNonZeroData(values)) {
+                    charts.topProfitable = new Chart(document.getElementById('topProfitableChart').getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: fullNames.map(n => truncateLabel(n, 24)),
+                            datasets: [{
+                                label: 'Rentabilidad',
+                                data: values,
+                                backgroundColor: 'rgba(37, 99, 235, 0.82)',
+                                hoverBackgroundColor: '#2563eb',
+                                borderColor: '#1d4ed8',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                maxBarThickness: 28
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    ...baseTooltip,
+                                    callbacks: {
+                                        title: (items) => fullNames[items[0]?.dataIndex] || items[0]?.label || '',
+                                        label: (ctx) => ` Margen neto: ${arsFull.format(Number(ctx.raw) || 0)}`
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    beginAtZero: true,
+                                    border: { display: false },
+                                    grid: { color: GRID_LINE },
+                                    ticks: {
+                                        maxRotation: 0,
+                                        minRotation: 0,
+                                        color: TEXT_MUTED,
+                                        font: { family: FONT_MONO, size: 11 },
+                                        callback: (v) => arsCompact.format(v)
+                                    }
+                                },
+                                y: {
+                                    border: { color: 'rgba(21, 23, 26, 0.14)' },
+                                    grid: { display: false },
+                                    ticks: {
+                                        color: INK,
+                                        font: { family: FONT_BODY, size: 12, weight: '600' }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    renderEmptyState('topProfitableChart', 'No hay datos de rentabilidad disponibles.');
+                }
             }
         }
 
+        // 2. INVENTARIO
         function renderInventory() {
-            if (charts.inventory2) return;
-            
-            if (document.getElementById('stockByBrandChart') && data.stockBrand && data.stockBrand.labels) {
-                charts.inventory1 = new Chart(document.getElementById('stockByBrandChart').getContext('2d'), {
-                    type: 'doughnut',
-                    data: { labels: data.stockBrand.labels, datasets: [{ data: data.stockBrand.values, backgroundColor: doughnutColors, borderColor: cardBg, borderWidth: 3 }] },
-                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { tooltip: { backgroundColor: '#1F2937', titleColor: '#FAFAFA', bodyColor: secondary, borderColor: '#374151', borderWidth: 1, padding: 12 }, legend: { position: 'bottom', labels: { color: textMuted, font: { family: 'Outfit, sans-serif', size: 12 }, padding: 20 } } } }
-                });
+            if (!charts.inventoryBrand && document.getElementById('stockByBrandChart')) {
+                const labels = data.stockBrand?.labels || [];
+                const values = (data.stockBrand?.values || []).map(Number);
+
+                if (labels.length > 0 && hasNonZeroData(values)) {
+                    const totalUnits = values.reduce((a, b) => a + b, 0);
+                    charts.inventoryBrand = new Chart(document.getElementById('stockByBrandChart').getContext('2d'), {
+                        type: 'doughnut',
+                        plugins: [centerDoughnutPlugin],
+                        data: {
+                            labels,
+                            datasets: [{
+                                data: values,
+                                backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length]),
+                                borderColor: SURFACE,
+                                borderWidth: 3,
+                                spacing: 2,
+                                borderRadius: 4,
+                                hoverOffset: 6
+                            }]
+                        },
+                        options: buildDoughnutOptions({
+                            centerLabel: 'Unidades',
+                            centerValue: numFmt.format(totalUnits),
+                            formatValue: (v) => `${numFmt.format(v)} un.`
+                        })
+                    });
+                } else {
+                    renderEmptyState('stockByBrandChart', 'Sin stock activo por marca para mostrar.');
+                }
             }
 
-            if (document.getElementById('topValueChart') && data.topValue && data.topValue.products) {
-                charts.inventory2 = new Chart(document.getElementById('topValueChart').getContext('2d'), {
-                    type: 'bar',
-                    data: { labels: data.topValue.products.map(name => { if(name.length > 12 && name.indexOf(' ') !== -1) { let p = name.split(' '); return [p[0], p.slice(1).join(' ').substring(0, 12) + (p.slice(1).join(' ').length > 12 ? '...' : '')]; } return name; }), datasets: [{ label: 'Cantidad en Stock', data: data.topValue.values, backgroundColor: secondaryAlpha, borderColor: secondary, borderWidth: 1, borderRadius: 6 }] },
-                    options: { indexAxis: 'x', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1F2937', titleColor: '#FAFAFA', bodyColor: secondary, borderColor: '#374151', borderWidth: 1, padding: 12, callbacks: { label: (c) => c.raw } } }, scales: { x: { grid: { display: false }, ticks: { color: textMuted, font: { family: 'Outfit, sans-serif' } } }, y: { grid: { color: border }, ticks: { color: textMuted, font: { family: 'Outfit, sans-serif' } } } } }
-                });
+            if (!charts.inventoryTop && document.getElementById('topValueChart')) {
+                const fullProducts = data.topValue?.products || [];
+                const values = (data.topValue?.values || []).map(Number);
+
+                if (fullProducts.length > 0 && hasNonZeroData(values)) {
+                    charts.inventoryTop = new Chart(document.getElementById('topValueChart').getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: fullProducts.map(n => truncateLabel(n, 26)),
+                            datasets: [{
+                                label: 'Unidades en Stock',
+                                data: values,
+                                backgroundColor: fullProducts.map((_, i) => PALETTE[i % PALETTE.length] + 'D9'),
+                                hoverBackgroundColor: fullProducts.map((_, i) => PALETTE[i % PALETTE.length]),
+                                borderColor: fullProducts.map((_, i) => PALETTE[i % PALETTE.length]),
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                maxBarThickness: 52
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    ...baseTooltip,
+                                    callbacks: {
+                                        title: (items) => fullProducts[items[0]?.dataIndex] || items[0]?.label || '',
+                                        label: (ctx) => ` En depósito: ${numFmt.format(Number(ctx.raw) || 0)} unidades`
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    border: { color: 'rgba(21, 23, 26, 0.14)' },
+                                    grid: { display: false },
+                                    ticks: {
+                                        color: INK,
+                                        font: { family: FONT_BODY, size: 12, weight: '600' }
+                                    }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    border: { display: false },
+                                    grid: { color: GRID_LINE },
+                                    ticks: {
+                                        precision: 0,
+                                        color: TEXT_MUTED,
+                                        font: { family: FONT_MONO, size: 11 }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    renderEmptyState('topValueChart', 'No hay productos en inventario para graficar.');
+                }
             }
         }
 
+        // 3. VENTAS
         function renderSales() {
-            if (charts.sales1) return;
-            if (document.getElementById('topSalesChart') && data.topSales && data.topSales.names) {
-                charts.sales1 = new Chart(document.getElementById('topSalesChart').getContext('2d'), {
-                    type: 'bar',
-                    data: { labels: data.topSales.names, datasets: [{ label: 'Unidades Vendidas', data: data.topSales.quantities, backgroundColor: primaryAlpha, borderColor: primary, borderWidth: 1, borderRadius: 6 }] },
-                    options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1F2937', titleColor: '#FAFAFA', bodyColor: secondary, borderColor: '#374151', borderWidth: 1, padding: 12 } }, scales: { x: { grid: { color: border }, ticks: { color: textMuted, font: { family: 'Outfit, sans-serif' }, precision: 0 } }, y: { grid: { display: false }, ticks: { color: textMuted, font: { family: 'Outfit, sans-serif' } } } } }
-                });
+            if (!charts.salesCategory && document.getElementById('salesCategoryChart')) {
+                const labels = data.salesCategory?.labels || [];
+                const values = (data.salesCategory?.values || []).map(Number);
+
+                if (labels.length > 0 && hasNonZeroData(values)) {
+                    charts.salesCategory = new Chart(document.getElementById('salesCategoryChart').getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels,
+                            datasets: [{
+                                label: 'Unidades',
+                                data: values,
+                                backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length] + 'D9'),
+                                hoverBackgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length]),
+                                borderColor: labels.map((_, i) => PALETTE[i % PALETTE.length]),
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                maxBarThickness: 46
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    ...baseTooltip,
+                                    callbacks: {
+                                        label: (ctx) => ` Vendidas: ${numFmt.format(Number(ctx.raw) || 0)} unidades`
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    border: { display: false },
+                                    grid: { color: GRID_LINE },
+                                    ticks: {
+                                        precision: 0,
+                                        color: TEXT_MUTED,
+                                        font: { family: FONT_MONO, size: 11 }
+                                    }
+                                },
+                                x: {
+                                    border: { color: 'rgba(21, 23, 26, 0.14)' },
+                                    grid: { display: false },
+                                    ticks: {
+                                        color: INK,
+                                        font: { family: FONT_BODY, size: 12, weight: '600' }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    renderEmptyState('salesCategoryChart', 'No hay ventas registradas por categoría.');
+                }
             }
 
-            if (document.getElementById('salesCategoryChart') && data.salesCategory && data.salesCategory.labels) {
-                charts.sales2 = new Chart(document.getElementById('salesCategoryChart').getContext('2d'), {
-                    type: 'bar',
-                    data: { labels: data.salesCategory.labels, datasets: [{ label: 'Unidades', data: data.salesCategory.values, backgroundColor: secondaryAlpha, borderColor: secondary, borderWidth: 1, borderRadius: 6 }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1F2937', titleColor: '#FAFAFA', bodyColor: secondary, borderColor: '#374151', borderWidth: 1, padding: 12 } }, scales: { y: { grid: { color: border }, ticks: { color: textMuted } }, x: { grid: { display: false }, ticks: { color: textMuted, font: { family: 'Outfit, sans-serif' } } } } }
-                });
+            if (!charts.salesMethods && document.getElementById('methodsChart')) {
+                const methods = data.salesMethods?.methods || [];
+                const amounts = (data.salesMethods?.amounts || []).map(Number);
+
+                if (methods.length > 0 && hasNonZeroData(amounts)) {
+                    const totalAmount = amounts.reduce((a, b) => a + b, 0);
+                    const sliceColors = methods.map((m, idx) => getPaymentMethodColor(m, idx));
+
+                    charts.salesMethods = new Chart(document.getElementById('methodsChart').getContext('2d'), {
+                        type: 'doughnut',
+                        plugins: [centerDoughnutPlugin],
+                        data: {
+                            labels: methods,
+                            datasets: [{
+                                data: amounts,
+                                backgroundColor: sliceColors,
+                                borderColor: SURFACE,
+                                borderWidth: 3,
+                                spacing: 2,
+                                borderRadius: 4,
+                                hoverOffset: 6
+                            }]
+                        },
+                        options: buildDoughnutOptions({
+                            centerLabel: 'Facturado',
+                            centerValue: arsCompact.format(totalAmount),
+                            formatValue: (v) => arsFull.format(v)
+                        })
+                    });
+                } else {
+                    renderEmptyState('methodsChart', 'Sin cobros registrados por medio de pago.');
+                }
             }
 
-            if (document.getElementById('methodsChart') && data.salesMethods && data.salesMethods.methods) {
-                charts.sales3 = new Chart(document.getElementById('methodsChart').getContext('2d'), {
-                    type: 'doughnut',
-                    data: { labels: data.salesMethods.methods, datasets: [{ data: data.salesMethods.amounts, backgroundColor: doughnutColors, borderColor: cardBg, borderWidth: 3 }] },
-                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { tooltip: { backgroundColor: '#1F2937', titleColor: '#FAFAFA', bodyColor: secondary, borderColor: '#374151', borderWidth: 1, padding: 12 }, legend: { position: 'bottom', labels: { color: textMuted, font: { family: 'Outfit, sans-serif', size: 12 }, padding: 20 } } } }
-                });
+            if (!charts.salesTop && document.getElementById('topSalesChart')) {
+                const fullNames = data.topSales?.names || [];
+                const quantities = (data.topSales?.quantities || []).map(Number);
+
+                if (fullNames.length > 0 && hasNonZeroData(quantities)) {
+                    charts.salesTop = new Chart(document.getElementById('topSalesChart').getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: fullNames.map(n => truncateLabel(n, 30)),
+                            datasets: [{
+                                label: 'Unidades Vendidas',
+                                data: quantities,
+                                backgroundColor: 'rgba(15, 118, 110, 0.85)',
+                                hoverBackgroundColor: '#0f766e',
+                                borderColor: '#0f766e',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                maxBarThickness: 28
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    ...baseTooltip,
+                                    callbacks: {
+                                        title: (items) => fullNames[items[0]?.dataIndex] || items[0]?.label || '',
+                                        label: (ctx) => ` Unidades vendidas: ${numFmt.format(Number(ctx.raw) || 0)}`
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    beginAtZero: true,
+                                    border: { display: false },
+                                    grid: { color: GRID_LINE },
+                                    ticks: {
+                                        precision: 0,
+                                        color: TEXT_MUTED,
+                                        font: { family: FONT_MONO, size: 11 }
+                                    }
+                                },
+                                y: {
+                                    border: { color: 'rgba(21, 23, 26, 0.14)' },
+                                    grid: { display: false },
+                                    ticks: {
+                                        color: INK,
+                                        font: { family: FONT_BODY, size: 12, weight: '600' }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    renderEmptyState('topSalesChart', 'No hay unidades vendidas para construir el ranking.');
+                }
             }
         }
 
+        // 4. TALLER
         function renderWorkshop() {
-            if (charts.workshop1) return;
-            if (document.getElementById('repairStatusChart') && data.repairStatus && data.repairStatus.labels) {
-                const statusColors = {
-                    'Recibido': '#0EA5A0', 
-                    'En diagnóstico': '#5EEAD4', 
-                    'En reparación': '#FBBF24',
-                    'Listo': '#4ADE80', 
-                    'Entregado': '#0EA5A0', 
-                    'Cancelado': '#F87171'
-                };
-                const colors = data.repairStatus.labels.map(l => statusColors[l] || '#A1A1AA');
-                charts.workshop1 = new Chart(document.getElementById('repairStatusChart').getContext('2d'), {
-                    type: 'doughnut',
-                    data: { labels: data.repairStatus.labels, datasets: [{ data: data.repairStatus.counts, backgroundColor: colors, borderColor: cardBg, borderWidth: 3 }] },
-                    options: { responsive: true, maintainAspectRatio: false, cutout: '70%', plugins: { tooltip: { backgroundColor: '#1F2937', titleColor: '#FAFAFA', bodyColor: secondary, borderColor: '#374151', borderWidth: 1, padding: 12 }, legend: { position: 'bottom', labels: { color: textMuted, font: { family: 'Outfit, sans-serif', size: 12 }, padding: 20 } } } }
-                });
+            if (!charts.workshopStatus && document.getElementById('repairStatusChart')) {
+                const labels = data.repairStatus?.labels || [];
+                const counts = (data.repairStatus?.counts || []).map(Number);
+
+                if (labels.length > 0 && hasNonZeroData(counts)) {
+                    const statusColors = {
+                        'Recibido': '#3b76e6',
+                        'En diagnóstico': '#8b5cf6',
+                        'En reparación': '#dea000',
+                        'Listo': '#1fa855',
+                        'Entregado': '#0f766e',
+                        'Cancelado': '#cc1f1f'
+                    };
+                    const colors = labels.map((l, idx) => statusColors[l] || PALETTE[idx % PALETTE.length]);
+                    const totalOrders = counts.reduce((a, b) => a + b, 0);
+
+                    charts.workshopStatus = new Chart(document.getElementById('repairStatusChart').getContext('2d'), {
+                        type: 'doughnut',
+                        plugins: [centerDoughnutPlugin],
+                        data: {
+                            labels,
+                            datasets: [{
+                                data: counts,
+                                backgroundColor: colors,
+                                borderColor: SURFACE,
+                                borderWidth: 3,
+                                spacing: 2,
+                                borderRadius: 4,
+                                hoverOffset: 6
+                            }]
+                        },
+                        options: buildDoughnutOptions({
+                            centerLabel: 'Órdenes',
+                            centerValue: numFmt.format(totalOrders),
+                            formatValue: (v) => `${numFmt.format(v)} órd.`
+                        })
+                    });
+                } else {
+                    renderEmptyState('repairStatusChart', 'Sin órdenes de reparación registradas.');
+                }
             }
 
-            if (document.getElementById('repairByBrandChart') && data.repairBrand && data.repairBrand.labels) {
-                charts.workshop2 = new Chart(document.getElementById('repairByBrandChart').getContext('2d'), {
-                    type: 'bar',
-                    data: { labels: data.repairBrand.labels, datasets: [{ label: 'Reparaciones', data: data.repairBrand.counts, backgroundColor: primaryAlpha, borderColor: primary, borderWidth: 1, borderRadius: 6 }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1F2937', titleColor: '#FAFAFA', bodyColor: secondary, borderColor: '#374151', borderWidth: 1, padding: 12 } }, scales: { y: { grid: { color: border }, ticks: { color: textMuted, precision: 0 } }, x: { grid: { display: false }, ticks: { color: textMuted, font: { family: 'Outfit, sans-serif' } } } } }
-                });
+            if (!charts.workshopBrand && document.getElementById('repairByBrandChart')) {
+                const labels = data.repairBrand?.labels || [];
+                const counts = (data.repairBrand?.counts || []).map(Number);
+
+                if (labels.length > 0 && hasNonZeroData(counts)) {
+                    charts.workshopBrand = new Chart(document.getElementById('repairByBrandChart').getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels,
+                            datasets: [{
+                                label: 'Reparaciones',
+                                data: counts,
+                                backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length] + 'D9'),
+                                hoverBackgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length]),
+                                borderColor: labels.map((_, i) => PALETTE[i % PALETTE.length]),
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                maxBarThickness: 46
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    ...baseTooltip,
+                                    callbacks: {
+                                        label: (ctx) => ` Órdenes ingresadas: ${numFmt.format(Number(ctx.raw) || 0)}`
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    border: { display: false },
+                                    grid: { color: GRID_LINE },
+                                    ticks: {
+                                        precision: 0,
+                                        color: TEXT_MUTED,
+                                        font: { family: FONT_MONO, size: 11 }
+                                    }
+                                },
+                                x: {
+                                    border: { color: 'rgba(21, 23, 26, 0.14)' },
+                                    grid: { display: false },
+                                    ticks: {
+                                        color: INK,
+                                        font: { family: FONT_BODY, size: 12, weight: '600' }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    renderEmptyState('repairByBrandChart', 'Sin reparaciones agrupadas por marca.');
+                }
             }
         }
 
         tabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 tabBtns.forEach(b => {
-                    b.classList.remove('text-primary', 'border-primary');
-                    b.classList.add('text-text-muted', 'border-transparent');
+                    b.classList.remove('text-[#15171a]', 'border-[#15171a]');
+                    b.classList.add('text-[#6b7075]', 'border-transparent');
                 });
-                btn.classList.add('text-primary', 'border-primary');
-                btn.classList.remove('text-text-muted', 'border-transparent');
+                btn.classList.add('text-[#15171a]', 'border-[#15171a]');
+                btn.classList.remove('text-[#6b7075]', 'border-transparent');
 
                 const targetId = btn.getAttribute('data-tab');
                 tabContents.forEach(content => {
-                    if(content.id === targetId) {
+                    if (content.id === targetId) {
                         content.classList.remove('hidden');
                         content.classList.add('block');
-                        
-                        // Renderizar los gráficos de esta pestaña si aún no se han renderizado
-                        if(targetId === 'tab-finanzas') renderFinancial();
-                        if(targetId === 'tab-inventario') renderInventory();
-                        if(targetId === 'tab-ventas') renderSales();
-                        if(targetId === 'tab-taller') renderWorkshop();
+
+                        if (targetId === 'tab-finanzas') renderFinancial();
+                        if (targetId === 'tab-inventario') renderInventory();
+                        if (targetId === 'tab-ventas') renderSales();
+                        if (targetId === 'tab-taller') renderWorkshop();
                     } else {
                         content.classList.add('hidden');
                         content.classList.remove('block');
@@ -166,38 +776,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
-        
-        // --- BUSQUEDA EN TABLAS ---
-        const searchStock = document.getElementById('search-critical-stock');
-        const stockTableBody = document.querySelector('#critical-stock-table tbody');
-        if (searchStock && stockTableBody) {
-            searchStock.addEventListener('input', function(e) {
-                const term = e.target.value.toLowerCase();
-                const rows = stockTableBody.querySelectorAll('tr');
-                rows.forEach(row => {
-                    const text = row.textContent.toLowerCase();
-                    row.style.display = text.includes(term) ? '' : 'none';
-                });
-            });
-        }
-
-        const searchRepairs = document.getElementById('search-repairs');
-        const repairsTableBody = document.querySelector('#repairs-table tbody');
-        if (searchRepairs && repairsTableBody) {
-            searchRepairs.addEventListener('input', function(e) {
-                const term = e.target.value.toLowerCase();
-                const rows = repairsTableBody.querySelectorAll('tr');
-                rows.forEach(row => {
-                    const text = row.textContent.toLowerCase();
-                    row.style.display = text.includes(term) ? '' : 'none';
-                });
-            });
-        }
-
-        // Iniciar con la primera pestaña
         renderFinancial();
-
     } catch (error) {
-        console.error("Error inicializando los gráficos de reportes:", error);
+        console.error('Error inicializando los gráficos de reportes:', error);
     }
 });

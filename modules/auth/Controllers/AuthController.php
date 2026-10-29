@@ -3,6 +3,7 @@
 
 require_once __DIR__ . '/../../../classes/BaseController.php';
 require_once __DIR__ . '/../Models/AuthModel.php';
+require_once __DIR__ . '/../../../config/audit.php';
 
 class AuthController extends BaseController
 {

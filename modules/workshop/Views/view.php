@@ -35,18 +35,18 @@ if ($_SESSION['role'] === 'admin') {
                         </h2>
                         <?php 
                         $badgeClasses = [
-                            'Recibido' => 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-                            'En diagnóstico' => 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-                            'En reparación' => 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30',
-                            'Listo' => 'bg-primary/20 text-primary border-primary/40 shadow-sm shadow-primary/10',
-                            'Entregado' => 'bg-green-500/10 text-green-400 border-green-500/30',
-                            'Cancelado' => 'bg-red-500/10 text-red-400 border-red-500/30',
+                            'Recibido' => 'repair-status-recibido',
+                            'En diagnóstico' => 'repair-status-diagnostico',
+                            'En reparación' => 'repair-status-reparacion',
+                            'Listo' => 'repair-status-listo',
+                            'Entregado' => 'repair-status-entregado',
+                            'Cancelado' => 'repair-status-cancelado',
                         ];
                         $st = $repair['estado'];
-                        $bClass = $badgeClasses[$st] ?? 'bg-surface text-text-muted border-border';
+                        $bClass = 'repair-status ' . ($badgeClasses[$st] ?? 'repair-status-default');
                         ?>
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider <?php echo $bClass; ?>">
-                            <span class="w-1.5 h-1.5 rounded-full <?php echo ($st === 'Listo' || $st === 'Entregado') ? 'bg-primary' : 'bg-current'; ?>"></span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
                             <?php echo htmlspecialchars($st); ?>
                         </span>
                     </div>
@@ -65,6 +65,7 @@ if ($_SESSION['role'] === 'admin') {
         </div>
 
         <?php // Barra de acción según el estado ?>
+        <div id="repair_action_banner">
         <?php if ($repair['estado'] === 'Listo'): ?>
             <div class="glass-card rounded-xl px-4 py-2.5 mb-5 border border-primary/30 bg-primary/5 flex items-center justify-between gap-3 flex-wrap text-xs">
                 <div class="flex items-center gap-2 flex-wrap">
@@ -136,6 +137,7 @@ if ($_SESSION['role'] === 'admin') {
                 </div>
             </div>
         <?php endif; ?>
+        </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
@@ -540,17 +542,21 @@ if ($_SESSION['role'] === 'admin') {
                                 body: formData
                             })
                             .then(response => {
-                                if (response.url.includes('&error=')) {
-                                    const params = new URLSearchParams(response.url.split('?')[1]);
-                                    const errorMsg = params.get('error') || 'Ocurrió un error en el servidor.';
-                                    if (typeof showToast === 'function') {
-                                        showToast(errorMsg, 'error');
-                                    } else {
-                                        alert(errorMsg);
+                                try {
+                                    const urlObj = new URL(response.url, window.location.origin);
+                                    const errorMsg = urlObj.searchParams.get('error');
+                                    if (errorMsg) {
+                                        if (typeof showToast === 'function') {
+                                            showToast(decodeURIComponent(errorMsg), 'error');
+                                        } else {
+                                            alert(decodeURIComponent(errorMsg));
+                                        }
+                                        btnSubmit.innerHTML = originalHtml;
+                                        btnSubmit.disabled = false;
+                                        return Promise.reject('Backend error');
                                     }
-                                    btnSubmit.innerHTML = originalHtml;
-                                    btnSubmit.disabled = false;
-                                    return Promise.reject('Backend error');
+                                } catch (e) {
+                                    // fallback
                                 }
                                 return response.text();
                             })
@@ -558,25 +564,31 @@ if ($_SESSION['role'] === 'admin') {
                                 const parser = new DOMParser();
                                 const doc = parser.parseFromString(html, 'text/html');
                                 const newContainer = doc.getElementById('repuestos_container');
+                                const newBanner = doc.getElementById('repair_action_banner');
+                                const newModal = doc.getElementById('modal-send-to-cashier');
                                 
-                                if(newContainer) {
+                                if (newContainer) {
                                     document.getElementById('repuestos_container').innerHTML = newContainer.innerHTML;
-                                    attachRepuestoAjax(); // Re-attach listeners to new elements
-                                } else {
-                                    if (typeof showToast === 'function') showToast('Error en el servidor al cargar los datos.', 'error');
-                                    btnSubmit.innerHTML = originalHtml;
-                                    btnSubmit.disabled = false;
-                                }
-                                
-                                if (typeof showToast === 'function' && newContainer) {
-                                    if (actionInput && actionInput.value === 'remove_repuesto') {
-                                        showToast('Repuesto devuelto al inventario', 'info');
-                                    } else {
-                                        showToast('Repuesto asignado correctamente', 'success');
+                                    if (newBanner && document.getElementById('repair_action_banner')) {
+                                        document.getElementById('repair_action_banner').innerHTML = newBanner.innerHTML;
                                     }
+                                    if (newModal && document.getElementById('modal-send-to-cashier')) {
+                                        document.getElementById('modal-send-to-cashier').innerHTML = newModal.innerHTML;
+                                    }
+                                    attachRepuestoAjax(); // Re-attach listeners to new elements
+                                    if (typeof showToast === 'function') {
+                                        if (actionInput && actionInput.value === 'remove_repuesto') {
+                                            showToast('Repuesto devuelto al inventario', 'info');
+                                        } else {
+                                            showToast('Repuesto asignado correctamente', 'success');
+                                        }
+                                    }
+                                } else {
+                                    window.location.reload();
                                 }
                             })
                             .catch(error => {
+                                if (error === 'Backend error') return;
                                 console.error('Error:', error);
                                 if (typeof showToast === 'function') {
                                     showToast('Ocurrió un error al procesar el repuesto.', 'error');
@@ -637,7 +649,7 @@ if ($_SESSION['role'] === 'admin') {
                             <label class="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">Presupuesto / Mano de Obra ($)</label>
                             <div class="relative">
                                 <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted text-sm font-bold">$</span>
-                                <input type="number" step="0.01" min="0" name="presupuesto" id="presupuesto_input" value="<?php echo $repair['presupuesto']; ?>" class="w-full bg-surface border border-border pl-8 pr-3.5 py-2.5 rounded-xl text-sm font-medium text-text-main focus:outline-none focus:border-primary transition-colors">
+                                <input type="number" step="0.01" min="0" name="presupuesto" id="presupuesto_input" value="<?php echo $repair['presupuesto']; ?>" onwheel="this.blur()" class="w-full bg-surface border border-border pl-8 pr-3.5 py-2.5 rounded-xl text-sm font-medium text-text-main focus:outline-none focus:border-primary transition-colors">
                             </div>
                             <p class="text-[11px] text-text-muted mt-1.5">Mano de obra o servicio base. Se conservará al mandar a caja.</p>
                         </div>
@@ -749,7 +761,7 @@ if ($_SESSION['role'] === 'admin') {
 
             <div>
                 <label class="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">Presupuesto / Mano de Obra Base ($)</label>
-                <input type="number" step="0.01" min="0" name="presupuesto" id="cashier_presupuesto" value="<?php echo $repair['presupuesto']; ?>" required oninput="recalcCashierTotal(<?php echo floatval($repair['costo_total']); ?>)" class="w-full bg-surface border border-border px-3 py-2.5 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
+                <input type="number" step="0.01" min="0" name="presupuesto" id="cashier_presupuesto" value="<?php echo $repair['presupuesto']; ?>" required oninput="recalcCashierTotal(<?php echo floatval($repair['costo_total']); ?>)" onwheel="this.blur()" class="w-full bg-surface border border-border px-3 py-2.5 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
                 <span class="text-[11px] text-text-muted mt-0.5 block">Se conserva el presupuesto fijado previamente en la orden. Podés editarlo aquí si lo deseas antes de enviarlo.</span>
             </div>
 

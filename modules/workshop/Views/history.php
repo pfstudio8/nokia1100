@@ -22,14 +22,9 @@ if ($_SESSION['role'] === 'admin') {
                     <p class="text-text-muted mt-1 text-sm">Registro de ingresos generados por reparaciones finalizadas</p>
                 </div>
             </div>
-            <div class="flex items-center gap-4">
+            <div class="flex items-center gap-2.5 flex-wrap">
                 <!-- Botones de Exportación -->
-                <button type="button" onclick="exportTableToExcel('history-table', 'historial_reparaciones', this)" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-                    <span class="material-symbols-outlined text-[16px]">download</span> Excel
-                </button>
-                <button type="button" onclick="exportTableToPDF('history-table', 'Historial de Cobros', 'historial_reparaciones', this)" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-                    <span class="material-symbols-outlined text-[16px]">download</span> PDF
-                </button>
+                <?php echo Layout::renderExportButtons('history-table', 'Historial de Cobros', 'historial_reparaciones'); ?>
             </div>
         </div>
 
@@ -51,9 +46,7 @@ if ($_SESSION['role'] === 'admin') {
                                 <td class="p-4 text-text-muted text-sm"><?php echo date('d/m/Y H:i', strtotime($r['fecha'])); ?></td>
                                 <td class="p-4 font-medium text-text-main"><?php echo htmlspecialchars($r['descripcion']); ?></td>
                                 <td class="p-4 text-center">
-                                    <span class="inline-block px-2.5 py-1 rounded text-[10px] uppercase font-bold tracking-widest bg-surface border border-border text-text-muted">
-                                        <?php echo htmlspecialchars($r['metodo_de_pago']); ?>
-                                    </span>
+                                    <?php echo Layout::renderPaymentBadge($r['metodo_de_pago'] ?? 'N/A'); ?>
                                 </td>
                                 <td class="p-4 text-right font-medium text-primary">
                                     $<?php echo number_format($r['total'], 2); ?>
@@ -70,74 +63,13 @@ if ($_SESSION['role'] === 'admin') {
             </table>
         </div>
 
-        <?php 
-        $total_items = $total_items ?? count($paid_repairs ?? []);
-        $limit = $limit ?? 10;
-        $page = $page ?? 1;
-        $total_pages = $total_pages ?? max(1, ceil($total_items / $limit));
-        $count_current = count($paid_repairs ?? []);
-        $from = ($total_items > 0) ? (($page - 1) * $limit + 1) : 0;
-        $to = ($total_items > 0) ? min($from + $count_current - 1, $total_items) : 0;
-
-        $query_args = ['action' => 'history'];
+        <?php
+        $total_items = (int)($total_items ?? count($paid_repairs ?? []));
+        $limit = (int)($limit ?? 10);
+        $page = (int)($page ?? 1);
+        $total_pages = (int)($total_pages ?? max(1, ceil($total_items / max(1, $limit))));
+        echo Layout::renderPagination($page, $total_pages, $total_items, 'reparación', 'reparaciones', ['action' => 'history']);
         ?>
-
-        <div class="mt-6 pt-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
-            <div>
-                <?php if ($total_items > 0): ?>
-                    Mostrando <strong class="text-text-main font-semibold"><?php echo $from; ?>–<?php echo $to; ?></strong> de <strong class="text-text-main font-semibold"><?php echo $total_items; ?></strong> reparaciones
-                    <span class="mx-1.5 opacity-40">•</span>
-                    Página <strong class="text-primary font-semibold"><?php echo $page; ?></strong> de <strong class="text-text-main font-semibold"><?php echo $total_pages; ?></strong>
-                <?php else: ?>
-                    <span>No hay reparaciones en el historial</span>
-                <?php endif; ?>
-            </div>
-
-            <?php if ($total_pages > 1): ?>
-                <div class="flex items-center gap-1.5 flex-wrap justify-center">
-                    <?php if ($page > 1): 
-                        $prev_args = $query_args;
-                        $prev_args['page'] = $page - 1;
-                    ?>
-                        <a href="?<?php echo http_build_query($prev_args); ?>" class="px-2.5 py-1.5 border border-border rounded-lg bg-surface hover:bg-surface-hover text-text-main transition-colors flex items-center gap-1" title="Página anterior">
-                            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
-                            <span class="hidden md:inline">Anterior</span>
-                        </a>
-                    <?php else: ?>
-                        <span class="px-2.5 py-1.5 border border-border/40 rounded-lg bg-surface/30 text-text-muted/40 cursor-not-allowed flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
-                            <span class="hidden md:inline">Anterior</span>
-                        </span>
-                    <?php endif; ?>
-
-                    <?php for ($i = 1; $i <= $total_pages; $i++): 
-                        $num_args = $query_args;
-                        $num_args['page'] = $i;
-                        $isCurrent = ($i === $page);
-                    ?>
-                        <a href="?<?php echo http_build_query($num_args); ?>" class="min-w-[32px] h-8 flex items-center justify-center px-2.5 rounded-lg border text-xs font-semibold transition-all <?php echo $isCurrent ? 'bg-primary text-background border-primary shadow-sm shadow-primary/20' : 'bg-surface border-border text-text-muted hover:text-text-main hover:bg-surface-hover'; ?>">
-                            <?php echo $i; ?>
-                        </a>
-                    <?php endfor; ?>
-
-                    <?php if ($page < $total_pages): 
-                        $next_args = $query_args;
-                        $next_args['page'] = $page + 1;
-                    ?>
-                        <a href="?<?php echo http_build_query($next_args); ?>" class="px-2.5 py-1.5 border border-border rounded-lg bg-surface hover:bg-surface-hover text-text-main transition-colors flex items-center gap-1" title="Página siguiente">
-                            <span class="hidden md:inline">Siguiente</span>
-                            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
-                        </a>
-                    <?php else: ?>
-                        <span class="px-2.5 py-1.5 border border-border/40 rounded-lg bg-surface/30 text-text-muted/40 cursor-not-allowed flex items-center gap-1">
-                            <span class="hidden md:inline">Siguiente</span>
-                            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
-                        </span>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
-        </div>
-
     </div>
 </main>
 

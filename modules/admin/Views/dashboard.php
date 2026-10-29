@@ -1,130 +1,149 @@
 <?php
-// modules/admin/Views/dashboard.php
+// modules/admin/Views/dashboard.php - Nokia 1100 Design System
 
 Layout::renderHead('NOKIA1100 | Admin Panel');
 Layout::renderAdminSidebar('dashboard');
 ?>
 
-<main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen flex flex-col">
+<main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen flex flex-col bg-[#eeebe3]">
     <div class="max-w-7xl mx-auto w-full flex-grow">
         
-        <header class="flex justify-between items-end mb-8">
+        <header class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
             <div>
-                <h1 class="text-3xl md:text-4xl font-display font-bold text-text-main tracking-tight flex items-center gap-3">
+                <h1 class="text-2xl sm:text-3xl font-display font-bold text-[#15171a] tracking-tight">
                     Resumen Operativo
                 </h1>
-                <p class="text-sm text-text-muted mt-2 font-medium">Vista general del rendimiento y operaciones de la sucursal</p>
+                <p class="text-xs text-[#5c6165] mt-1 font-medium">Supervisión integral de rendimiento, flujo comercial y auditoría de inventario</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <a href="<?php echo BASE_URL; ?>/modules/inventory/index.php" class="btn btn-lcd text-xs">
+                    <span class="material-symbols-outlined text-[16px]">inventory_2</span>
+                    Gestionar Inventario
+                </a>
             </div>
         </header>
 
-        <?php // Banner visual ?>
-        <section class="mb-10 w-full rounded-3xl relative flex items-center bg-card shadow-lg border border-border">
-            <div class="relative z-10 w-full p-5 sm:p-8 md:p-12 flex flex-col justify-center h-full max-w-3xl">
-                <h2 class="text-2xl sm:text-4xl md:text-5xl font-display font-bold text-text-main mb-3 tracking-tight">Bienvenido a Nokia1100</h2>
-                <p class="text-xs sm:text-sm md:text-base text-text-muted font-medium max-w-lg leading-relaxed">Supervisa todas las operaciones, controla el inventario en tiempo real y analiza el rendimiento corporativo con precisión.</p>
+        <?php // Banner visual estilo Nokia 1100 ?>
+        <section class="mb-8 w-full rounded-[2px] bg-[#15181a] border border-[#222729] shadow-sm relative overflow-hidden">
+            <div class="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+                <div class="max-w-2xl">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="w-2 h-2 rounded-full bg-[#c6e24a] animate-pulse"></span>
+                        <span class="font-mono text-[11px] font-bold text-[#c6e24a] uppercase tracking-wider">ESTADO DEL SISTEMA: ONLINE</span>
+                    </div>
+                    <h2 class="text-xl sm:text-2xl font-display font-bold text-[#e9e6db] mb-2 tracking-tight">Bienvenido a Nokia 1100</h2>
+                    <p class="text-xs sm:text-sm text-[#9ba19f] font-normal leading-relaxed">
+                        Controla el stock en tiempo real, supervisa ventas registradas y audita las actividades operativas de la sucursal con máxima precisión técnica.
+                    </p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2.5 self-start md:self-auto">
+                    <div class="px-3.5 py-2.5 bg-[#222729] border border-[#30363a] rounded-[2px] min-w-[124px]">
+                        <div class="flex items-center gap-1.5 font-mono text-[10px] text-[#9ba19f] uppercase tracking-wider">
+                            <span class="material-symbols-outlined text-[13px] text-[#c6e24a]">calendar_today</span>
+                            <span>Fecha</span>
+                        </div>
+                        <div class="font-mono text-sm font-bold text-[#e9e6db] mt-0.5 tabular-nums" data-live-date><?php echo date('d/m/Y'); ?></div>
+                    </div>
+                    <div class="px-3.5 py-2.5 bg-[#222729] border border-[#30363a] rounded-[2px] min-w-[124px]">
+                        <div class="flex items-center gap-1.5 font-mono text-[10px] text-[#9ba19f] uppercase tracking-wider">
+                            <span class="material-symbols-outlined text-[13px] text-[#c6e24a]">schedule</span>
+                            <span>Hora</span>
+                        </div>
+                        <div class="font-mono text-sm font-bold text-[#c6e24a] mt-0.5 tabular-nums" data-live-clock><?php echo date('H:i:s'); ?></div>
+                    </div>
+                </div>
             </div>
         </section>
 
-        <?php // Metrics ?>
-        <section class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        <?php // Tarjetas de Métricas KPI ?>
+        <section class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-8">
             
-            <div class="bg-card p-6 rounded-3xl flex flex-col justify-between group hover:border-primary/40 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative overflow-hidden border border-border">
-                <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/5 rounded-full blur-2xl transition-all group-hover:bg-primary/10"></div>
-                <div class="flex justify-between items-start mb-6 relative z-10">
-                    <div class="p-3 text-primary rounded-xl border border-primary/20 bg-primary/5 shadow-inner">
-                        <span class="material-symbols-outlined text-xl">payments</span>
-                    </div>
-                    <span class="text-[10px] uppercase font-bold text-primary tracking-widest bg-transparent px-3 py-1.5 rounded-full border border-primary/30">Ventas Totales</span>
+            <?php // Ventas Totales ?>
+            <div class="bg-[#f8f6f0] p-5 rounded-[2px] border border-[#b5af9c] flex flex-col justify-between shadow-sm">
+                <div class="flex justify-between items-start mb-4">
+                    <span class="font-mono text-[11px] font-bold text-[#5c6165] uppercase tracking-wider">Ingresos Registrados</span>
+                    <span class="material-symbols-outlined text-[20px] text-[#15171a]">payments</span>
                 </div>
-                <div class="relative z-10">
-                    <p class="text-xs text-text-muted mb-2 font-semibold uppercase tracking-wider">Ingresos Registrados</p>
-                    <h3 class="text-4xl font-display font-bold text-text-main tracking-tight">$<span id="metric-ventas" class="skeleton px-8 rounded">0</span></h3>
+                <div>
+                    <div class="text-3xl font-display font-bold text-[#15171a] font-mono tracking-tight">$<span id="metric-ventas" class="skeleton px-6 rounded-[2px]">0</span></div>
+                    <p class="text-[11px] font-mono text-[#5c6165] mt-1">Total acumulado de ventas</p>
                 </div>
             </div>
 
-            <div class="bg-card p-6 rounded-3xl flex flex-col justify-between group hover:border-secondary/40 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative overflow-hidden border border-border">
-                <div class="absolute -top-10 -right-10 w-32 h-32 bg-secondary/5 rounded-full blur-2xl transition-all group-hover:bg-secondary/10"></div>
-                <div class="flex justify-between items-start mb-6 relative z-10">
-                    <div class="p-3 text-secondary rounded-xl border border-secondary/20 bg-secondary/5 shadow-inner">
-                        <span class="material-symbols-outlined text-xl">group</span>
-                    </div>
-                    <span class="text-[10px] uppercase font-bold text-secondary tracking-widest bg-transparent px-3 py-1.5 rounded-full border border-secondary/30">Cuentas</span>
+            <?php // Usuarios Activos ?>
+            <div class="bg-[#f8f6f0] p-5 rounded-[2px] border border-[#b5af9c] flex flex-col justify-between shadow-sm">
+                <div class="flex justify-between items-start mb-4">
+                    <span class="font-mono text-[11px] font-bold text-[#5c6165] uppercase tracking-wider">Usuarios Activos</span>
+                    <span class="material-symbols-outlined text-[20px] text-[#15171a]">group</span>
                 </div>
-                <div class="relative z-10">
-                    <p class="text-xs text-text-muted mb-2 font-semibold uppercase tracking-wider">Usuarios Activos</p>
-                    <h3 class="text-4xl font-display font-bold text-text-main tracking-tight"><span id="metric-usuarios" class="skeleton px-6 rounded">0</span></h3>
+                <div>
+                    <div class="text-3xl font-display font-bold text-[#15171a] font-mono tracking-tight"><span id="metric-usuarios" class="skeleton px-5 rounded-[2px]">0</span></div>
+                    <p class="text-[11px] font-mono text-[#5c6165] mt-1">Cuentas habilitadas</p>
                 </div>
             </div>
 
-            <div class="bg-card p-6 rounded-3xl flex flex-col justify-between cursor-pointer hover:border-error/40 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 relative overflow-hidden border border-border group" onclick="window.location.href='<?php echo BASE_URL; ?>/modules/inventory/index.php?filter=low_stock';">
-                <div class="absolute -top-10 -right-10 w-32 h-32 bg-error/5 rounded-full blur-2xl transition-all group-hover:bg-error/10"></div>
-                <div class="flex justify-between items-start mb-6 relative z-10">
-                    <div class="p-3 text-error rounded-xl border border-error/20 bg-error/5 shadow-inner">
-                        <span class="material-symbols-outlined text-xl">warning</span>
+            <?php // Alertas de Stock ?>
+            <div class="bg-[#f8f6f0] p-5 rounded-[2px] border border-[#b5af9c] flex flex-col justify-between shadow-sm cursor-pointer hover:bg-[#e5e1d6]/50 transition-colors" onclick="window.location.href='<?php echo BASE_URL; ?>/modules/inventory/index.php?filter=low_stock';" title="Ver artículos con bajo stock">
+                <div class="flex justify-between items-start mb-4">
+                    <span class="font-mono text-[11px] font-bold text-[#5c6165] uppercase tracking-wider">Alertas de Stock</span>
+                    <div id="stock-badge-container">
+                        <span class="material-symbols-outlined text-[20px] text-[#15171a]">warning</span>
                     </div>
-                    <div id="stock-badge-container"></div>
                 </div>
-                <div class="relative z-10">
-                    <p class="text-xs text-text-muted mb-2 font-semibold uppercase tracking-wider">Alertas de Stock</p>
-                    <h3 id="metric-stock-container" class="text-4xl font-display font-bold tracking-tight text-text-main">
-                        <span id="metric-stock" class="skeleton px-4 rounded">0</span>
-                    </h3>
+                <div>
+                    <div id="metric-stock-container" class="text-3xl font-display font-bold text-[#15171a] font-mono tracking-tight">
+                        <span id="metric-stock" class="skeleton px-4 rounded-[2px]">0</span>
+                    </div>
+                    <p class="text-[11px] font-mono text-[#5c6165] mt-1">Artículos con bajo stock</p>
                 </div>
             </div>
             
         </section>
         
-        <?php // Tablas de datos ?>
-        <section class="grid grid-cols-1 gap-6">
-            
-            <?php // Ventas Recientes ?>
-            <div class="col-span-12 bg-card rounded-3xl overflow-hidden p-0 flex flex-col justify-between border border-border shadow-lg">
-                <div>
-                    <div class="p-6 md:p-8 border-b border-border flex justify-between items-center bg-transparent">
-                        <div class="flex items-center gap-3">
-                            <div class="p-2 text-primary">
-                                <span class="material-symbols-outlined text-2xl">receipt_long</span>
-                            </div>
-                            <h3 class="font-display text-lg font-bold text-text-main tracking-tight">Ventas Recientes</h3>
-                        </div>
-                        <a href="<?php echo BASE_URL; ?>/modules/sales/index.php" class="text-sm font-medium text-text-muted hover:text-text-main transition-colors flex items-center gap-1">Ver todas <span class="material-symbols-outlined text-sm">arrow_right_alt</span></a>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr class="bg-surface/50 border-b border-border">
-                                    <th class="px-6 md:px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">ID Venta</th>
-                                    <th class="px-6 md:px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Fecha</th>
-                                    <th class="px-6 md:px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest">Método</th>
-                                    <th class="px-6 md:px-8 py-5 text-xs font-bold text-text-muted uppercase tracking-widest text-right">Monto</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-border">
-                                <?php // Skeleton Rows ?>
-                                <tr id="sales-skeleton-1" class="skeleton-row">
-                                    <td class="px-6 md:px-8 py-5"><div class="skeleton h-4 w-16 rounded"></div></td>
-                                    <td class="px-6 md:px-8 py-5"><div class="skeleton h-4 w-24 rounded"></div></td>
-                                    <td class="px-6 md:px-8 py-5"><div class="skeleton h-6 w-12 rounded-full"></div></td>
-                                    <td class="px-6 md:px-8 py-5 flex justify-end"><div class="skeleton h-4 w-16 rounded"></div></td>
-                                </tr>
-                                <tr id="sales-skeleton-2" class="skeleton-row">
-                                    <td class="px-6 md:px-8 py-5"><div class="skeleton h-4 w-16 rounded"></div></td>
-                                    <td class="px-6 md:px-8 py-5"><div class="skeleton h-4 w-24 rounded"></div></td>
-                                    <td class="px-6 md:px-8 py-5"><div class="skeleton h-6 w-12 rounded-full"></div></td>
-                                    <td class="px-6 md:px-8 py-5 flex justify-end"><div class="skeleton h-4 w-16 rounded"></div></td>
-                                </tr>
-                                <tr id="sales-skeleton-3" class="skeleton-row">
-                                    <td class="px-6 md:px-8 py-5"><div class="skeleton h-4 w-16 rounded"></div></td>
-                                    <td class="px-6 md:px-8 py-5"><div class="skeleton h-4 w-24 rounded"></div></td>
-                                    <td class="px-6 md:px-8 py-5"><div class="skeleton h-6 w-12 rounded-full"></div></td>
-                                    <td class="px-6 md:px-8 py-5 flex justify-end"><div class="skeleton h-4 w-16 rounded"></div></td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+        <?php // Ventas Recientes ?>
+        <section class="bg-[#f8f6f0] rounded-[2px] border border-[#b5af9c] shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-[#b5af9c] bg-[#e5e1d6]/60 flex justify-between items-center">
+                <div class="flex items-center gap-2.5">
+                    <span class="material-symbols-outlined text-[20px] text-[#15171a]">receipt_long</span>
+                    <h3 class="font-display text-base font-bold text-[#15171a] tracking-tight">Ventas Recientes</h3>
                 </div>
+                <a href="<?php echo BASE_URL; ?>/modules/sales/index.php" class="text-xs font-semibold text-[#15171a] hover:underline flex items-center gap-1">
+                    Ver todas <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                </a>
             </div>
-
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="bg-[#e5e1d6] border-b border-[#b5af9c]">
+                            <th class="px-6 py-3.5 text-xs font-mono font-bold text-[#5c6165] uppercase tracking-wider">ID Venta</th>
+                            <th class="px-6 py-3.5 text-xs font-mono font-bold text-[#5c6165] uppercase tracking-wider">Fecha / Hora</th>
+                            <th class="px-6 py-3.5 text-xs font-mono font-bold text-[#5c6165] uppercase tracking-wider">Método de Pago</th>
+                            <th class="px-6 py-3.5 text-xs font-mono font-bold text-[#5c6165] uppercase tracking-wider text-right">Monto Total</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-[#d3cebf]">
+                        <?php // Skeleton Rows ?>
+                        <tr id="sales-skeleton-1" class="skeleton-row">
+                            <td class="px-6 py-4"><div class="skeleton h-3.5 w-16 rounded-[2px]"></div></td>
+                            <td class="px-6 py-4"><div class="skeleton h-3.5 w-24 rounded-[2px]"></div></td>
+                            <td class="px-6 py-4"><div class="skeleton h-5 w-16 rounded-[2px]"></div></td>
+                            <td class="px-6 py-4 flex justify-end"><div class="skeleton h-3.5 w-16 rounded-[2px]"></div></td>
+                        </tr>
+                        <tr id="sales-skeleton-2" class="skeleton-row">
+                            <td class="px-6 py-4"><div class="skeleton h-3.5 w-16 rounded-[2px]"></div></td>
+                            <td class="px-6 py-4"><div class="skeleton h-3.5 w-24 rounded-[2px]"></div></td>
+                            <td class="px-6 py-4"><div class="skeleton h-5 w-16 rounded-[2px]"></div></td>
+                            <td class="px-6 py-4 flex justify-end"><div class="skeleton h-3.5 w-16 rounded-[2px]"></div></td>
+                        </tr>
+                        <tr id="sales-skeleton-3" class="skeleton-row">
+                            <td class="px-6 py-4"><div class="skeleton h-3.5 w-16 rounded-[2px]"></div></td>
+                            <td class="px-6 py-4"><div class="skeleton h-3.5 w-24 rounded-[2px]"></div></td>
+                            <td class="px-6 py-4"><div class="skeleton h-5 w-16 rounded-[2px]"></div></td>
+                            <td class="px-6 py-4 flex justify-end"><div class="skeleton h-3.5 w-16 rounded-[2px]"></div></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
 
     </div>
@@ -135,6 +154,22 @@ function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, ch => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[ch]));
+}
+
+function getPaymentBadge(method) {
+    const raw = String(method || '').trim() || 'N/A';
+    const m = raw.toLowerCase();
+    let badgeClass = 'badge-payment badge-payment-default';
+    if (m.includes('efectivo') || m.includes('contado')) {
+        badgeClass = 'badge-payment badge-payment-efectivo';
+    } else if (m.includes('tarjeta') || m.includes('debito') || m.includes('débito') || m.includes('credito') || m.includes('crédito') || m.includes('posnet')) {
+        badgeClass = 'badge-payment badge-payment-tarjeta';
+    } else if (m.includes('transf') || m.includes('banco') || m.includes('deposito') || m.includes('depósito') || m.includes('cbu') || m.includes('cvu') || m.includes('alias')) {
+        badgeClass = 'badge-payment badge-payment-transferencia';
+    } else if (m.includes('mercado') || /\bmp\b/.test(m) || m.includes('qr') || m.includes('billetera')) {
+        badgeClass = 'badge-payment badge-payment-mp';
+    }
+    return `<span class="${badgeClass}">${escapeHtml(raw)}</span>`;
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -154,23 +189,22 @@ document.addEventListener('DOMContentLoaded', () => {
             // Actualizar Métricas (Remover skeleton y asignar valor)
             const mVentas = document.getElementById('metric-ventas');
             mVentas.textContent = data.totalVentas;
-            mVentas.classList.remove('skeleton', 'px-8', 'rounded');
+            mVentas.classList.remove('skeleton', 'px-6', 'rounded-[2px]');
 
             const mUsuarios = document.getElementById('metric-usuarios');
             mUsuarios.textContent = data.totalUsuarios;
-            mUsuarios.classList.remove('skeleton', 'px-6', 'rounded');
+            mUsuarios.classList.remove('skeleton', 'px-5', 'rounded-[2px]');
 
             const mStock = document.getElementById('metric-stock');
             mStock.textContent = data.bajoStock;
-            mStock.classList.remove('skeleton', 'px-4', 'rounded');
+            mStock.classList.remove('skeleton', 'px-4', 'rounded-[2px]');
 
             // Actualizar diseño de Alerta de Stock si hay bajo stock
             if (parseInt(data.bajoStock) > 0) {
                 const stockContainer = document.getElementById('metric-stock-container');
-                stockContainer.classList.remove('text-text-main');
-                stockContainer.classList.add('text-red-400', 'drop-shadow-[0_0_8px_rgba(248,113,113,0.5)]');
+                stockContainer.classList.add('text-[#a82a1d]');
 
-                document.getElementById('stock-badge-container').innerHTML = `<span class="text-[10px] uppercase font-bold text-red-400 tracking-widest bg-red-500/10 px-3 py-1.5 rounded-full border border-red-500/20 pulse-badge">Atención</span>`;
+                document.getElementById('stock-badge-container').innerHTML = `<span class="text-[10px] font-mono uppercase font-bold text-[#a82a1d] tracking-wider bg-[#f6dcd7] px-2 py-0.5 rounded-[2px] border border-[#a82a1d]/30">Atención</span>`;
             }
 
             // Actualizar Tabla de Ventas Recientes
@@ -182,27 +216,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 data.ventasRecientes.forEach(v => {
                     const dateObj = new Date(v.fecha);
                     const dateStr = dateObj.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '');
-                    const metodo = escapeHtml(v.metodo_de_pago ? v.metodo_de_pago : 'N/A');
                     const totalFormatted = parseFloat(v.total).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
                     
                     const tr = document.createElement('tr');
-                    tr.className = 'hover:bg-surface/50 transition-colors group';
+                    tr.className = 'hover:bg-[#e5e1d6]/50 transition-colors border-b border-[#d3cebf]';
                     tr.innerHTML = `
-                        <td class='px-6 md:px-8 py-5 text-sm font-bold text-primary'>#TX-${escapeHtml(v.id_venta)}</td>
-                        <td class='px-6 md:px-8 py-5 text-sm text-text-muted group-hover:text-text-main transition-colors font-medium'>${dateStr}</td>
-                        <td class='px-6 md:px-8 py-5 text-sm'>
-                            <span class='px-3 py-1.5 rounded-full border border-border/30 bg-surface/80 text-[10px] font-bold text-text-muted uppercase tracking-widest shadow-sm'>${metodo}</span>
-                        </td>
-                        <td class='px-6 md:px-8 py-5 text-sm font-bold text-text-main text-right'>$${totalFormatted}</td>
+                        <td class='px-6 py-3.5 text-xs font-mono font-bold text-[#15171a]'>#TX-${escapeHtml(v.id_venta)}</td>
+                        <td class='px-6 py-3.5 text-xs text-[#464b4f] font-medium'>${dateStr}</td>
+                        <td class='px-6 py-3.5 text-xs'>${getPaymentBadge(v.metodo_de_pago)}</td>
+                        <td class='px-6 py-3.5 text-xs font-mono font-bold text-[#15171a] text-right'>$${totalFormatted}</td>
                     `;
                     tbody.appendChild(tr);
                 });
             } else {
                 tbody.innerHTML = `<tr>
-                    <td colspan='4' class='px-6 py-16 text-center'>
-                        <div class='flex flex-col items-center justify-center gap-3'>
-                            <span class='material-symbols-outlined text-5xl text-text-muted/30'>receipt_long</span>
-                            <p class='text-sm font-medium text-text-muted'>No hay transacciones registradas</p>
+                    <td colspan='4' class='px-6 py-12 text-center'>
+                        <div class='flex flex-col items-center justify-center gap-2'>
+                            <span class='material-symbols-outlined text-4xl text-[#5c6165]/40'>receipt_long</span>
+                            <p class='text-xs font-mono text-[#5c6165]'>No hay transacciones registradas</p>
                         </div>
                     </td>
                 </tr>`;

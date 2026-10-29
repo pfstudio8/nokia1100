@@ -3,13 +3,19 @@
 require_once __DIR__ . '/Controllers/WorkshopController.php';
 $controller = new WorkshopController();
 
-$action = $_POST['action'] ?? ($_GET['action'] ?? 'index');
+$action = $_GET['action'] ?? ($_POST['action'] ?? 'index');
 
 switch ($action) {
     case 'add':
         $controller->add();
         break;
     case 'view':
+    case 'add_repuesto':
+    case 'remove_repuesto':
+    case 'update_status':
+    case 'send_to_cashier':
+    case 'add_image':
+    case 'delete_image':
         $controller->view();
         break;
     case 'print_receipt':

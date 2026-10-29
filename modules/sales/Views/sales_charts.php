@@ -27,12 +27,12 @@ Layout::renderAdminSidebar('graficos');
                 <h2 class="text-2xl font-display font-medium text-text-main">Estadísticas de Ventas</h2>
                 <p class="text-text-muted text-sm mt-1">Reporte financiero y métricas de desempeño (Últimos 30 días)</p>
             </div>
-            <div class="flex items-center gap-2 flex-wrap">
-                <button type="button" id="btnExportXls" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-                    <span class="material-symbols-outlined text-[16px]">download</span> Excel
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <button type="button" id="btnExportXls" class="btn-export" title="Exportar a Excel">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>Excel
                 </button>
-                <button type="button" id="btnExportPdf" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-                    <span class="material-symbols-outlined text-[16px]">download</span> PDF
+                <button type="button" id="btnExportPdf" class="btn-export" title="Exportar a PDF">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>PDF
                 </button>
                 <a href="<?php echo BASE_URL; ?>/modules/admin/index.php" class="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-sm font-medium transition-colors flex items-center gap-2 ml-2">
                     <span class="material-symbols-outlined text-[18px]">arrow_back</span> Volver al Dashboard

@@ -33,9 +33,13 @@ class InventoryController extends BaseController
 
         $items = $this->inventory_model->get_inventory($search, $filter, $limit, $offset, $categoria);
         $categorias = $this->inventory_model->get_all_categories();
+        $all_products = $this->inventory_model->get_all_products_catalog();
+        $stats = $this->inventory_model->get_inventory_stats();
 
         $this->render_view(__DIR__ . '/../Views/inventory.php', [
             'items' => $items,
+            'all_products' => $all_products,
+            'stats' => $stats,
             'search' => $search,
             'filter' => $filter,
             'categoria' => $categoria,
@@ -260,11 +264,23 @@ class InventoryController extends BaseController
         }
 
         $id_producto = isset($_POST['id']) ? intval($_POST['id']) : 0;
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+            || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
 
         if ($id_producto > 0) {
             if ($this->inventory_model->toggle_product_status($id_producto)) {
+                if ($isAjax) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => true, 'message' => 'Estado actualizado correctamente']);
+                    exit();
+                }
                 $this->redirect(BASE_URL . "/modules/inventory/index.php?msg=status_updated");
             } else {
+                if ($isAjax) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Error al actualizar estado']);
+                    exit();
+                }
                 $this->redirect(BASE_URL . "/modules/inventory/index.php?error=update_failed");
             }
         } else {
@@ -390,6 +406,89 @@ class InventoryController extends BaseController
             echo json_encode(['success' => false, 'message' => $e->getMessage()]);
         }
         exit;
+    }
+
+    public function ajax_save_product()
+    {
+        $this->check_access('inventario');
+        header('Content-Type: application/json');
+        if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+            echo json_encode(['success' => false, 'message' => 'No autorizado']);
+            exit();
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!$input) {
+            $input = $_POST;
+        }
+
+        // Validación Anti-CSRF
+        $token = $input['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
+        if (empty($_SESSION['session_token']) || !hash_equals($_SESSION['session_token'], (string)$token)) {
+            echo json_encode(['success' => false, 'message' => 'Token de seguridad inválido o expirado.']);
+            exit();
+        }
+
+        $id = isset($input['id']) ? intval($input['id']) : 0;
+        $nombre = trim($input['nombre'] ?? '');
+        $marca = trim($input['marca'] ?? '');
+        $modelo = trim($input['modelo'] ?? '');
+        $sku = trim($input['sku'] ?? ($input['codigo'] ?? ''));
+        $categoria = trim($input['categoria'] ?? 'Celulares');
+        $cantidad = isset($input['cantidad']) ? intval($input['cantidad']) : 0;
+        $minimo = isset($input['minimo']) ? intval($input['minimo']) : (isset($input['stock_minimo']) ? intval($input['stock_minimo']) : 3);
+        $precio = isset($input['precio']) ? floatval($input['precio']) : 0;
+        $activo = isset($input['activo']) ? ($input['activo'] ? 1 : 0) : 1;
+
+        if (empty($nombre)) {
+            echo json_encode(['success' => false, 'message' => 'El nombre del producto es obligatorio']);
+            exit();
+        }
+
+        try {
+            require_once __DIR__ . '/../../../config/audit.php';
+            if ($id > 0) {
+                // Actualizar producto existente
+                $product_data = [
+                    'nombre' => $nombre,
+                    'precio' => $precio,
+                    'is_active' => $activo
+                ];
+                $detail_data = [
+                    'marca' => $marca,
+                    'modelo' => $modelo,
+                    'categoria' => $categoria,
+                    'codigo' => $sku,
+                    'stock_minimo' => $minimo
+                ];
+                $this->inventory_model->update_product_transaction($id, $product_data, $detail_data, $cantidad);
+                audit_log($this->conn, 'INVENTORY_UPDATE', $_SESSION['user_id'], 'Inventario', $id, "Actualizado producto ID $id: $nombre");
+                echo json_encode(['success' => true, 'id' => $id, 'message' => 'Producto actualizado']);
+            } else {
+                // Crear nuevo producto
+                $product_data = [
+                    'nombre' => $nombre,
+                    'precio' => $precio
+                ];
+                $detail_data = [
+                    'marca' => $marca,
+                    'modelo' => $modelo,
+                    'categoria' => $categoria,
+                    'codigo' => $sku,
+                    'descripcion' => '',
+                    'stock_minimo' => $minimo
+                ];
+                $id_nuevo = $this->inventory_model->create_product_transaction($product_data, $detail_data, $cantidad);
+                if (!$activo) {
+                    $this->inventory_model->deactivate_product($id_nuevo);
+                }
+                audit_log($this->conn, 'INVENTORY_CREATE', $_SESSION['user_id'], 'Inventario', $id_nuevo, "Registrado nuevo producto en inventario ID $id_nuevo: $nombre");
+                echo json_encode(['success' => true, 'id' => $id_nuevo, 'message' => 'Producto añadido al inventario']);
+            }
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit();
     }
 
     public function get_purchase_history()

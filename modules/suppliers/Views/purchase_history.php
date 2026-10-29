@@ -22,8 +22,8 @@ Layout::renderAdminSidebar('proveedores');
             </a>
         </div>
 
-        <div class="overflow-x-auto bg-surface/20 rounded-2xl border border-border/50 mb-8">
-            <table class="w-full text-left border-collapse">
+        <div class="overflow-x-auto bg-surface/20 rounded-2xl border border-border/50">
+            <table id="purchases-table" class="w-full text-left border-collapse" data-paginate="10" data-entity-singular="pedido" data-entity-plural="pedidos">
                 <thead>
                     <tr class="bg-surface/50 border-b border-border/50 text-xs uppercase tracking-wider text-text-muted">
                         <th class="p-4 font-semibold">Fecha</th>
@@ -69,7 +69,7 @@ Layout::renderAdminSidebar('proveedores');
                                     </div>
                                 </td>
                             </tr>
-                            <tr id="detail-<?php echo $row['id_compra']; ?>" class="hidden bg-surface/10 border-t border-border/30">
+                            <tr id="detail-<?php echo $row['id_compra']; ?>" class="detail-row hidden bg-surface/10 border-t border-border/30">
                                 <td colspan="7" class="p-0">
                                     <div class="px-8 py-6 bg-primary/5 rounded-b-2xl">
                                         <div class="grid grid-cols-2 gap-4 mb-4 text-sm border-b border-primary/10 pb-4">

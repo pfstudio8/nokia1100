@@ -3,7 +3,7 @@
 require_once __DIR__ . '/Controllers/AdminController.php';
 $controller = new AdminController();
 
-$action = $_POST['action'] ?? ($_GET['action'] ?? 'dashboard');
+$action = $_GET['action'] ?? ($_POST['action'] ?? 'dashboard');
 
 switch ($action) {
     case 'dashboard':

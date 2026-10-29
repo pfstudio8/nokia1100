@@ -1,27 +1,96 @@
-/* assets/css/pages/admin_users.css */
+/* modules/admin/admin_users.css */
 .role-badge {
+    display: inline-block;
     padding: 0.25rem 0.75rem;
     border-radius: 999px;
-    font-size: 0.75rem;
-    font-weight: 600;
+    font-size: 0.74rem;
+    font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    line-height: 1.25;
 }
 
 .role-admin {
-    background: rgba(94, 234, 212, .15);
-    color: var(--secondary-color);
-    border: 1px solid rgba(94, 234, 212, .3);
+    background: #dbe7fe;
+    color: #143a82;
+    border: 1px solid #86acf0;
 }
 
 .role-employee {
-    background: rgba(14, 165, 160, .15);
-    color: var(--primary-color);
-    border: 1px solid rgba(14, 165, 160, .3);
+    background: #d8efed;
+    color: #114543;
+    border: 1px solid #88cbc6;
+}
+
+.badge-active {
+    background: #dcf2e3;
+    color: #156835;
+    border: 1px solid #8ed0a6;
 }
 
 .badge-inactive {
     background: var(--error-bg);
     color: var(--error);
-    border: 1px solid rgba(248, 113, 113, .3);
+    border: 1px solid rgba(168, 42, 29, 0.35);
+}
+
+/* Botones de filtro Activos / Inactivos / Todos */
+.user-filter-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+a.user-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 36px;
+    padding: 0.42rem 0.9rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-muted);
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
+}
+
+a.user-filter-btn:hover {
+    background: var(--surface-hover);
+    border-color: var(--text-main);
+    color: var(--text-main);
+}
+
+a.user-filter-btn:active {
+    transform: translateY(1px);
+}
+
+a.user-filter-btn.is-active {
+    background: var(--primary-color);
+    border-color: var(--primary-color);
+    color: #ffffff;
+}
+
+a.user-filter-btn.is-active:hover {
+    background: #23272c;
+    border-color: #23272c;
+    color: #ffffff;
+}
+
+a.user-filter-btn.is-active-danger {
+    background: #cc1f1f;
+    border-color: #b91c1c;
+    color: #ffffff;
+}
+
+a.user-filter-btn.is-active-danger:hover {
+    background: #b91c1c;
+    border-color: #991b1b;
+    color: #ffffff;
 }

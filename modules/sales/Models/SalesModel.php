@@ -14,14 +14,15 @@ class SalesModel extends BaseModel
                     v.id_venta, 
                     v.fecha, 
                     v.total, 
-                    v.metodo_de_pago,
+                    COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), m.metodo) AS metodo_de_pago,
                     v.estado,
-                    COALESCE(dv.nombre_producto, p.nombre) AS producto,
-                    dv.cantidad
+                    COALESCE(dv.nombre_producto, p.nombre, NULLIF(TRIM(v.descripcion), ''), 'Venta directa') AS producto,
+                    COALESCE(dv.cantidad, 1) AS cantidad
                 FROM venta v
-                INNER JOIN detalle_venta dv ON v.id_venta = dv.id_venta
+                LEFT JOIN detalle_venta dv ON v.id_venta = dv.id_venta
                 LEFT JOIN producto p ON dv.id_producto = p.id_producto
-                ORDER BY v.fecha DESC
+                LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago
+                ORDER BY v.fecha DESC, v.id_venta DESC
                 LIMIT ? OFFSET ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("ii", $limit, $offset);
@@ -41,7 +42,7 @@ class SalesModel extends BaseModel
     {
         $sql = "SELECT COUNT(*) as total
                 FROM venta v
-                INNER JOIN detalle_venta dv ON v.id_venta = dv.id_venta";
+                LEFT JOIN detalle_venta dv ON v.id_venta = dv.id_venta";
         $res = $this->conn->query($sql);
         if ($res && $row = $res->fetch_assoc()) {
             return (int)$row['total'];
@@ -51,7 +52,7 @@ class SalesModel extends BaseModel
 
     public function find_sale_by_id(int $id)
     {
-        $stmt = $this->conn->prepare("SELECT id_venta, fecha, total, metodo_de_pago, estado FROM venta WHERE id_venta = ?");
+        $stmt = $this->conn->prepare("SELECT v.id_venta, v.fecha, v.total, COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), m.metodo) AS metodo_de_pago, v.estado FROM venta v LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago WHERE v.id_venta = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
@@ -134,11 +135,14 @@ class SalesModel extends BaseModel
     public function get_top_products($limit = 5)
     {
         $limit = (int) $limit;
-        $sql = "SELECT CONCAT(pd.marca, ' ', pd.modelo) as nombre_real, SUM(dv.cantidad) as total_vendido 
+        $excludeServices = ServiceProduct::excludeSql('p', 'pd');
+        $sql = "SELECT COALESCE(NULLIF(TRIM(CONCAT(COALESCE(pd.marca, ''), ' ', COALESCE(pd.modelo, ''))), ''), p.nombre) as nombre_real,
+                       SUM(dv.cantidad) as total_vendido 
                 FROM detalle_venta dv
                 JOIN venta v ON dv.id_venta = v.id_venta
+                JOIN producto p ON dv.id_producto = p.id_producto
                 JOIN producto_detalle pd ON dv.id_producto = pd.id_producto
-                WHERE v.estado = 'completada'
+                WHERE v.estado = 'completada' AND $excludeServices
                 GROUP BY dv.id_producto
                 ORDER BY total_vendido DESC
                 LIMIT ?";
@@ -182,13 +186,14 @@ class SalesModel extends BaseModel
     public function get_top_profitable_products($limit = 5)
     {
         $limit = (int) $limit;
-        $sql = "SELECT CONCAT(pd.marca, ' ', pd.modelo) as nombre_real, 
+        $excludeServices = ServiceProduct::excludeSql('p', 'pd');
+        $sql = "SELECT COALESCE(NULLIF(TRIM(CONCAT(COALESCE(pd.marca, ''), ' ', COALESCE(pd.modelo, ''))), ''), p.nombre) as nombre_real, 
                         SUM((dv.precio_unitario - COALESCE((SELECT AVG(precio_compra) FROM detalle_compra WHERE id_producto = p.id_producto), 0)) * dv.cantidad) as rentabilidad
                 FROM detalle_venta dv
                 JOIN venta v ON dv.id_venta = v.id_venta
                 JOIN producto p ON dv.id_producto = p.id_producto
                 JOIN producto_detalle pd ON p.id_producto = pd.id_producto
-                WHERE v.estado = 'completada'
+                WHERE v.estado = 'completada' AND $excludeServices
                 GROUP BY dv.id_producto
                 ORDER BY rentabilidad DESC
                 LIMIT ?";
@@ -210,11 +215,13 @@ class SalesModel extends BaseModel
 
     public function get_sales_by_category()
     {
+        $excludeServices = ServiceProduct::excludeSql('p', 'pd');
         $sql = "SELECT COALESCE(pd.categoria, 'Otros') as categoria, SUM(dv.cantidad) as total_unidades
                 FROM detalle_venta dv
                 JOIN venta v ON dv.id_venta = v.id_venta
+                JOIN producto p ON dv.id_producto = p.id_producto
                 JOIN producto_detalle pd ON dv.id_producto = pd.id_producto
-                WHERE v.estado = 'completada'
+                WHERE v.estado = 'completada' AND $excludeServices
                 GROUP BY pd.categoria
                 ORDER BY total_unidades DESC";
         $result = $this->conn->query($sql);
@@ -235,14 +242,15 @@ class SalesModel extends BaseModel
                     v.id_venta, 
                     v.fecha, 
                     v.total, 
-                    v.metodo_de_pago,
+                    COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), m.metodo) AS metodo_de_pago,
                     v.estado,
-                    COALESCE(dv.nombre_producto, p.nombre) AS producto,
-                    dv.cantidad
+                    COALESCE(dv.nombre_producto, p.nombre, NULLIF(TRIM(v.descripcion), ''), 'Venta directa') AS producto,
+                    COALESCE(dv.cantidad, 1) AS cantidad
                 FROM venta v
                 LEFT JOIN detalle_venta dv ON v.id_venta = dv.id_venta
                 LEFT JOIN producto p ON dv.id_producto = p.id_producto
-                ORDER BY v.fecha DESC";
+                LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago
+                ORDER BY v.fecha DESC, v.id_venta DESC";
         $result = $this->conn->query($sql);
         $data = [];
         if ($result && $result->num_rows > 0) {
@@ -539,11 +547,17 @@ class SalesModel extends BaseModel
     public function get_top_sales_products($limit = 5)
     {
         $limit = intval($limit);
+        $excludeServices = ServiceProduct::excludeSql('p', 'pd');
+        $serviceName = ServiceProduct::NAME;
         $sql = "SELECT COALESCE(dv.nombre_producto, p.nombre) as nombre, SUM(dv.cantidad) as total_vendido
                 FROM detalle_venta dv
                 LEFT JOIN producto p ON dv.id_producto = p.id_producto
+                LEFT JOIN producto_detalle pd ON p.id_producto = pd.id_producto
                 JOIN venta v ON dv.id_venta = v.id_venta
-                WHERE v.estado != 'anulada' AND v.fecha >= DATE(NOW()) - INTERVAL 30 DAY
+                WHERE v.estado != 'anulada'
+                  AND v.fecha >= DATE(NOW()) - INTERVAL 30 DAY
+                  AND COALESCE(dv.nombre_producto, '') <> '$serviceName'
+                  AND (p.id_producto IS NULL OR $excludeServices)
                 GROUP BY dv.id_producto, COALESCE(dv.nombre_producto, p.nombre)
                 ORDER BY total_vendido DESC LIMIT ?";
         $stmt = $this->conn->prepare($sql);

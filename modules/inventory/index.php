@@ -3,7 +3,7 @@
 require_once __DIR__ . '/Controllers/InventoryController.php';
 $controller = new InventoryController();
 
-$action = $_POST['action'] ?? ($_GET['action'] ?? 'inventory');
+$action = $_GET['action'] ?? ($_POST['action'] ?? 'inventory');
 
 switch ($action) {
     case 'add_product':
@@ -29,6 +29,9 @@ switch ($action) {
         break;
     case 'ajax_create_product':
         $controller->ajax_create_product();
+        break;
+    case 'ajax_save_product':
+        $controller->ajax_save_product();
         break;
     case 'get_purchase_history':
         $controller->get_purchase_history();

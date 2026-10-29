@@ -1,7 +1,9 @@
-/* assets/css/pages/login.css */
+/* assets/css/login.css - Nokia 1100 Design System */
+
 body {
-    background: #181E26 !important;
-    color: #FAFAFA !important;
+    background-color: var(--paper, #eeebe3) !important;
+    background-image: none !important;
+    color: var(--ink, #15171a) !important;
     min-height: 100vh !important;
     display: flex !important;
     align-items: center !important;
@@ -9,24 +11,22 @@ body {
     overflow-x: hidden !important;
     position: relative !important;
     padding: 1.5rem !important;
-    font-family: 'Inter', sans-serif !important;
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
 
-/* Contenedor principal estilo Glassmorphism Double Slider */
+/* Contenedor principal estilo Instrumento Táctil Nokia 1100 */
 .double-slider-container {
-    background: rgba(38, 51, 71, 0.4) !important; /* Card background #263347 with opacity */
-    backdrop-filter: blur(24px) !important;
-    -webkit-backdrop-filter: blur(24px) !important;
-    border-radius: 30px !important;
-    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+    background: #f8f6f0 !important;
+    border: 1px solid #c5c0b0 !important;
+    border-radius: 4px !important;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08) !important;
     position: relative !important;
     overflow: hidden !important;
-    width: 900px !important;
-    max-width: 100% !important;
-    min-height: 600px !important;
+    width: 1040px !important;
+    max-width: calc(100vw - 2rem) !important;
+    min-height: 720px !important;
     transition: all 0.6s cubic-bezier(0.25, 1, 0.5, 1) !important;
     z-index: 10 !important;
-    border: 1px solid rgba(255, 255, 255, 0.05) !important;
 }
 
 .form-container {
@@ -34,21 +34,13 @@ body {
     top: 0 !important;
     height: 100% !important;
     transition: all 0.6s ease-in-out !important;
-    background: transparent !important;
+    background: #f8f6f0 !important;
     width: 50% !important;
-    padding: 3rem 2.5rem !important;
+    padding: 2rem 2.5rem !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: center !important;
-}
-
-.double-slider-container h2 {
-    font-size: 32px !important;
-    font-weight: 800 !important;
-    margin-bottom: 1rem !important;
-    color: #FAFAFA !important;
-    text-align: left !important;
-    font-family: 'Outfit', sans-serif !important;
+    overflow-y: auto !important;
 }
 
 .sign-in-container {
@@ -81,6 +73,7 @@ body {
     pointer-events: auto !important;
 }
 
+/* Capa de Cobertura Slider (Overlay) */
 .overlay-container {
     position: absolute !important;
     top: 0 !important;
@@ -88,30 +81,28 @@ body {
     width: 50% !important;
     height: 100% !important;
     overflow: hidden !important;
-    transition: transform 0.7s cubic-bezier(0.76, 0, 0.24, 1) !important;
+    transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1) !important;
     z-index: 100 !important;
-    background: #1F2937 !important; /* Surface */
-    border-left: 1px solid rgba(255, 255, 255, 0.05) !important;
-    box-shadow: -15px 0 40px rgba(0, 0, 0, 0.4) !important;
+    background: #111315 !important;
+    border-left: none !important;
 }
 
 .double-slider-container.right-panel-active .overlay-container {
     transform: translateX(-100%) !important;
     border-left: none !important;
-    border-right: 1px solid rgba(255, 255, 255, 0.05) !important;
-    box-shadow: 15px 0 40px rgba(0, 0, 0, 0.4) !important;
+    border-right: none !important;
 }
 
 .overlay {
-    background: radial-gradient(circle at top right, rgba(14, 165, 160, 0.15) 0%, transparent 60%),
-                radial-gradient(circle at bottom left, rgba(94, 234, 212, 0.1) 0%, transparent 60%) !important;
-    color: #ffffff !important;
+    background-color: #111315 !important;
+    background-image: none !important;
+    color: #e9e6db !important;
     position: relative !important;
     left: -100% !important;
     height: 100% !important;
     width: 200% !important;
     transform: translateX(0) !important;
-    transition: transform 0.7s cubic-bezier(0.76, 0, 0.24, 1) !important;
+    transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1) !important;
 }
 
 .double-slider-container.right-panel-active .overlay {
@@ -121,38 +112,17 @@ body {
 .overlay-panel {
     position: absolute !important;
     display: flex !important;
-    justify-content: center !important;
+    justify-content: space-between !important;
     flex-direction: column !important;
-    align-items: center !important;
-    text-align: center !important;
     top: 0 !important;
     height: 100% !important;
     width: 50% !important;
-    transition: transform 0.7s cubic-bezier(0.76, 0, 0.24, 1) !important;
-}
-
-.overlay-panel h1 {
-    font-size: 34px !important;
-    font-weight: 800 !important;
-    margin-bottom: 0.75rem !important;
-    color: #ffffff !important;
-    font-family: 'Outfit', sans-serif !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1px !important;
-}
-
-.overlay-panel p {
-    font-size: 14px !important;
-    font-weight: 400 !important;
-    line-height: 1.6 !important;
-    color: rgba(255, 255, 255, 0.7) !important;
-    margin-bottom: 1.5rem !important;
-    text-align: center !important;
+    transition: transform 0.6s cubic-bezier(0.76, 0, 0.24, 1) !important;
+    padding: 3rem !important;
 }
 
 .overlay-left {
     left: 0 !important;
-    padding: 0 3rem !important;
     transform: translateX(-15%) !important;
     opacity: 0 !important;
     pointer-events: none !important;
@@ -166,7 +136,6 @@ body {
 
 .overlay-right {
     right: 0 !important;
-    padding: 0 3rem !important;
     transform: translateX(0) !important;
     opacity: 1 !important;
     pointer-events: auto !important;
@@ -178,225 +147,359 @@ body {
     pointer-events: none !important;
 }
 
-/* Estilos de Campos de Entrada Premium Modernos */
-.double-slider-container .input-box {
-    position: relative !important;
-    margin: 12px 0 !important;
-    background: rgba(31, 41, 55, 0.5) !important; /* Surface #1F2937 */
-    border: 1px solid rgba(255, 255, 255, 0.08) !important;
-    border-radius: 12px !important;
-    padding: 0 !important;
-    transition: all 0.3s ease !important;
+/* Cabecera de Marca Overlay */
+.overlay-brand {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-.double-slider-container .sign-in-container .input-box:focus-within {
-    border-color: #0EA5A0 !important;
-    background: rgba(14, 165, 160, 0.05) !important;
-    box-shadow: 0 0 0 3px rgba(14, 165, 160, 0.1) !important;
-}
-.double-slider-container .sign-up-container .input-box:focus-within {
-    border-color: #5EEAD4 !important;
-    background: rgba(94, 234, 212, 0.05) !important;
-    box-shadow: 0 0 0 3px rgba(94, 234, 212, 0.1) !important;
-}
-
-.double-slider-container input {
-    width: 100% !important;
-    height: 48px !important;
-    background: transparent !important;
-    border: none !important;
-    outline: none !important;
-    font-size: 14px !important;
-    color: #FAFAFA !important;
-    font-weight: 500 !important;
-    padding: 0 40px 0 16px !important; /* Espacio para el ícono */
-    border-radius: 12px !important;
+.brand-chip {
+    background-color: #c6e24a;
+    color: #15171a;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2.5px 6px;
+    border-radius: 2px;
+    line-height: 1;
 }
 
-/* Evitar fondo blanco en autocompletado para el login */
-.double-slider-container input:-webkit-autofill,
-.double-slider-container input:-webkit-autofill:hover, 
-.double-slider-container input:-webkit-autofill:focus, 
-.double-slider-container input:-webkit-autofill:active {
-    -webkit-box-shadow: 0 0 0 30px #1F2937 inset !important;
-    -webkit-text-fill-color: #FAFAFA !important;
-    color: #FAFAFA !important;
-    caret-color: #FAFAFA !important;
-    transition: background-color 5000s ease-in-out 0s !important;
-    border-radius: 12px !important;
+.brand-text {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: #c6e24a;
+    text-transform: uppercase;
 }
 
-.double-slider-container label {
-    display: inline-block !important;
-    margin-bottom: 0 !important;
-    position: absolute !important;
-    left: 16px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    font-size: 14px !important;
-    color: #9CA3AF !important;
-    pointer-events: none !important;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    text-transform: none !important;
-    font-weight: 400 !important;
+/* Contenido Persuasivo del Overlay */
+.overlay-content {
+    display: flex;
+    flex-direction: column;
+    margin: auto 0;
+    padding: 1rem 0;
 }
 
-.double-slider-container .sign-in-container input:focus ~ label,
-.double-slider-container .sign-in-container input:not(:placeholder-shown) ~ label {
-    top: 0 !important;
-    left: 12px !important;
-    font-size: 11px !important;
-    color: #0EA5A0 !important;
-    font-weight: 600 !important;
-    background: #181E26 !important; /* Fake background to cut through border */
-    padding: 0 4px !important;
-    border-radius: 4px !important;
-}
-.double-slider-container .sign-up-container input:focus ~ label,
-.double-slider-container .sign-up-container input:not(:placeholder-shown) ~ label {
-    top: 0 !important;
-    left: 12px !important;
-    font-size: 11px !important;
-    color: #5EEAD4 !important;
-    font-weight: 600 !important;
-    background: #181E26 !important;
-    padding: 0 4px !important;
-    border-radius: 4px !important;
+.overlay-title {
+    font-family: 'Bricolage Grotesque', sans-serif !important;
+    font-size: 32px !important;
+    font-weight: 800 !important;
+    line-height: 1.15 !important;
+    color: #f8f6f0 !important;
+    letter-spacing: -0.02em !important;
+    margin-bottom: 0.6rem !important;
 }
 
-.double-slider-container .input-box i {
-    position: absolute !important;
-    right: 14px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
+.overlay-desc {
+    font-size: 13.5px !important;
+    line-height: 1.5 !important;
+    color: #9ba19f !important;
+    margin-bottom: 1.5rem !important;
+}
+
+/* Bloque de Características y Convicción de Elección */
+.trust-features {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 1.75rem;
+}
+
+.trust-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 3px;
+    padding: 10px 12px;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.trust-item:hover {
+    background: rgba(198, 226, 74, 0.05);
+    border-color: rgba(198, 226, 74, 0.25);
+}
+
+.trust-icon {
     font-size: 20px !important;
-    color: #6B7280 !important;
-    transition: color 0.3s ease !important;
-}
-.double-slider-container .sign-in-container .input-box:focus-within i {
-    color: #0EA5A0 !important;
-}
-.double-slider-container .sign-up-container .input-box:focus-within i {
-    color: #5EEAD4 !important;
+    color: #c6e24a !important;
+    flex-shrink: 0;
+    margin-top: 1px;
 }
 
-/* Botón de Estilo Píldora */
-.double-slider-container .sign-in-container button.auth-btn-pill {
-    width: 100% !important;
-    height: 48px !important;
-    background: linear-gradient(135deg, #0EA5A0 0%, #097572 100%) !important;
-    color: #FFFFFF !important;
-    border: none !important;
-    border-radius: 12px !important;
-    font-size: 15px !important;
+.trust-title {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: #f8f6f0;
+    margin-bottom: 2px;
+}
+
+.trust-text {
+    font-size: 11px;
+    color: #858c93;
+    line-height: 1.35;
+    margin: 0 !important;
+}
+
+.ghost-btn {
+    align-self: flex-start;
+    background: transparent !important;
+    border: 1px solid #c6e24a !important;
+    color: #c6e24a !important;
+    border-radius: 2px !important;
+    font-family: 'IBM Plex Sans', sans-serif !important;
     font-weight: 600 !important;
+    font-size: 12.5px !important;
+    padding: 8px 22px !important;
     cursor: pointer !important;
-    margin-top: 1.5rem !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: 0 4px 15px rgba(14, 165, 160, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 0.5rem !important;
-    padding: 0 !important;
-}
-.double-slider-container .sign-in-container button.auth-btn-pill:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 8px 25px rgba(14, 165, 160, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.2) !important;
-    filter: brightness(1.1) !important;
+    transition: all 0.15s ease !important;
 }
 
-.double-slider-container .sign-up-container button.auth-btn-pill {
+.ghost-btn:hover {
+    background: #c6e24a !important;
+    color: #15171a !important;
+}
+
+.ghost-btn:active {
+    transform: translateY(1px) !important;
+}
+
+/* Pie del Overlay */
+.overlay-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #5c6165;
+    text-transform: uppercase;
+}
+
+.overlay-footer .dot {
+    color: #c6e24a;
+    font-size: 8px;
+}
+
+/* Estilos de los Formularios (Light side) */
+.form-header-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    color: #5c6165;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.form-title {
+    font-family: 'Bricolage Grotesque', sans-serif !important;
+    font-size: 30px !important;
+    font-weight: 800 !important;
+    color: #15171a !important;
+    letter-spacing: -0.02em !important;
+    margin-bottom: 4px !important;
+    line-height: 1.15 !important;
+}
+
+.form-subtitle {
+    font-size: 13px !important;
+    color: #5c6165 !important;
+    font-weight: 400 !important;
+    margin-bottom: 1.25rem !important;
+}
+
+/* Campos de Formulario */
+.field-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 11px;
+}
+
+.field-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: #464b4f;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.field-input-box {
+    position: relative;
+    width: 100%;
+}
+
+.field-input-box input {
     width: 100% !important;
-    height: 48px !important;
-    background: rgba(31, 41, 55, 0.8) !important; /* Surface con opacidad */
-    color: #5EEAD4 !important; /* Acento 2 */
-    border: 1px solid rgba(94, 234, 212, 0.5) !important; /* Borde Acento 2 translúcido */
-    border-radius: 12px !important;
-    font-size: 15px !important;
-    font-weight: 700 !important;
-    cursor: pointer !important;
-    margin-top: 1.5rem !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    box-shadow: 0 4px 15px rgba(94, 234, 212, 0.1) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 0.5rem !important;
-    padding: 0 !important;
-}
-.double-slider-container .sign-up-container button.auth-btn-pill:hover {
-    transform: translateY(-2px) !important;
-    background: linear-gradient(135deg, #5EEAD4 0%, #2DD4BF 100%) !important;
-    color: #181E26 !important;
-    border-color: transparent !important;
-    box-shadow: 0 8px 25px rgba(94, 234, 212, 0.4) !important;
-}
-
-.double-slider-container button.auth-btn-pill:active {
-    transform: translateY(0) !important;
-}
-
-.double-slider-container .toggle-link {
-    text-align: center !important;
-    margin-top: 1.5rem !important;
-    font-size: 13px !important;
-    color: #A1A1AA !important;
+    height: 40px !important;
+    background: #ffffff !important;
+    border: 1px solid #b5af9c !important;
+    border-radius: 2px !important;
+    padding: 0 36px 0 12px !important;
+    font-size: 13.5px !important;
+    font-family: 'IBM Plex Sans', sans-serif !important;
+    color: #15171a !important;
     font-weight: 500 !important;
+    outline: none !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
 }
 
-.double-slider-container .sign-in-container .toggle-link button {
-    color: #0EA5A0 !important;
-    font-weight: 700 !important;
-    text-decoration: underline !important;
-    background: transparent !important;
-    border: none !important;
-    cursor: pointer !important;
-    display: inline !important;
-    font-size: 13px !important;
-}
-.double-slider-container .sign-up-container .toggle-link button {
-    color: #5EEAD4 !important;
-    font-weight: 700 !important;
-    text-decoration: underline !important;
-    background: transparent !important;
-    border: none !important;
-    cursor: pointer !important;
-    display: inline !important;
-    font-size: 13px !important;
+.field-input-box input:focus {
+    border-color: #15171a !important;
+    box-shadow: 0 0 0 1px #15171a !important;
 }
 
-.forgot-link {
-    text-align: right !important;
-    margin-top: -5px !important;
+.field-input-box .field-icon {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: #5c6165;
+    pointer-events: none;
 }
 
-.forgot-link a {
-    font-size: 12px !important;
-    color: #A1A1AA !important;
-    font-weight: 500 !important;
-    transition: color 0.3s !important;
+.field-input-box .field-action-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #5c6165;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px;
+    transition: color 0.15s;
 }
 
-.forgot-link a:hover {
-    color: #0EA5A0 !important;
-    text-decoration: underline !important;
+.field-input-box .field-action-btn:hover {
+    color: #15171a;
 }
 
-.double-slider-container form {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 0 !important;
+/* Autocompletado del navegador */
+.field-input-box input:-webkit-autofill,
+.field-input-box input:-webkit-autofill:hover, 
+.field-input-box input:-webkit-autofill:focus, 
+.field-input-box input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #ffffff inset !important;
+    -webkit-text-fill-color: #15171a !important;
+    color: #15171a !important;
+    caret-color: #15171a !important;
+    transition: background-color 5000s ease-in-out 0s !important;
+    border-radius: 2px !important;
 }
 
-@media (max-width: 767px) {
+/* Botón Principal */
+.btn-primary-auth {
+    width: 100%;
+    height: 42px;
+    background: #15171a;
+    color: #ffffff;
+    border: 1px solid #15171a;
+    border-radius: 2px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13.5px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.15s, color 0.15s, transform 0.08s;
+    margin-top: 6px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+.btn-primary-auth:hover {
+    background: #2b3035;
+    color: #c6e24a;
+}
+
+.btn-primary-auth:active {
+    transform: translateY(1px);
+}
+
+/* Separador y Acceso de Invitado */
+.guest-access-divider {
+    position: relative;
+    margin: 1.15rem 0 0.9rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.guest-access-divider::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #d3cebf;
+}
+
+.guest-access-divider span {
+    position: relative;
+    background: #f8f6f0;
+    padding: 0 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 700;
+    color: #5c6165;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.btn-guest-auth {
+    width: 100%;
+    height: 38px;
+    background: #eeebe3;
+    color: #15171a;
+    border: 1px solid #b5af9c;
+    border-radius: 2px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.btn-guest-auth:hover {
+    background: #e5e1d6;
+    border-color: #15171a;
+    color: #15171a;
+}
+
+.btn-guest-auth:active {
+    transform: translateY(1px);
+}
+
+/* Responsivo para pantallas pequeñas */
+@media (max-width: 860px) {
     .double-slider-container {
         width: 100% !important;
-        max-width: 440px !important;
-        min-height: 550px !important;
+        max-width: 480px !important;
+        min-height: auto !important;
         display: flex !important;
         flex-direction: column !important;
-        justify-content: center !important;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06) !important;
+        border: 1px solid #c5c0b0 !important;
     }
     .overlay-container {
         display: none !important;
@@ -408,7 +511,7 @@ body {
         transform: none !important;
         opacity: 1 !important;
         display: none !important;
-        padding: 2.5rem 2rem !important;
+        padding: 2rem 1.5rem !important;
     }
     .double-slider-container:not(.right-panel-active) .sign-in-container {
         display: flex !important;

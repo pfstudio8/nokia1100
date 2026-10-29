@@ -27,12 +27,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
             </div>
             <div style="display: flex; gap: 0.75rem; align-items: center; justify-content: flex-end; flex: 1; flex-wrap: wrap;">
                 <input type="text" id="search-input" placeholder="Buscar venta..." class="w-full sm:w-[220px]" style="padding: 0.5rem 1rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--text-main); font-size: 0.9rem;">
-                <button type="button" onclick="exportTableToExcel('sales-table', 'ventas', this)" class="px-3 py-2 rounded-xl border border-green-500/30 bg-green-500/10 hover:bg-green-500/20 text-xs font-medium text-green-400 hover:text-green-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-                    <span class="material-symbols-outlined text-[16px]">download</span> Excel
-                </button>
-                <button type="button" onclick="exportTableToPDF('sales-table', 'Historial de Ventas', 'ventas', this)" class="px-3 py-2 rounded-xl border border-red-500/30 bg-red-500/10 hover:bg-red-500/20 text-xs font-medium text-red-400 hover:text-red-300 transition-colors flex items-center gap-1.5 cursor-pointer">
-                    <span class="material-symbols-outlined text-[16px]">download</span> PDF
-                </button>
+                <?php echo Layout::renderExportButtons('sales-table', 'Historial de Ventas', 'ventas'); ?>
                 <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=new_sale" class="px-3.5 py-1.5 rounded-lg border border-primary bg-primary text-background hover:bg-primary-hover text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm shadow-primary/20">
                     <span class="material-symbols-outlined text-[16px]">add</span> Nueva Venta
                 </a>
@@ -47,7 +42,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
             </div>
         </div>
 
-        <div class="table-container">
+        <div class="table-container sales-table-wrap">
             <table id="sales-table">
                 <thead>
                     <tr>
@@ -55,45 +50,47 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                         <th>Fecha</th>
                         <th>Producto</th>
                         <th>Cantidad</th>
-                        <th>Método</th>
+                        <th>Método de Pago</th>
                         <th>Estado</th>
                         <th style="text-align: right;">Total</th>
-                        <th style="text-align: right;">Acciones</th>
+                        <th class="sale-actions-head">Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (count($sales) > 0): ?>
                         <?php foreach($sales as $row): ?>
-                            <tr class="<?php echo ($row['estado'] === 'anulada') ? 'opacity-60' : ''; ?>">
-                                <td class="text-primary font-medium text-sm">#TX-<?php echo $row['id_venta']; ?></td>
-                                <td class="text-text-muted text-sm"><?php echo date('d/m/Y H:i', strtotime($row['fecha'])); ?></td>
-                                <td class="font-medium font-display <?php echo ($row['estado'] === 'anulada') ? 'line-through text-text-muted' : ''; ?>"><?php echo htmlspecialchars($row['producto']); ?></td>
-                                <td><?php echo $row['cantidad']; ?> u.</td>
-                                <td>
-                                    <span class="px-2 py-1 rounded border border-border text-[10px] font-medium text-text-muted uppercase tracking-wider">
-                                        <?php echo htmlspecialchars($row['metodo_de_pago']); ?>
-                                    </span>
+                            <?php $isVoided = (($row['estado'] ?? '') === 'anulada'); ?>
+                            <tr class="<?php echo $isVoided ? 'sale-row-voided' : ''; ?>">
+                                <td class="font-mono font-bold text-xs <?php echo $isVoided ? 'text-[#7a7f84]' : 'text-[#15171a]'; ?>">#TX-<?php echo (int)$row['id_venta']; ?></td>
+                                <td class="text-xs font-medium <?php echo $isVoided ? 'text-[#8a8f94]' : 'text-[#464b4f]'; ?>"><?php echo date('d/m/Y H:i', strtotime($row['fecha'])); ?></td>
+                                <td class="font-medium font-display <?php echo $isVoided ? 'line-through text-[#7a7f84]' : 'text-[#15171a]'; ?>"><?php echo htmlspecialchars($row['producto']); ?></td>
+                                <td class="<?php echo $isVoided ? 'text-[#7a7f84]' : 'text-[#15171a]'; ?>"><?php echo (int)$row['cantidad']; ?> u.</td>
+                                <td class="sale-payment-cell">
+                                    <?php echo Layout::renderPaymentBadge($row['metodo_de_pago'] ?? 'N/A'); ?>
                                 </td>
                                 <td>
-                                    <?php if ($row['estado'] === 'anulada'): ?>
-                                        <span class="px-2 py-1 rounded border border-red-500/30 text-[10px] font-medium text-red-400 uppercase tracking-wider bg-red-500/10">Anulada</span>
+                                    <?php if ($isVoided): ?>
+                                        <span class="sale-status-badge sale-status-voided">Anulada</span>
                                     <?php else: ?>
-                                        <span class="px-2 py-1 rounded border border-green-500/30 text-[10px] font-medium text-green-400 uppercase tracking-wider bg-green-500/10">Completada</span>
+                                        <span class="sale-status-badge sale-status-completed">Completada</span>
                                     <?php endif; ?>
                                 </td>
-                                <td style="text-align: right; font-weight: 600;">$<?php echo number_format($row['total'], 2); ?></td>
-                                <td style="text-align: right; min-width: 200px;">
-                                    <div style="display: flex; gap: 0.75rem; justify-content: flex-end; align-items: center; flex-wrap: nowrap; white-space: nowrap;">
-                                        <a href="index.php?action=invoice&id=<?php echo $row['id_venta']; ?>" target="_blank" class="whitespace-nowrap px-3 py-1 bg-surface border border-border rounded text-sm text-text-main hover:bg-border transition inline-flex items-center gap-1">
-                                            <span class="material-symbols-outlined text-[1rem]">print</span> Factura
+                                <td class="font-mono text-xs <?php echo $isVoided ? 'line-through text-[#7a7f84]' : 'text-[#15171a]'; ?>" style="text-align: right; font-weight: 700;">$<?php echo number_format((float)$row['total'], 2); ?></td>
+                                <td class="sale-actions-cell">
+                                    <div class="sale-actions-grid">
+                                        <?php if (!$isVoided): ?>
+                                        <a href="index.php?action=invoice&id=<?php echo (int)$row['id_venta']; ?>" target="_blank" class="sale-action-btn sale-btn-invoice">
+                                            <span class="material-symbols-outlined">print</span>
+                                            <span>Factura</span>
                                         </a>
-                                        <?php if ($row['estado'] !== 'anulada'): ?>
-                                        <button type="button" onclick="confirmRollback(<?php echo $row['id_venta']; ?>)" class="whitespace-nowrap px-3 py-1 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-400 hover:bg-red-500 hover:text-white transition inline-flex items-center gap-1 shadow-[0_0_10px_rgba(239,68,68,0.1)] hover:shadow-[0_0_15px_rgba(239,68,68,0.3)]" style="width: auto; padding: 0.35rem 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; font-size: 0.75rem;">
-                                            <span class="material-symbols-outlined text-[1rem]">undo</span> Anular
+                                        <button type="button" onclick="confirmRollback(<?php echo (int)$row['id_venta']; ?>)" class="sale-action-btn sale-btn-rollback">
+                                            <span class="material-symbols-outlined">undo</span>
+                                            <span>Anular</span>
                                         </button>
                                         <?php else: ?>
-                                        <a href="credit_note.php?id=<?php echo $row['id_venta']; ?>" target="_blank" class="whitespace-nowrap px-3 py-1 bg-red-500/10 border border-red-500/20 rounded text-sm text-red-400 hover:bg-red-500 hover:text-white transition inline-flex items-center gap-1">
-                                            <span class="material-symbols-outlined text-[1rem]">receipt_long</span> Nota Crédito
+                                        <a href="credit_note.php?id=<?php echo (int)$row['id_venta']; ?>" target="_blank" class="sale-action-btn sale-btn-creditnote sale-btn-solo">
+                                            <span class="material-symbols-outlined">receipt_long</span>
+                                            <span>Nota Crédito</span>
                                         </a>
                                         <?php endif; ?>
                                     </div>
@@ -102,7 +99,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="7" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            <td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-muted);">
                                 No hay ventas registradas en el sistema.
                             </td>
                         </tr>
@@ -110,75 +107,14 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                 </tbody>
             </table>
         </div>
-        </div>
 
-        <?php 
-        $total_items = $total_items ?? count($sales ?? []);
-        $limit = $limit ?? 10;
-        $page = $page ?? 1;
-        $total_pages = $total_pages ?? max(1, ceil($total_items / $limit));
-        $count_current = count($sales ?? []);
-        $from = ($total_items > 0) ? (($page - 1) * $limit + 1) : 0;
-        $to = ($total_items > 0) ? min($from + $count_current - 1, $total_items) : 0;
-
-        $query_args = [];
+        <?php
+        $total_items = (int)($total_items ?? count($sales ?? []));
+        $limit = (int)($limit ?? 10);
+        $page = (int)($page ?? 1);
+        $total_pages = (int)($total_pages ?? max(1, ceil($total_items / max(1, $limit))));
+        echo Layout::renderPagination($page, $total_pages, $total_items, 'venta', 'ventas');
         ?>
-
-        <div class="mt-6 pt-4 border-t border-border/50 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-text-muted">
-            <div>
-                <?php if ($total_items > 0): ?>
-                    Mostrando <strong class="text-text-main font-semibold"><?php echo $from; ?>–<?php echo $to; ?></strong> de <strong class="text-text-main font-semibold"><?php echo $total_items; ?></strong> ventas
-                    <span class="mx-1.5 opacity-40">•</span>
-                    Página <strong class="text-primary font-semibold"><?php echo $page; ?></strong> de <strong class="text-text-main font-semibold"><?php echo $total_pages; ?></strong>
-                <?php else: ?>
-                    <span>No hay ventas registradas</span>
-                <?php endif; ?>
-            </div>
-
-            <?php if ($total_pages > 1): ?>
-                <div class="flex items-center gap-1.5 flex-wrap justify-center">
-                    <?php if ($page > 1): 
-                        $prev_args = $query_args;
-                        $prev_args['page'] = $page - 1;
-                    ?>
-                        <a href="?<?php echo http_build_query($prev_args); ?>" class="px-2.5 py-1.5 border border-border rounded-lg bg-surface hover:bg-surface-hover text-text-main transition-colors flex items-center gap-1" title="Página anterior">
-                            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
-                            <span class="hidden md:inline">Anterior</span>
-                        </a>
-                    <?php else: ?>
-                        <span class="px-2.5 py-1.5 border border-border/40 rounded-lg bg-surface/30 text-text-muted/40 cursor-not-allowed flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
-                            <span class="hidden md:inline">Anterior</span>
-                        </span>
-                    <?php endif; ?>
-
-                    <?php for ($i = 1; $i <= $total_pages; $i++): 
-                        $num_args = $query_args;
-                        $num_args['page'] = $i;
-                        $isCurrent = ($i === $page);
-                    ?>
-                        <a href="?<?php echo http_build_query($num_args); ?>" class="min-w-[32px] h-8 flex items-center justify-center px-2.5 rounded-lg border text-xs font-semibold transition-all <?php echo $isCurrent ? 'bg-primary text-background border-primary shadow-sm shadow-primary/20' : 'bg-surface border-border text-text-muted hover:text-text-main hover:bg-surface-hover'; ?>">
-                            <?php echo $i; ?>
-                        </a>
-                    <?php endfor; ?>
-
-                    <?php if ($page < $total_pages): 
-                        $next_args = $query_args;
-                        $next_args['page'] = $page + 1;
-                    ?>
-                        <a href="?<?php echo http_build_query($next_args); ?>" class="px-2.5 py-1.5 border border-border rounded-lg bg-surface hover:bg-surface-hover text-text-main transition-colors flex items-center gap-1" title="Página siguiente">
-                            <span class="hidden md:inline">Siguiente</span>
-                            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
-                        </a>
-                    <?php else: ?>
-                        <span class="px-2.5 py-1.5 border border-border/40 rounded-lg bg-surface/30 text-text-muted/40 cursor-not-allowed flex items-center gap-1">
-                            <span class="hidden md:inline">Siguiente</span>
-                            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
-                        </span>
-                    <?php endif; ?>
-                </div>
-            <?php endif; ?>
-        </div>
     </div>
 </main>
 <script>

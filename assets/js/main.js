@@ -1,6 +1,8 @@
 // Nokia 1100 - Main JavaScript file
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Paginado unificado del sistema (10 elementos por página + integración con búsqueda)
+    initTablePagination();
     // Arranco el buscador en tiempo real para filtrar las filas de las tablas mientras escribo
     initTableSearch();
     // Activo los modales bonitos de confirmación cuando toco botones de borrar o confirmar algo
@@ -17,12 +19,36 @@ document.addEventListener('DOMContentLoaded', () => {
     initGlobalKeyboardShortcuts();
     // Monitor en tiempo real de órdenes terminadas en Taller listas para cobrar
     initReadyRepairsWatcher();
+    // Protección contra scroll accidental de mouse y flechas en inputs numéricos
+    initNumberInputScrollProtection();
 });
+
+// Desactivar scroll con la rueda del ratón y teclas arriba/abajo en inputs de números/precios
+function initNumberInputScrollProtection() {
+    document.addEventListener('wheel', function (e) {
+        if (document.activeElement && document.activeElement.type === 'number') {
+            document.activeElement.blur();
+        }
+    }, { passive: true });
+
+    document.addEventListener('keydown', function (e) {
+        if (document.activeElement && document.activeElement.type === 'number') {
+            if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                e.preventDefault();
+            }
+        }
+    });
+}
 
 // Reemplaza la validación nativa del navegador por notificaciones tipo Toast
 function initCustomFormValidation() {
     const forms = document.querySelectorAll('form');
     forms.forEach(form => {
+        // Ignorar formularios manejados por su propio validador inline (ej: modal AJAX de inventario)
+        if (form.id === 'form' && form.classList.contains('d-body')) {
+            return;
+        }
+
         // Agregamos novalidate para suprimir los tooltips nativos del navegador
         form.setAttribute('novalidate', 'true');
 
@@ -36,26 +62,45 @@ function initCustomFormValidation() {
 
                     let fieldName = 'este campo';
 
-                    // Intentamos obtener un nombre descriptivo (desde el placeholder, ID asociado al label, o name)
-                    const labelDiv = firstInvalid.closest('div')?.querySelector('label');
+                    // Intentamos obtener un nombre descriptivo (desde label[for], contenedor .field-group/.form-group, placeholder o name)
                     if (firstInvalid.id) {
-                        const label = document.querySelector(`label[for="${firstInvalid.id}"]`);
-                        if (label) fieldName = label.textContent.trim().replace('*', '');
+                        const labelByFor = document.querySelector(`label[for="${firstInvalid.id}"]`);
+                        if (labelByFor && labelByFor.textContent.trim()) {
+                            fieldName = labelByFor.textContent.trim().replace(/\*/g, '').trim();
+                        }
                     }
-                    if (fieldName === 'este campo' && labelDiv) {
-                        fieldName = labelDiv.textContent.trim().replace('*', '');
+                    if (fieldName === 'este campo') {
+                        const wrapperLabel = firstInvalid
+                            .closest('.field-group, .form-group, .premium-form-group, .d-body > div, div')
+                            ?.querySelector('label, .lbl');
+                        if (wrapperLabel && wrapperLabel.textContent.trim()) {
+                            fieldName = wrapperLabel.textContent.trim().replace(/\*/g, '').trim();
+                        }
                     }
-                    if (fieldName === 'este campo' && firstInvalid.placeholder) {
-                        fieldName = firstInvalid.placeholder;
+                    if (fieldName === 'este campo' && firstInvalid.placeholder && firstInvalid.placeholder.trim()) {
+                        fieldName = firstInvalid.placeholder.trim();
                     }
                     if (fieldName === 'este campo' && firstInvalid.name) {
-                        fieldName = firstInvalid.name;
+                        const friendlyNames = {
+                            username: 'Usuario',
+                            password: 'Contraseña',
+                            password_confirm: 'Confirmar Contraseña',
+                            email: 'Correo Electrónico',
+                            guest_name: 'Nombre de Invitado',
+                            nombre: 'Nombre',
+                            apellido: 'Apellido',
+                            dni: 'DNI'
+                        };
+                        fieldName = friendlyNames[firstInvalid.name] || firstInvalid.name.replace(/_/g, ' ');
                     }
 
                     if (typeof showToast === 'function') {
-                        // Formateamos el nombre a Capital Case para que se vea mejor y acortamos el mensaje
-                        fieldName = fieldName.toLowerCase().replace(/(?:^|\s)\S/g, a => a.toUpperCase());
-                        showToast(`Por favor completa el campo ${fieldName}`, 'warning');
+                        if (fieldName !== 'este campo') {
+                            fieldName = fieldName.toLowerCase().replace(/(?:^|\s)\S/g, a => a.toUpperCase());
+                            showToast(`Por favor completa el campo ${fieldName}`, 'warning');
+                        } else {
+                            showToast('Por favor completa los campos requeridos', 'warning');
+                        }
                     } else {
                         alert(`Error:\nPor favor, completa correctamente el campo: ${fieldName}`);
                     }
@@ -88,12 +133,196 @@ function levenshteinDistance(a, b) {
     return matrix[b.length][a.length];
 }
 
+// Construye una ventana compacta de números de página (ej. 1 … 4 5 6 … 12)
+function buildPageWindow(current, total) {
+    const items = [];
+    if (total <= 7) {
+        for (let i = 1; i <= total; i++) items.push(i);
+        return items;
+    }
+    items.push(1);
+    let start = Math.max(2, current - 1);
+    let end = Math.min(total - 1, current + 1);
+    if (current <= 3) {
+        start = 2;
+        end = 4;
+    } else if (current >= total - 2) {
+        start = total - 3;
+        end = total - 1;
+    }
+    if (start > 2) items.push('...');
+    for (let i = start; i <= end; i++) items.push(i);
+    if (end < total - 1) items.push('...');
+    items.push(total);
+    return items;
+}
+
+// Evalúa coincidencia difusa (subcadena + Levenshtein) para buscadores de tablas
+function matchesTableQuery(text, queryWords) {
+    if (!queryWords || queryWords.length === 0) return true;
+    const textWords = text.toLowerCase().split(/[\s\-_]+/);
+    return queryWords.every(qw => {
+        return textWords.some(tw => {
+            if (tw.includes(qw)) return true;
+            const maxDistance = qw.length > 4 ? 2 : (qw.length > 2 ? 1 : 0);
+            return levenshteinDistance(qw, tw) <= maxDistance ||
+                (tw.length >= qw.length && levenshteinDistance(qw, tw.substring(0, qw.length)) <= maxDistance);
+        });
+    });
+}
+
+// Paginado unificado de 10 ítems por página para tablas con [data-paginate]
+function initTablePagination() {
+    const tables = document.querySelectorAll('table[data-paginate]');
+    if (!tables.length) return;
+
+    tables.forEach(table => {
+        const tbody = table.tBodies[0];
+        if (!tbody) return;
+
+        const perPage = Math.max(1, parseInt(table.getAttribute('data-paginate') || '10', 10) || 10);
+        const singular = table.getAttribute('data-entity-singular') || 'registro';
+        const plural = table.getAttribute('data-entity-plural') || 'registros';
+        let currentPage = 1;
+
+        const getDataRows = () => Array.from(tbody.children).filter(tr =>
+            tr.tagName === 'TR' &&
+            tr.cells.length > 1 &&
+            !tr.classList.contains('history-row') &&
+            !tr.classList.contains('detail-row') &&
+            !tr.classList.contains('js-no-results')
+        );
+
+        const placeholderRow = Array.from(tbody.children).find(tr =>
+            tr.tagName === 'TR' &&
+            tr.cells.length <= 1 &&
+            !tr.classList.contains('js-no-results')
+        );
+
+        const collapseAuxRows = () => {
+            Array.from(tbody.children).forEach(tr => {
+                if (tr.classList.contains('history-row')) {
+                    tr.style.display = 'none';
+                } else if (tr.classList.contains('detail-row')) {
+                    tr.classList.add('hidden');
+                }
+            });
+        };
+
+        // Contenedor visual del paginado justo debajo del wrapper de la tabla
+        const wrapper = table.closest('.table-container, .overflow-x-auto') || table;
+        const pagerBar = document.createElement('div');
+        pagerBar.className = 'sys-pagination';
+        wrapper.insertAdjacentElement('afterend', pagerBar);
+
+        const colCount = table.tHead?.rows[0]?.cells.length || 6;
+
+        function renderPage() {
+            const existingNoRes = tbody.querySelector(':scope > tr.js-no-results');
+            if (existingNoRes) existingNoRes.remove();
+
+            const allRows = getDataRows();
+            const matchingRows = allRows.filter(r => !r.classList.contains('sys-search-hidden'));
+            const total = matchingRows.length;
+            const totalPages = Math.max(1, Math.ceil(total / perPage));
+            currentPage = Math.max(1, Math.min(currentPage, totalPages));
+
+            const start = (currentPage - 1) * perPage;
+            const end = start + perPage;
+
+            allRows.forEach(r => {
+                if (r.classList.contains('sys-search-hidden')) {
+                    r.classList.add('sys-page-hidden');
+                }
+            });
+
+            matchingRows.forEach((r, idx) => {
+                if (idx >= start && idx < end) {
+                    r.classList.remove('sys-page-hidden');
+                } else {
+                    r.classList.add('sys-page-hidden');
+                }
+            });
+
+            if (allRows.length === 0) {
+                if (placeholderRow) placeholderRow.style.display = '';
+            } else {
+                if (placeholderRow) placeholderRow.style.display = 'none';
+                if (total === 0) {
+                    const emptyRow = document.createElement('tr');
+                    emptyRow.className = 'js-no-results';
+                    emptyRow.innerHTML = `<td colspan="${colCount}" style="text-align: center; padding: 3rem; color: var(--text-muted);">No se encontraron coincidencias locales.</td>`;
+                    tbody.appendChild(emptyRow);
+                }
+            }
+
+            const entityLabel = total === 1 ? singular : plural;
+            let html = `<span class="sys-pagination-info">Página ${currentPage} de ${totalPages} - ${total} ${entityLabel}</span>`;
+
+            if (totalPages > 1) {
+                const win = buildPageWindow(currentPage, totalPages);
+                html += `<nav class="sys-pagination-nav" aria-label="Paginación">`;
+                html += `<button type="button" class="sys-page-btn" data-sys-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''} aria-label="Página anterior">&lsaquo;</button>`;
+                win.forEach(it => {
+                    if (it === '...') {
+                        html += `<span class="sys-page-ellipsis">&hellip;</span>`;
+                    } else {
+                        const isAct = it === currentPage;
+                        html += `<button type="button" class="sys-page-btn${isAct ? ' is-active' : ''}" data-sys-page="${it}" ${isAct ? 'aria-current="page"' : ''}>${it}</button>`;
+                    }
+                });
+                html += `<button type="button" class="sys-page-btn" data-sys-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''} aria-label="Página siguiente">&rsaquo;</button>`;
+                html += `</nav>`;
+            }
+
+            pagerBar.innerHTML = html;
+        }
+
+        pagerBar.addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-sys-page]');
+            if (!btn || btn.disabled) return;
+            const nextP = parseInt(btn.getAttribute('data-sys-page'), 10);
+            if (!Number.isNaN(nextP) && nextP !== currentPage) {
+                currentPage = nextP;
+                collapseAuxRows();
+                renderPage();
+            }
+        });
+
+        // Vincular input de búsqueda (explícito por data-search-input o #search-input de la tarjeta)
+        const searchId = table.getAttribute('data-search-input');
+        const searchInput = searchId
+            ? document.getElementById(searchId)
+            : table.closest('.glass-card, main')?.querySelector('#search-input');
+
+        if (searchInput) {
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                const queryWords = query.split(/\s+/).filter(w => w.length > 0);
+                collapseAuxRows();
+                getDataRows().forEach(row => {
+                    if (matchesTableQuery(row.textContent || '', queryWords)) {
+                        row.classList.remove('sys-search-hidden');
+                    } else {
+                        row.classList.add('sys-search-hidden');
+                    }
+                });
+                currentPage = 1;
+                renderPage();
+            });
+        }
+
+        renderPage();
+    });
+}
+
 // Función para filtrar filas de una tabla en tiempo real con Fuzzy Search
 function initTableSearch() {
     const searchInput = document.getElementById('search-input');
     const tableBody = document.querySelector('.table-container tbody');
 
     if (!searchInput || !tableBody) return;
+    if (tableBody.closest('table')?.hasAttribute('data-paginate')) return;
 
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase().trim();
@@ -205,6 +434,12 @@ function handleUrlToasts() {
         const msg = messages[code] || safeDecode(code);
         showToast(msg, 'error');
         urlParams.delete('error');
+        const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+        window.history.replaceState({}, document.title, newUrl);
+    }
+    else if (urlParams.has('msg') && urlParams.get('msg') === 'status_updated') {
+        showToast('Estado de producto actualizado correctamente', 'success');
+        urlParams.delete('msg');
         const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
         window.history.replaceState({}, document.title, newUrl);
     }
