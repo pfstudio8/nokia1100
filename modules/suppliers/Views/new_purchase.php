@@ -8,6 +8,7 @@
  */
 $suppliers = $suppliers ?? [];
 $inventory = $inventory ?? [];
+$preselected_id = isset($_GET['id_proveedor']) ? (int)$_GET['id_proveedor'] : (isset($_GET['id']) ? (int)$_GET['id'] : 0);
 
 Layout::renderHead('Registrar Pedido - NOKIA1100');
 Layout::renderAdminSidebar('proveedores');
@@ -29,7 +30,7 @@ Layout::renderAdminSidebar('proveedores');
             <select id="id_proveedor" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main appearance-none">
                 <option value="">Seleccione un proveedor...</option>
                 <?php foreach($suppliers as $s): ?>
-                    <option value="<?php echo $s['id_proveedor']; ?>"><?php echo htmlspecialchars($s['nombre']); ?></option>
+                    <option value="<?php echo $s['id_proveedor']; ?>" <?php echo ($preselected_id > 0 && $preselected_id === (int)$s['id_proveedor']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($s['nombre']); ?></option>
                 <?php endforeach; ?>
             </select>
         </div>
@@ -134,3 +135,14 @@ Layout::renderAdminSidebar('proveedores');
     window.CSRF_TOKEN = '<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>';
 </script>
 <script src="<?php echo BASE_URL; ?>/modules/suppliers/new_purchase.js?v=<?php echo time(); ?>"></script>
+<?php if ($preselected_id > 0): ?>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof showToast === 'function') {
+            showToast('Proveedor preseleccionado en el asistente.', 'success');
+        } else if (window.NK && window.NK.toast) {
+            window.NK.toast('Proveedor preseleccionado en el asistente.');
+        }
+    });
+</script>
+<?php endif; ?>

@@ -89,6 +89,40 @@ if ($isAdmin) {
   <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5V8zM3 8l9 5 9-5M12 13v8"/></symbol>
   <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
   <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <!-- Iconos de Categorías Oficiales Nokia 1100 -->
+  <symbol id="cat-audio" viewBox="0 0 24 24">
+    <path d="M4 14.5V10.5C4 6.08 7.58 2.5 12 2.5s8 3.58 8 8v4" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+    <rect x="2" y="13" width="4.5" height="8" rx="2.25" fill="currentColor"/>
+    <rect x="17.5" y="13" width="4.5" height="8" rx="2.25" fill="currentColor"/>
+  </symbol>
+  <symbol id="cat-repuestos" viewBox="0 0 24 24">
+    <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M10 2h4v2.4a7.6 7.6 0 0 1 2.3.9l1.7-1.7 2.8 2.8-1.7 1.7c.4.7.7 1.5.9 2.3H22v4h-2.4a7.6 7.6 0 0 1-.9 2.3l1.7 1.7-2.8 2.8-1.7-1.7a7.6 7.6 0 0 1-2.3.9V22h-4v-2.4a7.6 7.6 0 0 1-2.3-.9l-1.7 1.7-2.8-2.8 1.7-1.7a7.6 7.6 0 0 1-.9-2.3H2v-4h2.4a7.6 7.6 0 0 1 .9-2.3l-1.7-1.7 2.8-2.8 1.7 1.7c.7-.4 1.5-.7 2.3-.9V2zm2 5.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9z"/>
+  </symbol>
+  <symbol id="cat-perifericos" viewBox="0 0 24 24">
+    <rect x="5.5" y="2" width="13" height="20" rx="6.5" fill="none" stroke="currentColor" stroke-width="2.4"/>
+    <line x1="5.5" y1="10" x2="18.5" y2="10" stroke="currentColor" stroke-width="2.4"/>
+    <line x1="12" y1="2" x2="12" y2="10" stroke="currentColor" stroke-width="2.4"/>
+  </symbol>
+  <symbol id="cat-fundas" viewBox="0 0 24 24">
+    <rect x="5" y="2" width="14" height="20" rx="4.5" fill="none" stroke="currentColor" stroke-width="2.4"/>
+    <rect x="7.8" y="5" width="4.6" height="4.6" rx="1.4" fill="currentColor"/>
+  </symbol>
+  <symbol id="cat-celulares" viewBox="0 0 24 24">
+    <rect x="5.5" y="2" width="13" height="20" rx="3.5" fill="none" stroke="currentColor" stroke-width="2.4"/>
+    <line x1="10" y1="5.5" x2="14" y2="5.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="12" cy="18" r="1.2" fill="currentColor"/>
+  </symbol>
+  <symbol id="cat-cargadores" viewBox="0 0 24 24">
+    <line x1="9" y1="2" x2="9" y2="6.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+    <line x1="15" y1="2" x2="15" y2="6.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+    <rect x="5.5" y="6" width="13" height="8.5" rx="3" fill="currentColor"/>
+    <path d="M12 14.5v2.5c0 1.8 1.8 2.8 1.8 4.2 0 1.2-.8 1.8-1.8 1.8" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+  </symbol>
+  <symbol id="cat-accesorios" viewBox="0 0 24 24">
+    <path fill="currentColor" fill-rule="evenodd" clip-rule="evenodd" d="M7.5 1.5A1.5 1.5 0 0 0 6 3v4.2C4.8 7.8 4 9 4 10.5v8A3.5 3.5 0 0 0 7.5 22h9a3.5 3.5 0 0 0 3.5-3.5v-8c0-1.5-.8-2.7-2-3.3V3a1.5 1.5 0 0 0-1.5-1.5h-9zM8.5 3.5h7v3h-7v-3zM12 16.7a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6z"/>
+    <rect x="9.8" y="4.2" width="1.4" height="1.6" rx="0.3" fill="currentColor"/>
+    <rect x="12.8" y="4.2" width="1.4" height="1.6" rx="0.3" fill="currentColor"/>
+  </symbol>
 </svg>
 
 <main id="main" class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen flex flex-col bg-[#eeebe3]">

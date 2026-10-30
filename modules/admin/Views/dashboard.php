@@ -1,6 +1,4 @@
 <?php
-// modules/admin/Views/dashboard.php - Nokia 1100 Design System
-
 Layout::renderHead('NOKIA1100 | Admin Panel');
 Layout::renderAdminSidebar('dashboard');
 ?>
@@ -27,10 +25,6 @@ Layout::renderAdminSidebar('dashboard');
         <section class="mb-8 w-full rounded-[2px] bg-[#15181a] border border-[#222729] shadow-sm relative overflow-hidden">
             <div class="p-6 sm:p-8 flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
                 <div class="max-w-2xl">
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="w-2 h-2 rounded-full bg-[#c6e24a] animate-pulse"></span>
-                        <span class="font-mono text-[11px] font-bold text-[#c6e24a] uppercase tracking-wider">ESTADO DEL SISTEMA: ONLINE</span>
-                    </div>
                     <h2 class="text-xl sm:text-2xl font-display font-bold text-[#e9e6db] mb-2 tracking-tight">Bienvenido a Nokia 1100</h2>
                     <p class="text-xs sm:text-sm text-[#9ba19f] font-normal leading-relaxed">
                         Controla el stock en tiempo real, supervisa ventas registradas y audita las actividades operativas de la sucursal con máxima precisión técnica.

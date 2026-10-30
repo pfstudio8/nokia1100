@@ -95,6 +95,7 @@ Layout::renderAdminSidebar('proveedores');
                                     </span>
                                 </td>
                                 <td>
+                                    <a href="index.php?action=new_purchase&id_proveedor=<?php echo (int)$row['id_proveedor']; ?>" style="color: var(--ink, #15171a); font-weight: 600; font-size: 0.85rem; margin-right: 1rem; text-decoration: none;" title="Registrar pedido con este proveedor">Pedir</a>
                                     <a href="index.php?action=edit_supplier&id=<?php echo $row['id_proveedor']; ?>" style="color: var(--primary-color); font-weight: 600; font-size: 0.85rem; margin-right: 1rem;">Editar</a>
                                     <form method="POST" action="index.php" style="display:inline;">
                                         <input type="hidden" name="action" value="delete_supplier">

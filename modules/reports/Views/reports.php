@@ -106,7 +106,7 @@ function renderRepairStatusBadge(string $estado): string
                                     <span class="material-symbols-outlined">check_circle</span>
                                 </div>
                                 <div>
-                                    <h4 class="text-[#15171a] font-semibold text-sm">Stock Óptimo</h4>
+                                    <h4 class="text-[#15171a] font-semibold text-sm">Stock Maximo</h4>
                                     <p class="text-[#5c6165] text-xs mt-0.5">Unidades suficientes para operar</p>
                                 </div>
                             </div>

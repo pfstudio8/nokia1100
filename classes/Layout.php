@@ -34,7 +34,7 @@ class Layout
     <script src="' . BASE_URL . '/assets/js/tailwind_config.js?v=' . self::getAssetVersion('/assets/js/tailwind_config.js') . '"></script>
     <script src="' . BASE_URL . '/assets/js/session-cache.js?v=' . self::getAssetVersion('/assets/js/session-cache.js') . '"></script>
 </head>
-<body class="font-sans antialiased text-[#15171a] bg-[#eeebe3] selection:bg-[#c6e24a] selection:text-[#15171a]">
+<body class="nk-base font-sans antialiased text-[#15171a] bg-[#eeebe3] selection:bg-[#c6e24a] selection:text-[#15171a]">
     <script>
         (function() {
             try {

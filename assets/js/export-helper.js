@@ -106,7 +106,7 @@ function restoreExportButton(btn) {
  */
 window.runCancelableExport = async function runCancelableExport(btnElement, performExportFn, options = {}) {
     const btn = resolveExportButton(btnElement);
-    const delayMs = Math.max(1000, Number(options.delayMs) || 1400);
+    const delayMs = Math.max(1000, Number(options.delayMs) || 1000);
 
     // 1. Segundo clic durante la espera: cancelar inmediatamente sin desplazar botones
     if (btn && btn._exportTimerId) {
@@ -173,7 +173,7 @@ window.runCancelableExport = async function runCancelableExport(btnElement, perf
     }
 
     if (typeof showToast === 'function') {
-        const toast = showToast('Preparando descarga... Clic de nuevo para cancelar', 'info');
+        const toast = showToast('Preparando descarga... Clic de nuevo para cancelar', 'info', delayMs);
         if (btn) {
             btn._initToast = toast;
         }

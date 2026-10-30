@@ -25,13 +25,13 @@
 
   let products = Array.isArray(data.products)
     ? data.products.map(p => ({
-        ...p,
-        id: Number(p.id) || 0,
-        cantidad: Number(p.cantidad ?? 0),
-        minimo: Number(p.minimo ?? 3),
-        precio: Number(p.precio ?? 0),
-        activo: Boolean(p.activo)
-      }))
+      ...p,
+      id: Number(p.id) || 0,
+      cantidad: Number(p.cantidad ?? 0),
+      minimo: Number(p.minimo ?? 3),
+      precio: Number(p.precio ?? 0),
+      activo: Boolean(p.activo)
+    }))
     : [];
 
   /* ---------- Estado Reactivo del Módulo ---------- */
@@ -56,9 +56,29 @@
   const ico = n => `<svg class="i" aria-hidden="true"><use href="#i-${n}"/></svg>`;
   const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
   const motionOk = () => window.fx && !reduced();
-  const run = fn => { try { fn(); } catch (e) {} };
+  const run = fn => { try { fn(); } catch (e) { } };
   const level = p => p.cantidad === 0 ? 'out' : p.cantidad <= p.minimo ? 'low' : 'ok';
   const catColor = c => CAT_COLOR[c] || '#5c6165';
+  const catIconSvg = (cat) => {
+    const s = norm(cat);
+    let id = 'cat-accesorios';
+    if (s.includes('audio') || s.includes('auricular') || s.includes('parlante') || s.includes('sound') || s.includes('headphone')) {
+      id = 'cat-audio';
+    } else if (s.includes('repuesto') || s.includes('pieza') || s.includes('taller') || s.includes('bateria') || s.includes('pantalla') || s.includes('modulo')) {
+      id = 'cat-repuestos';
+    } else if (s.includes('periferico') || s.includes('mouse') || s.includes('teclado') || s.includes('raton')) {
+      id = 'cat-perifericos';
+    } else if (s.includes('funda') || s.includes('case') || s.includes('silicona') || s.includes('cover')) {
+      id = 'cat-fundas';
+    } else if (s.includes('cargador') || s.includes('cable') || s.includes('enchufe') || s.includes('fuente') || s.includes('adaptador') || s.includes('usb')) {
+      id = 'cat-cargadores';
+    } else if (s.includes('celular') || s.includes('smartphone') || s.includes('telefono') || s.includes('movil')) {
+      id = 'cat-celulares';
+    } else if (s.includes('accesorio') || s.includes('pendrive') || s.includes('memoria') || s.includes('flash') || s.includes('storage')) {
+      id = 'cat-accesorios';
+    }
+    return `<svg class="cat-icon" aria-hidden="true" focusable="false"><use href="#${id}"/></svg>`;
+  };
 
   /* ---------- Micro-animaciones con Motion ---------- */
   const fx = {
@@ -229,8 +249,8 @@
           </span>
         </td>
         <td data-c="cat" data-label="Categoría">
-          <span class="cat" style="--c:${catColor(p.categoria)}">
-            <i></i>${esc(p.categoria)}
+          <span class="cat" style="--c:${catColor(p.categoria)}" title="${esc(p.categoria)}">
+            ${catIconSvg(p.categoria)}<span>${esc(p.categoria)}</span>
           </span>
         </td>
         <td data-c="stock" data-label="Stock" class="c">${stockCell(p)}</td>
