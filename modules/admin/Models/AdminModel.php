@@ -36,7 +36,7 @@ class AdminModel extends BaseModel
     public function get_recent_sales($limit = 5)
     {
         $limit = (int) $limit;
-        $stmt = $this->conn->prepare("SELECT v.id_venta, v.fecha, v.total, COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), m.metodo) AS metodo_de_pago FROM venta v LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago WHERE v.estado != 'anulada' ORDER BY v.fecha DESC, v.id_venta DESC LIMIT ?");
+        $stmt = $this->conn->prepare("SELECT v.id_venta, v.fecha, v.total, COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), 'N/A') AS metodo_de_pago FROM venta v WHERE v.estado != 'anulada' ORDER BY v.fecha DESC, v.id_venta DESC LIMIT ?");
         $stmt->bind_param("i", $limit);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -175,7 +175,7 @@ class AdminModel extends BaseModel
             $id_persona = $this->conn->insert_id;
             $stmt->close();
 
-            $modulos_permitidos = ($user_data['rol'] === 'admin') ? null : 'dashboard,venta,inventario,clientes';
+            $modulos_permitidos = ($user_data['rol'] === 'admin') ? null : 'dashboard,venta,caja,inventario,clientes';
             $stmt = $this->conn->prepare(
                 "INSERT INTO usuario (id_persona, nombre_usuario, contrasena, rol, email, verificado, is_active, token_verificacion, token_expira, modulos_permitidos) 
                  VALUES (?, ?, ?, ?, ?, 1, 1, NULL, NULL, ?)"

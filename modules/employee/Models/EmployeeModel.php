@@ -23,7 +23,7 @@ class EmployeeModel extends BaseModel
     public function get_recent_sales(int $limit = 5): array
     {
         $limit = (int) $limit;
-        $stmt = $this->conn->prepare("SELECT v.id_venta, v.fecha, v.total, COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), m.metodo) AS metodo_de_pago FROM venta v LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago WHERE v.estado != 'anulada' ORDER BY v.fecha DESC, v.id_venta DESC LIMIT ?");
+        $stmt = $this->conn->prepare("SELECT v.id_venta, v.fecha, v.total, COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), 'N/A') AS metodo_de_pago FROM venta v WHERE v.estado != 'anulada' ORDER BY v.fecha DESC, v.id_venta DESC LIMIT ?");
         $stmt->bind_param("i", $limit);
         $stmt->execute();
         $result = $stmt->get_result();

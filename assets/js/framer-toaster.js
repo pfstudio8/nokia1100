@@ -320,7 +320,8 @@ window.showConfirmModal = function(title, message, confirmText = 'Confirmar', ca
             margin: '0 0 1.4rem 0',
             color: '#5c6165',
             fontSize: '0.88rem',
-            lineHeight: '1.5'
+            lineHeight: '1.5',
+            whiteSpace: 'pre-line'
         });
 
         const btnContainer = document.createElement('div');

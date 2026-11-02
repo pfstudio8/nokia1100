@@ -14,14 +14,14 @@ class SalesModel extends BaseModel
                     v.id_venta, 
                     v.fecha, 
                     v.total, 
-                    COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), m.metodo) AS metodo_de_pago,
+                    COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), 'N/A') AS metodo_de_pago,
                     v.estado,
                     COALESCE(dv.nombre_producto, p.nombre, NULLIF(TRIM(v.descripcion), ''), 'Venta directa') AS producto,
                     COALESCE(dv.cantidad, 1) AS cantidad
                 FROM venta v
                 LEFT JOIN detalle_venta dv ON v.id_venta = dv.id_venta
                 LEFT JOIN producto p ON dv.id_producto = p.id_producto
-                LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago
+
                 ORDER BY v.fecha DESC, v.id_venta DESC
                 LIMIT ? OFFSET ?";
         $stmt = $this->conn->prepare($sql);
@@ -52,7 +52,7 @@ class SalesModel extends BaseModel
 
     public function find_sale_by_id(int $id)
     {
-        $stmt = $this->conn->prepare("SELECT v.id_venta, v.fecha, v.total, COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), m.metodo) AS metodo_de_pago, v.estado, v.descripcion FROM venta v LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago WHERE v.id_venta = ?");
+        $stmt = $this->conn->prepare("SELECT v.id_venta, v.fecha, v.total, COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), 'N/A') AS metodo_de_pago, v.estado, v.descripcion FROM venta v WHERE v.id_venta = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
@@ -260,14 +260,14 @@ class SalesModel extends BaseModel
                     v.id_venta, 
                     v.fecha, 
                     v.total, 
-                    COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), m.metodo) AS metodo_de_pago,
+                    COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), 'N/A') AS metodo_de_pago,
                     v.estado,
                     COALESCE(dv.nombre_producto, p.nombre, NULLIF(TRIM(v.descripcion), ''), 'Venta directa') AS producto,
                     COALESCE(dv.cantidad, 1) AS cantidad
                 FROM venta v
                 LEFT JOIN detalle_venta dv ON v.id_venta = dv.id_venta
                 LEFT JOIN producto p ON dv.id_producto = p.id_producto
-                LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago
+
                 ORDER BY v.fecha DESC, v.id_venta DESC";
         $result = $this->conn->query($sql);
         $data = [];
@@ -544,9 +544,9 @@ class SalesModel extends BaseModel
 
     public function get_sales_methods()
     {
-        $sql = "SELECT COALESCE(m.metodo, v.metodo_de_pago, 'Otro') as metodo, SUM(v.total) as total_ventas 
+        $sql = "SELECT COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), 'Otro') as metodo, SUM(v.total) as total_ventas 
                 FROM venta v
-                LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago
+
                 WHERE v.estado != 'anulada' AND v.fecha >= DATE(NOW()) - INTERVAL 30 DAY
                 GROUP BY metodo";
         $result = $this->conn->query($sql);

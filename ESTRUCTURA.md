@@ -21,6 +21,7 @@ nokia1100/
 ├── modules/              → Módulos funcionales (arquitectura vertical slicing)
 │   ├── admin/            → Gestión de usuarios y administración
 │   ├── auth/             → Autenticación (login, registro, reset)
+│   ├── caja/             → Control de caja diaria, movimientos y arqueos
 │   ├── clients/          → Gestión de clientes
 │   ├── employee/         → Dashboard del empleado
 │   ├── inventory/        → Inventario de productos

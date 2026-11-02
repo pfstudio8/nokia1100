@@ -23,3 +23,6 @@ Thumbs.db
 .vscode/
 .idea/
 
+
+# Librerias descargadas manualmente
+PHPMailer-master/

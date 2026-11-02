@@ -81,7 +81,7 @@ class Layout
                     return array_values(array_filter(array_map('trim', explode(',', $trimmed))));
                 }
                 // Fallback seguro: Si es un empleado y no tiene módulos explícitos (NULL), limitar a módulos estándar
-                return ['dashboard', 'venta', 'inventario', 'clientes'];
+                return ['dashboard', 'venta', 'inventario', 'clientes', 'caja'];
             }
             $stmt->close();
         }
@@ -211,6 +211,7 @@ class Layout
             'taller'              => 'TALLER',
             'cobrar_reparaciones' => 'COBRAR REPARACIONES',
             'ventas'              => 'VENTAS',
+            'caja'                => 'CAJA',
             'venta'               => 'VENTAS',
             'clientes'            => 'CLIENTES',
             'reportes'            => 'REPORTES',
@@ -274,6 +275,7 @@ class Layout
             ['id' => 'taller', 'url' => BASE_URL . '/modules/workshop/index.php', 'icon' => 'home_repair_service', 'label' => 'Taller'],
             ['id' => 'cobrar_reparaciones', 'url' => BASE_URL . '/modules/sales/index.php?action=repairs_to_charge', 'icon' => 'price_check', 'label' => 'Cobrar Reparaciones', 'badge' => $readyRepairs, 'badge_title' => 'Reparaciones listas para cobrar'],
             ['id' => 'ventas', 'url' => BASE_URL . '/modules/sales/index.php', 'icon' => 'payments', 'label' => 'Ventas'],
+            ['id' => 'caja', 'url' => BASE_URL . '/modules/caja/index.php', 'icon' => 'point_of_sale', 'label' => 'Caja'],
             ['id' => 'clientes', 'url' => BASE_URL . '/modules/clients/index.php', 'icon' => 'contact_page', 'label' => 'Clientes'],
             ['id' => 'reportes', 'url' => BASE_URL . '/modules/reports/index.php', 'icon' => 'analytics', 'label' => 'Reportes'],
             ['id' => 'proveedores', 'url' => BASE_URL . '/modules/suppliers/index.php', 'icon' => 'local_shipping', 'label' => 'Proveedores'],
@@ -355,6 +357,7 @@ class Layout
         $links = [
             ['id' => 'dashboard', 'url' => BASE_URL . '/modules/employee/index.php', 'icon' => 'home', 'label' => 'Inicio'],
             ['id' => 'venta', 'url' => BASE_URL . '/modules/sales/index.php', 'icon' => 'payments', 'label' => 'Ventas'],
+            ['id' => 'caja', 'url' => BASE_URL . '/modules/caja/index.php', 'icon' => 'point_of_sale', 'label' => 'Caja'],
             ['id' => 'cobrar_reparaciones', 'url' => BASE_URL . '/modules/sales/index.php?action=repairs_to_charge', 'icon' => 'price_check', 'label' => 'Cobrar Reparaciones', 'badge' => $readyRepairs, 'badge_title' => 'Reparaciones listas para cobrar'],
             ['id' => 'taller', 'url' => BASE_URL . '/modules/workshop/index.php', 'icon' => 'home_repair_service', 'label' => 'Taller'],
             ['id' => 'inventario', 'url' => BASE_URL . '/modules/inventory/index.php', 'icon' => 'inventory_2', 'label' => 'Consultar Stock'],
