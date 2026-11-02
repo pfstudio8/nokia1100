@@ -61,7 +61,7 @@ Layout::renderAdminSidebar('inventario');
                                 </option>
                             <?php endforeach; ?>
                         </select>
-                        <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px] pointer-events-none">expand_more</span>
+
                     </div>
                 </div>
             </div>

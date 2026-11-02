@@ -231,7 +231,7 @@ if ($_SESSION['role'] === 'admin') {
                                                 <option value="Finalizado">Finalizado</option>
                                                 <option value="Otro">Otro</option>
                                             </select>
-                                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted text-[18px]">expand_more</span>
+
                                         </div>
                                         <p class="text-[11px] text-text-muted mt-2 leading-relaxed">Clasifica la foto para el historial.</p>
                                     </div>

@@ -58,10 +58,19 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                     <p class="text-text-muted text-sm mb-6">La reparación ha sido cobrada e ingresada a la caja diaria. El equipo figura como <strong class="text-text-main">Entregado</strong>.</p>
                     
                     <div class="flex flex-col gap-3">
+                        <?php if ($id_venta > 0): ?>
+                        <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=invoice&id=<?php echo $id_venta; ?>" target="_blank" class="w-full bg-primary text-background hover:bg-primary-hover font-semibold py-3 px-6 rounded-xl transition-all shadow-lg shadow-primary/20 flex justify-center items-center gap-2">
+                            <span class="material-symbols-outlined text-[20px]">print</span> Imprimir Factura (#TX-<?php echo str_pad($id_venta, 5, '0', STR_PAD_LEFT); ?>)
+                        </a>
+                        <a href="<?php echo BASE_URL; ?>/modules/workshop/index.php?action=delivery_receipt&id=<?php echo $charged_id; ?>" target="_blank" class="w-full bg-surface-hover text-text-main hover:bg-border/50 font-medium py-2.5 px-6 rounded-xl border border-border/50 transition-all flex justify-center items-center gap-2 text-sm">
+                            <span class="material-symbols-outlined text-[18px]">verified</span> Imprimir Comprobante y Garantía
+                        </a>
+                        <?php else: ?>
                         <a href="<?php echo BASE_URL; ?>/modules/workshop/index.php?action=delivery_receipt&id=<?php echo $charged_id; ?>" target="_blank" class="w-full bg-primary text-background hover:bg-primary-hover font-semibold py-3 px-6 rounded-xl transition-all shadow-lg shadow-primary/20 flex justify-center items-center gap-2">
                             <span class="material-symbols-outlined text-[20px]">print</span> Imprimir Comprobante y Garantía
                         </a>
-                        <button type="button" onclick="document.getElementById('modal-charge-success').remove()" class="w-full bg-surface-hover text-text-main hover:bg-border/50 font-medium py-3 px-6 rounded-xl border border-border/50 transition-all">
+                        <?php endif; ?>
+                        <button type="button" onclick="document.getElementById('modal-charge-success').remove()" class="w-full bg-surface text-text-muted hover:text-text-main font-medium py-2 px-6 rounded-xl border border-border/40 hover:bg-surface-hover transition-all text-xs">
                             Continuar en Caja
                         </button>
                     </div>

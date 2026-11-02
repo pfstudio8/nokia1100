@@ -112,6 +112,11 @@ $fecha_entrega = !empty($repair['fecha_entrega']) ? date('d/m/Y H:i', strtotime(
         <button onclick="window.print()" class="btn-print">
             <span class="material-symbols-outlined" style="font-size: 18px;">print</span> Imprimir Comprobante de Garantía
         </button>
+        <?php if ($venta && !empty($venta['id_venta'])): ?>
+        <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=invoice&id=<?php echo (int)$venta['id_venta']; ?>" target="_blank" class="btn-print" style="background: #0f172a; text-decoration: none; margin-left: 10px;">
+            <span class="material-symbols-outlined" style="font-size: 18px;">receipt</span> Ver Factura #TX-<?php echo str_pad($venta['id_venta'], 5, '0', STR_PAD_LEFT); ?>
+        </a>
+        <?php endif; ?>
     </div>
 
     <div class="receipt-container">
@@ -126,7 +131,7 @@ $fecha_entrega = !empty($repair['fecha_entrega']) ? date('d/m/Y H:i', strtotime(
                 <h2 style="color: #0f766e; font-size: 18px;">ENTREGA Y GARANTÍA</h2>
                 <p><strong>Orden:</strong> #<?php echo htmlspecialchars($repair['codigo_orden'] ?? ''); ?></p>
                 <?php if ($venta && !empty($venta['id_venta'])): ?>
-                    <p><strong>Factura / Recibo:</strong> #TX-<?php echo str_pad($venta['id_venta'], 5, '0', STR_PAD_LEFT); ?></p>
+                    <p><strong>Factura / Recibo:</strong> <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=invoice&id=<?php echo (int)$venta['id_venta']; ?>" target="_blank" style="color: #0ea5a0; text-decoration: underline; font-weight: 700;">#TX-<?php echo str_pad($venta['id_venta'], 5, '0', STR_PAD_LEFT); ?></a></p>
                 <?php endif; ?>
                 <p><strong>Fecha Entrega:</strong> <?php echo $fecha_entrega; ?></p>
                 <p><strong>Despachado por:</strong> <?php echo htmlspecialchars($cajero); ?></p>

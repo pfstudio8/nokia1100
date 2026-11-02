@@ -304,7 +304,7 @@ function showSuccessModal(id_venta) {
     
     // Configurar el botón de imprimir para que vaya a la factura
     printBtn.onclick = () => {
-        window.location.href = `index.php?action=invoice&id=${id_venta}`;
+        window.open(`index.php?action=invoice&id=${id_venta}`, '_blank');
     };
     
     modal.classList.remove('hidden');

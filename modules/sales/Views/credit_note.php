@@ -45,7 +45,8 @@
             <div class="invoice-details">
                 <div class="details-block">
                     <h3>Emitido A</h3>
-                    <p><strong>Cliente:</strong> Consumidor Final</p>
+                    <p><strong>Cliente:</strong> <?php echo htmlspecialchars($venta['cliente_nombre'] ?? 'Consumidor Final'); ?></p>
+                    <?php if (!empty($venta['cliente_telefono'])): ?><p><strong>Teléfono:</strong> <?php echo htmlspecialchars($venta['cliente_telefono']); ?></p><?php endif; ?>
                     <p><strong>Condición Venta:</strong> Consumidor Final</p>
                 </div>
                 <div class="details-block text-right">

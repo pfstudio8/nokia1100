@@ -88,7 +88,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                             <span>Anular</span>
                                         </button>
                                         <?php else: ?>
-                                        <a href="credit_note.php?id=<?php echo (int)$row['id_venta']; ?>" target="_blank" class="sale-action-btn sale-btn-creditnote sale-btn-solo">
+                                        <a href="index.php?action=credit_note&id=<?php echo (int)$row['id_venta']; ?>" target="_blank" class="sale-action-btn sale-btn-creditnote sale-btn-solo">
                                             <span class="material-symbols-outlined">receipt_long</span>
                                             <span>Nota Crédito</span>
                                         </a>

@@ -93,11 +93,11 @@ Layout::renderAdminSidebar('usuarios');
                                                         <input type="hidden" name="filtro" value="<?php echo htmlspecialchars($filtro, ENT_QUOTES, 'UTF-8'); ?>">
                                                         <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                                                         <div class="relative inline-block">
-                                                            <select name="rol" style="min-width: 110px; padding:.35rem 1.8rem .35rem .6rem; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text-main); font-size:.8rem; appearance: none; cursor: pointer; transition: border-color 0.2s;" onchange="this.form.submit()">
+                                                            <select name="rol" style="min-width: 105px; padding:.35rem 2rem .35rem .75rem; border-radius:4px; border:1.5px solid var(--nk-line-2, #8a8472); background:#ffffff; color:var(--ink, #15171a); font-size:.82rem; font-weight:600; cursor: pointer; transition: border-color 0.2s;" onchange="this.form.submit()">
                                                                 <option value="empleado" <?php echo $row['rol']==='empleado'?'selected':''; ?>>Empleado</option>
                                                                 <option value="admin"    <?php echo $row['rol']==='admin'   ?'selected':''; ?>>Admin</option>
                                                             </select>
-                                                            <span class="material-symbols-outlined absolute right-1.5 top-1/2 -translate-y-1/2 text-text-muted text-[16px] pointer-events-none">expand_more</span>
+
                                                         </div>
                                                     </form>
 
@@ -317,7 +317,7 @@ Layout::renderAdminSidebar('usuarios');
                                 <option value="empleado" selected>Empleado</option>
                                 <option value="admin">Administrador</option>
                             </select>
-                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px] pointer-events-none">expand_more</span>
+
                         </div>
                     </div>
                 </div>
@@ -475,7 +475,7 @@ Layout::renderAdminSidebar('usuarios');
                                 <option value="empleado">Empleado</option>
                                 <option value="admin">Administrador</option>
                             </select>
-                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px] pointer-events-none">expand_more</span>
+
                         </div>
                     </div>
                 </div>

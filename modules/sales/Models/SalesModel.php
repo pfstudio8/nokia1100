@@ -52,11 +52,29 @@ class SalesModel extends BaseModel
 
     public function find_sale_by_id(int $id)
     {
-        $stmt = $this->conn->prepare("SELECT v.id_venta, v.fecha, v.total, COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), m.metodo) AS metodo_de_pago, v.estado FROM venta v LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago WHERE v.id_venta = ?");
+        $stmt = $this->conn->prepare("SELECT v.id_venta, v.fecha, v.total, COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), m.metodo) AS metodo_de_pago, v.estado, v.descripcion FROM venta v LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago WHERE v.id_venta = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
+
+        if ($row && !empty($row['descripcion']) && preg_match('/Cobro de Reparaci[oó]n #([^\s-]+)/iu', $row['descripcion'], $matches)) {
+            $codigo_orden = trim($matches[1]);
+            $stmt_c = $this->conn->prepare("SELECT c.nombre AS cliente_nombre, c.telefono AS cliente_telefono FROM reparacion r LEFT JOIN cliente c ON r.id_cliente = c.id_cliente WHERE r.codigo_orden = ? LIMIT 1");
+            if ($stmt_c) {
+                $stmt_c->bind_param("s", $codigo_orden);
+                $stmt_c->execute();
+                $res_c = $stmt_c->get_result()->fetch_assoc();
+                $stmt_c->close();
+                if (!empty($res_c['cliente_nombre'])) {
+                    $row['cliente_nombre'] = $res_c['cliente_nombre'];
+                }
+                if (!empty($res_c['cliente_telefono'])) {
+                    $row['cliente_telefono'] = $res_c['cliente_telefono'];
+                }
+            }
+        }
+
         return $row;
     }
 

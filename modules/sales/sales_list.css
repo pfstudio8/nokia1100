@@ -152,14 +152,14 @@
     align-items: center !important;
     justify-content: center !important;
     gap: 6px !important;
-    padding: 4px 10px !important;
-    border-radius: 3px !important;
-    font-family: var(--f-mono, 'IBM Plex Mono', monospace) !important;
-    font-size: 10.5px !important;
-    font-weight: 700 !important;
+    padding: 3px 8px !important;
+    border-radius: var(--nk-r, 2px) !important;
+    font-family: var(--nk-f-mono, 'IBM Plex Mono', monospace) !important;
+    font-size: 0.68rem !important;
+    font-weight: 600 !important;
     text-transform: uppercase !important;
-    letter-spacing: 0.06em !important;
-    line-height: 1.2 !important;
+    letter-spacing: 0.05em !important;
+    line-height: 1.25 !important;
     white-space: nowrap !important;
     box-shadow: none !important;
     opacity: 1 !important;
@@ -175,68 +175,68 @@
     display: inline-block !important;
 }
 
-/* TARJETA: Azul sutil (#e5effe / #a6c4f7 / #3b76e6 / #1a4396) */
+/* TARJETA: Azul pizarra / acero */
 #sales-table .badge-payment-tarjeta,
 .badge-payment-tarjeta {
-    background: #e5effe !important;
-    border: 1px solid #a6c4f7 !important;
-    color: #1a4396 !important;
+    background: #e6ebf2 !important;
+    border: 1px solid rgba(23, 71, 126, 0.25) !important;
+    color: #17477e !important;
 }
 #sales-table .badge-payment-tarjeta::before,
 .badge-payment-tarjeta::before {
-    background: #3b76e6 !important;
+    background: #1f5fa8 !important;
 }
 
-/* EFECTIVO: Verde sutil (#e3f6ea / #9adbb3 / #1fa855 / #156835) */
+/* EFECTIVO: Verde bosque cálido y sobrio */
 #sales-table .badge-payment-efectivo,
 .badge-payment-efectivo {
-    background: #e3f6ea !important;
-    border: 1px solid #9adbb3 !important;
-    color: #156835 !important;
+    background: #dfeee3 !important;
+    border: 1px solid rgba(29, 106, 56, 0.28) !important;
+    color: #1d6a38 !important;
 }
 #sales-table .badge-payment-efectivo::before,
 .badge-payment-efectivo::before {
-    background: #1fa855 !important;
+    background: #1d6a38 !important;
 }
 
-/* TRANSFERENCIA: Violeta sutil (#f1ebfe / #ccb6fa / #8b5cf6 / #5b2199) */
+/* TRANSFERENCIA: Ciruela / borgoña sobrio */
 #sales-table .badge-payment-transferencia,
 .badge-payment-transferencia {
-    background: #f1ebfe !important;
-    border: 1px solid #ccb6fa !important;
-    color: #5b2199 !important;
+    background: #efe8ee !important;
+    border: 1px solid rgba(112, 40, 90, 0.25) !important;
+    color: #70285a !important;
 }
 #sales-table .badge-payment-transferencia::before,
 .badge-payment-transferencia::before {
-    background: #8b5cf6 !important;
+    background: #8c3371 !important;
 }
 
-/* MERCADO PAGO / QR: Celeste sutil (#e0f4fa / #92d5e8 / #0ea5c6 / #0d5c73) */
+/* MERCADO PAGO / QR: Ámbar / ocre cálido */
 #sales-table .badge-payment-mp,
 #sales-table .badge-payment-qr,
 .badge-payment-mp,
 .badge-payment-qr {
-    background: #e0f4fa !important;
-    border: 1px solid #92d5e8 !important;
-    color: #0d5c73 !important;
+    background: #f5eee0 !important;
+    border: 1px solid rgba(122, 73, 0, 0.25) !important;
+    color: #7a4900 !important;
 }
 #sales-table .badge-payment-mp::before,
 #sales-table .badge-payment-qr::before,
 .badge-payment-mp::before,
 .badge-payment-qr::before {
-    background: #0ea5c6 !important;
+    background: #b36a00 !important;
 }
 
 /* OTROS / N/A */
 #sales-table .badge-payment-default,
 .badge-payment-default {
-    background: #ece9e0 !important;
-    border: 1px solid #c8c2b2 !important;
-    color: #4a4f55 !important;
+    background: #e5e1d6 !important;
+    border: 1px solid #d3cebf !important;
+    color: #464b4f !important;
 }
 #sales-table .badge-payment-default::before,
 .badge-payment-default::before {
-    background: #858b92 !important;
+    background: #7a7f84 !important;
 }
 
 /* Estado de venta y grilla alineada de acciones en modo claro */
