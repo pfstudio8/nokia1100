@@ -5,6 +5,65 @@ require_once __DIR__ . '/../../../classes/BaseModel.php';
 
 class CajaModel extends BaseModel
 {
+    public function __construct()
+    {
+        parent::__construct();
+        $this->ensure_tables();
+    }
+
+    /**
+     * Garantiza que las tablas necesarias para el módulo de caja existan en la base de datos.
+     */
+    private function ensure_tables(): void
+    {
+        $check = $this->conn->query("SHOW TABLES LIKE 'caja'");
+        if ($check && $check->num_rows > 0) {
+            return;
+        }
+
+        $this->conn->query("CREATE TABLE IF NOT EXISTS `caja` (
+          `id_caja` int(11) NOT NULL AUTO_INCREMENT,
+          `fecha` date NOT NULL,
+          `hora_apertura` varchar(8) NOT NULL,
+          `hora_cierre` varchar(8) DEFAULT NULL,
+          `monto_apertura` decimal(12,2) NOT NULL DEFAULT 0.00,
+          `monto_cierre` decimal(12,2) DEFAULT NULL,
+          `monto_esperado` decimal(12,2) NOT NULL DEFAULT 0.00,
+          `diferencia` decimal(12,2) DEFAULT NULL,
+          `estado` enum('abierta','cerrada') NOT NULL DEFAULT 'abierta',
+          `observaciones` text DEFAULT NULL,
+          `id_usuario_apertura` int(11) DEFAULT NULL,
+          `id_usuario_cierre` int(11) DEFAULT NULL,
+          `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          PRIMARY KEY (`id_caja`),
+          KEY `idx_caja_estado` (`estado`),
+          KEY `idx_caja_fecha` (`fecha`),
+          KEY `fk_caja_usuario_apertura` (`id_usuario_apertura`),
+          KEY `fk_caja_usuario_cierre` (`id_usuario_cierre`),
+          CONSTRAINT `fk_caja_usuario_apertura` FOREIGN KEY (`id_usuario_apertura`) REFERENCES `usuario` (`id_usuario`) ON DELETE SET NULL,
+          CONSTRAINT `fk_caja_usuario_cierre` FOREIGN KEY (`id_usuario_cierre`) REFERENCES `usuario` (`id_usuario`) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+
+        $this->conn->query("CREATE TABLE IF NOT EXISTS `caja_movimiento` (
+          `id_movimiento` int(11) NOT NULL AUTO_INCREMENT,
+          `id_caja` int(11) NOT NULL,
+          `tipo` enum('in','out') NOT NULL DEFAULT 'in',
+          `concepto` varchar(100) NOT NULL,
+          `detalle` varchar(255) DEFAULT '',
+          `monto` decimal(12,2) NOT NULL DEFAULT 0.00,
+          `hora` varchar(8) NOT NULL,
+          `id_usuario` int(11) DEFAULT NULL,
+          `fecha_creacion` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (`id_movimiento`),
+          KEY `fk_mov_caja` (`id_caja`),
+          KEY `fk_mov_usuario` (`id_usuario`),
+          KEY `idx_mov_tipo` (`tipo`),
+          CONSTRAINT `fk_mov_caja` FOREIGN KEY (`id_caja`) REFERENCES `caja` (`id_caja`) ON DELETE CASCADE,
+          CONSTRAINT `fk_mov_usuario` FOREIGN KEY (`id_usuario`) REFERENCES `usuario` (`id_usuario`) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    }
+
     /**
      * Obtiene la caja actualmente abierta si existe, junto con sus movimientos.
      */
@@ -195,6 +254,8 @@ class CajaModel extends BaseModel
         $hora = $hora ?: date('H:i');
         $monto_esperado = $monto_apertura;
 
+        $id_usuario = ($id_usuario > 0) ? $id_usuario : null;
+
         $stmt = $this->conn->prepare("INSERT INTO caja (fecha, hora_apertura, monto_apertura, monto_esperado, estado, id_usuario_apertura) 
                                       VALUES (?, ?, ?, ?, 'abierta', ?)");
         $stmt->bind_param("ssddi", $fecha, $hora, $monto_apertura, $monto_esperado, $id_usuario);
@@ -213,10 +274,11 @@ class CajaModel extends BaseModel
         $tipo = ($tipo === 'out' || $tipo === 'egreso') ? 'out' : 'in';
         $hora = $hora ?: date('H:i');
         $detalle = $detalle ? trim($detalle) : '';
+        $id_usuario = ($id_usuario > 0) ? $id_usuario : null;
 
         $stmt = $this->conn->prepare("INSERT INTO caja_movimiento (id_caja, tipo, concepto, detalle, monto, hora, id_usuario) 
                                       VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("isssdss", $id_caja, $tipo, $concepto, $detalle, $monto, $hora, $id_usuario);
+        $stmt->bind_param("isssdsi", $id_caja, $tipo, $concepto, $detalle, $monto, $hora, $id_usuario);
         $success = $stmt->execute();
         $id_mov = $stmt->insert_id;
         $stmt->close();
@@ -262,6 +324,7 @@ class CajaModel extends BaseModel
         $esperado = $totals['esperado'];
         $diferencia = $monto_cierre - $esperado;
         $obs = trim($obs);
+        $id_usuario = ($id_usuario > 0) ? $id_usuario : null;
 
         $stmt = $this->conn->prepare("UPDATE caja SET 
                                         monto_cierre = ?,
@@ -299,56 +362,4 @@ class CajaModel extends BaseModel
         }
     }
 
-    /**
-     * Restablece los datos de demo iniciales (cajas históricas).
-     */
-    public function reset_demo_data(int $default_user_id = 11): bool
-    {
-        $this->conn->query("DELETE FROM caja_movimiento");
-        $this->conn->query("DELETE FROM caja");
-        $this->conn->query("ALTER TABLE caja AUTO_INCREMENT = 1");
-        $this->conn->query("ALTER TABLE caja_movimiento AUTO_INCREMENT = 1");
-
-        $sql = "INSERT INTO `caja` (`id_caja`, `fecha`, `hora_apertura`, `hora_cierre`, `monto_apertura`, `monto_cierre`, `monto_esperado`, `diferencia`, `estado`, `observaciones`, `id_usuario_apertura`, `id_usuario_cierre`) VALUES
-        (1, DATE_SUB(CURDATE(), INTERVAL 4 DAY), '09:10', '20:20', 12000.00, 71250.00, 71250.00, 0.00, 'cerrada', '', ?, ?),
-        (2, DATE_SUB(CURDATE(), INTERVAL 3 DAY), '08:47', '19:55', 12000.00, 64950.00, 64800.00, 150.00, 'cerrada', 'Sobrante de $150, sin identificar.', ?, ?),
-        (3, DATE_SUB(CURDATE(), INTERVAL 2 DAY), '09:03', '20:02', 15000.00, 102100.00, 102300.00, -200.00, 'cerrada', 'Faltante de $200 por vuelto mal dado en la tarde.', ?, ?),
-        (4, DATE_SUB(CURDATE(), INTERVAL 1 DAY), '08:52', '20:10', 15000.00, 87450.00, 87450.00, 0.00, 'cerrada', '', ?, ?)";
-        
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("iiiiiiii", $default_user_id, $default_user_id, $default_user_id, $default_user_id, $default_user_id, $default_user_id, $default_user_id, $default_user_id);
-        $stmt->execute();
-        $stmt->close();
-
-        $sqlMov = "INSERT INTO `caja_movimiento` (`id_caja`, `tipo`, `concepto`, `detalle`, `monto`, `hora`, `id_usuario`) VALUES
-        (1, 'in', 'Venta en efectivo', '', 64250.00, '14:30', ?),
-        (1, 'in', 'Cobro de reparación', 'Flex de carga', 8000.00, '17:00', ?),
-        (1, 'out', 'Gasto menor', 'Insumos limpieza', 13000.00, '11:50', ?),
-
-        (2, 'in', 'Venta en efectivo', '', 60000.00, '15:10', ?),
-        (2, 'in', 'Seña', 'Reparación placa', 9800.00, '10:25', ?),
-        (2, 'out', 'Pago a proveedor', 'Accesorios Norte', 17000.00, '12:40', ?),
-
-        (3, 'in', 'Venta en efectivo', '', 95000.00, '14:00', ?),
-        (3, 'in', 'Cobro de reparación', 'Batería Moto G8', 12000.00, '18:30', ?),
-        (3, 'out', 'Pago a proveedor', 'TechParts', 18700.00, '12:10', ?),
-        (3, 'out', 'Retiro de efectivo', 'Depósito banco', 1000.00, '19:00', ?),
-
-        (4, 'in', 'Venta en efectivo', 'Ventas de la mañana', 70200.00, '13:05', ?),
-        (4, 'in', 'Cobro de reparación', 'Pantalla iPhone 11', 18500.00, '16:40', ?),
-        (4, 'out', 'Pago a proveedor', 'DistriCell · flete', 14000.00, '11:20', ?),
-        (4, 'out', 'Gasto menor', 'Librería', 2250.00, '17:15', ?)";
-
-        $stmtM = $this->conn->prepare($sqlMov);
-        $stmtM->bind_param("iiiiiiiiiiiiii", 
-            $default_user_id, $default_user_id, $default_user_id,
-            $default_user_id, $default_user_id, $default_user_id,
-            $default_user_id, $default_user_id, $default_user_id, $default_user_id,
-            $default_user_id, $default_user_id, $default_user_id, $default_user_id
-        );
-        $stmtM->execute();
-        $stmtM->close();
-
-        return true;
-    }
 }

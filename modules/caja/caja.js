@@ -111,11 +111,12 @@
             const m = tr.dataset.month;   // 'YYYY-MM'
             const diff = parseFloat(tr.dataset.diff || '0');
 
-            const matchSt = (statusActive === 'all' || statusActive === st);
+            const matchSt = (statusActive === 'all' || statusActive === st || (statusActive === 'diff' && Math.abs(diff) >= 0.01));
             const matchM = (monthActive === 'all' || monthActive === m);
 
             if (matchSt && matchM) {
                 tr.style.display = '';
+                tr.classList.remove('sys-search-hidden');
                 visibleCount++;
                 if (st === 'closed') {
                     sumDiff += diff;
@@ -123,6 +124,7 @@
                 }
             } else {
                 tr.style.display = 'none';
+                tr.classList.add('sys-search-hidden');
             }
         });
 
@@ -174,6 +176,51 @@
             monthSel.addEventListener('change', filterHistory);
         }
 
+    // Pantallita LCD Nokia Loader (N-O-K-I-A en Cascada Elástica)
+    function showNokiaLcdLoader(statusText = 'ESPERE...') {
+        let loader = document.getElementById('nkNokiaLcdModal');
+        if (!loader) {
+            loader = document.createElement('div');
+            loader.id = 'nkNokiaLcdModal';
+            loader.className = 'nk-nokia-lcd-backdrop';
+            loader.setAttribute('role', 'status');
+            loader.setAttribute('aria-live', 'polite');
+            loader.innerHTML = `
+                <div class="nk-nokia-lcd-screen">
+                    <div class="nk-nokia-letters" aria-label="NOKIA">
+                        <span>N</span>
+                        <span>O</span>
+                        <span>K</span>
+                        <span>I</span>
+                        <span>A</span>
+                    </div>
+                    <div class="nk-nokia-lcd-status">
+                        <span class="nk-lcd-dot">■</span>
+                        <span class="nk-lcd-status-text">${statusText}</span>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(loader);
+        } else {
+            const statusEl = loader.querySelector('.nk-lcd-status-text');
+            if (statusEl) statusEl.textContent = statusText;
+        }
+
+        requestAnimationFrame(() => {
+            loader.classList.add('is-active');
+        });
+    }
+
+    function hideNokiaLcdLoader() {
+        const loader = document.getElementById('nkNokiaLcdModal');
+        if (loader) {
+            loader.classList.remove('is-active');
+            setTimeout(() => {
+                if (loader.parentNode) loader.parentNode.removeChild(loader);
+            }, 250);
+        }
+    }
+
         // Abrir Caja Form
         const openForm = document.getElementById('openForm');
         if (openForm) {
@@ -194,6 +241,10 @@
                 btn.disabled = true;
                 btn.textContent = 'Abriendo...';
 
+                // Mostrar pantallita LCD retro Nokia con letras en cascada elástica
+                const startTime = Date.now();
+                showNokiaLcdLoader('ABRIENDO CAJA...');
+
                 try {
                     const fd = new FormData();
                     fd.append('monto_apertura', val);
@@ -206,18 +257,26 @@
                         headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     const json = await res.json();
-                    if (json.success) {
-                        showToast(json.message);
-                        setTimeout(() => window.location.reload(), 400);
-                    } else {
-                        showToast(json.error || 'No se pudo abrir la caja.', 'err');
-                        btn.disabled = false;
-                        btn.innerHTML = 'Abrir caja';
-                    }
+
+                    // Garantizar que la animación se aprecie durante aprox 1 segundo
+                    const elapsed = Date.now() - startTime;
+                    const minWait = Math.max(0, 1000 - elapsed);
+
+                    setTimeout(() => {
+                        if (json.success) {
+                            window.location.reload();
+                        } else {
+                            hideNokiaLcdLoader();
+                            showToast(json.error || 'No se pudo abrir la caja.', 'err');
+                            btn.disabled = false;
+                            btn.innerHTML = '<span class="material-symbols-outlined text-[19px]">lock_open</span> Abrir caja';
+                        }
+                    }, minWait);
                 } catch (ex) {
+                    hideNokiaLcdLoader();
                     showToast('Error de conexión al abrir la caja.', 'err');
                     btn.disabled = false;
-                    btn.innerHTML = 'Abrir caja';
+                    btn.innerHTML = '<span class="material-symbols-outlined text-[19px]">lock_open</span> Abrir caja';
                 }
             });
         }
@@ -306,6 +365,11 @@
                 btn.disabled = true;
                 btn.textContent = 'Cerrando...';
 
+                // Mostrar pantallita LCD retro Nokia con letras en cascada elástica al cerrar
+                const startTime = Date.now();
+                showNokiaLcdLoader('CERRANDO CAJA...');
+                closeModal('closeModal');
+
                 try {
                     const fd = new FormData();
                     fd.append('monto_cierre', val);
@@ -319,15 +383,25 @@
                         headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     });
                     const json = await res.json();
-                    if (json.success) {
-                        showToast(json.message);
-                        setTimeout(() => window.location.reload(), 400);
-                    } else {
-                        showToast(json.error || 'No se pudo cerrar la caja.', 'err');
-                        btn.disabled = false;
-                        btn.textContent = 'Confirmar cierre';
-                    }
+
+                    // Garantizar que la animación se aprecie durante aprox 1 segundo
+                    const elapsed = Date.now() - startTime;
+                    const minWait = Math.max(0, 1000 - elapsed);
+
+                    setTimeout(() => {
+                        if (json.success) {
+                            window.location.reload();
+                        } else {
+                            hideNokiaLcdLoader();
+                            openModal('closeModal');
+                            showToast(json.error || 'No se pudo cerrar la caja.', 'err');
+                            btn.disabled = false;
+                            btn.textContent = 'Confirmar cierre';
+                        }
+                    }, minWait);
                 } catch (ex) {
+                    hideNokiaLcdLoader();
+                    openModal('closeModal');
                     showToast('Error de conexión al cerrar la caja.', 'err');
                     btn.disabled = false;
                     btn.textContent = 'Confirmar cierre';
@@ -480,19 +554,6 @@
                 return;
             }
 
-            // Exportar CSV
-            if (e.target.closest('[data-action="export"]')) {
-                const statusActive = document.querySelector('#stSeg button[aria-pressed="true"]')?.dataset.v || 'all';
-                const monthActive = document.getElementById('monthSel')?.value || 'all';
-                window.location.href = `index.php?action=export_csv&status=${statusActive}&month=${monthActive}`;
-                return;
-            }
-
-            // Imprimir página general
-            if (e.target.closest('[data-action="print"]')) {
-                window.print();
-                return;
-            }
 
             // Imprimir detalle específico
             if (e.target.closest('[data-action="print-detail"]')) {
@@ -501,42 +562,6 @@
                 return;
             }
 
-            // Restablecer datos de demo
-            if (e.target.closest('[data-action="reset-demo"]')) {
-                const confirmed = (typeof window.showConfirmModal === 'function')
-                    ? await window.showConfirmModal(
-                        'Restablecer Datos de Demo',
-                        '¿Desea restablecer los datos de demo?\n\nSe borrarán las cajas y movimientos actuales y se restaurarán los datos de ejemplo.',
-                        'Sí, restablecer',
-                        'Cancelar',
-                        true
-                    )
-                    : confirm('¿Desea restablecer los datos de demo? Se borrarán las cajas y movimientos actuales y se restaurarán los datos de ejemplo.');
-
-                if (!confirmed) {
-                    return;
-                }
-                try {
-                    const fd = new FormData();
-                    fd.append('csrf_token', csrfToken);
-                    fd.append('ajax', '1');
-                    const res = await fetch('index.php?action=reset_demo', {
-                        method: 'POST',
-                        body: fd,
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    const json = await res.json();
-                    if (json.success) {
-                        showToast(json.message);
-                        setTimeout(() => window.location.reload(), 400);
-                    } else {
-                        showToast(json.error || 'Error al restablecer demo.', 'err');
-                    }
-                } catch (ex) {
-                    showToast('Error de conexión al restablecer demo.', 'err');
-                }
-                return;
-            }
         });
 
         // Limpiar clase de impresión tras imprimir

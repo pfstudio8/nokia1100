@@ -17,13 +17,9 @@ Las tablas se definen en `database/migration_caja.sql`:
 - `caja`: Registro de cada jornada/turno de caja (apertura, cierre, saldo esperado, saldo real, diferencia y observaciones).
 - `caja_movimiento`: Movimientos individuales asociados (`in` = ingreso, `out` = egreso).
 
-Para poblar con datos de prueba:
-- `database/seed_caja.sql`
-
 ## Ciclo de Uso
 
 1. **Apertura:** Ingrese el saldo inicial en efectivo o use el botón "Usar último cierre".
 2. **Movimientos:** Registre ingresos (`+`) o egresos (`−`) con concepto y monto. El saldo esperado se recalcula al instante.
 3. **Cierre:** Al finalizar el día, cuente el dinero físico real. El sistema calculará la diferencia (sobrante o faltante). Si existe diferencia, la observación es obligatoria.
 4. **Auditoría:** Utilice los filtros por estado (Todas / Abiertas / Cerradas / Con diferencia) o por mes para auditorías, ver detalles de cajas anteriores o exportar a CSV.
-

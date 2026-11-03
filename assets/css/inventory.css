@@ -27,6 +27,32 @@
   --f-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
 }
 
+html.dark,
+html[data-theme="dark"],
+body.dark {
+  --paper: #111417;
+  --surface: #181c1f;
+  --sunk: #22272b;
+  --ink: #f1ede6;
+  --ink-2: #a4aaad;
+  --ink-3: #757c82;
+  --line: #293035;
+  --line-2: #3a4248;
+  --graphite: #0d0f11;
+  --graphite-2: #161a1d;
+  --on-dark: #f1ede6;
+  --on-dark-2: #9ba19f;
+  --lcd: #c6e24a;
+  --focus: #5a9cf8;
+  --ok: #34d399;
+  --ok-bg: #132f1f;
+  --warn: #fbbf24;
+  --warn-bar: #f59e0b;
+  --warn-bg: #35260c;
+  --bad: #f87171;
+  --bad-bg: #381515;
+}
+
 body.lock {
   overflow: hidden;
 }
@@ -1340,6 +1366,347 @@ button.tag:hover {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ========================================================
+   Modo Oscuro Oficial - Inventario (Graphite OLED)
+   ======================================================== */
+html.dark .panel {
+  background: #181c1f !important;
+  border-color: #293035 !important;
+}
+
+html.dark .tbl th {
+  background: #131618 !important;
+  border-bottom: 1px solid #293035 !important;
+}
+
+html.dark .th-btn,
+html.dark .th-static {
+  color: #9ba19f !important;
+}
+
+html.dark .th-btn:hover {
+  color: #f1ede6 !important;
+}
+
+html.dark th[aria-sort] .th-btn {
+  color: #c6e24a !important;
+}
+
+html.dark .tbl td {
+  border-bottom: 1px solid #293035 !important;
+  color: #f1ede6 !important;
+}
+
+html.dark .tbl tbody tr {
+  background: #181c1f !important;
+}
+
+html.dark .tbl tbody tr:hover {
+  background: #22272b !important;
+}
+
+/* Fila inactiva / sin stock en Modo Oscuro: alto contraste y legibilidad */
+html.dark .tbl tbody tr.is-inactive,
+html.dark .tbl tbody tr.is-inactive td {
+  background: #231517 !important;
+  border-bottom-color: #3d1d22 !important;
+  color: #f1ede6 !important;
+}
+
+html.dark .tbl tbody tr.is-inactive:hover,
+html.dark .tbl tbody tr.is-inactive:hover td {
+  background: #2d191c !important;
+}
+
+html.dark .tbl tbody tr.is-inactive .pname {
+  color: #f1ede6 !important;
+}
+
+html.dark .tbl tbody tr.is-inactive .pmeta {
+  color: #a4aaad !important;
+}
+
+html.dark .tbl tbody tr.is-inactive .pmeta b {
+  color: #f1ede6 !important;
+}
+
+html.dark .tbl tbody tr.is-inactive .pmeta .mono {
+  color: #8b9296 !important;
+}
+
+html.dark .tbl tbody tr.is-inactive .price {
+  color: #f1ede6 !important;
+}
+
+html.dark .tbl tbody tr.is-inactive .cat {
+  color: #f1ede6 !important;
+}
+
+html.dark .tbl tbody tr.is-inactive .stock-n {
+  color: #f1ede6 !important;
+}
+
+html.dark .tbl tbody tr.is-inactive .stock-n.out {
+  color: #f87171 !important;
+}
+
+html.dark .tbl tbody tr.is-inactive .stock-flag.out {
+  color: #f87171 !important;
+}
+
+html.dark .tbl tbody tr.is-inactive .tag-off {
+  background: #381515 !important;
+  border-color: #7f1d1d !important;
+  color: #f87171 !important;
+}
+
+html.dark .tbl tbody tr.is-inactive .tbl-actions .edit {
+  background: #181c1f !important;
+  border-color: #3a4248 !important;
+  color: #f1ede6 !important;
+}
+
+html.dark .tbl tbody tr.is-inactive .tbl-actions .edit:hover {
+  background: #22272b !important;
+  border-color: #c6e24a !important;
+  color: #c6e24a !important;
+}
+
+/* Textos y celdas generales en tabla */
+html.dark .pname {
+  color: #f1ede6 !important;
+}
+
+html.dark .pmeta {
+  color: #a4aaad !important;
+}
+
+html.dark .pmeta b {
+  color: #f1ede6 !important;
+}
+
+html.dark .pmeta .mono {
+  color: #757c82 !important;
+}
+
+html.dark .price {
+  color: #f1ede6 !important;
+}
+
+html.dark .cat {
+  color: #f1ede6 !important;
+}
+
+html.dark .tbl-actions .edit {
+  background: #22272b !important;
+  border-color: #3a4248 !important;
+  color: #f1ede6 !important;
+}
+
+html.dark .tbl-actions .edit:hover {
+  background: #2f363c !important;
+  border-color: #c6e24a !important;
+  color: #c6e24a !important;
+}
+
+/* Pie de tabla y paginador */
+html.dark .foot {
+  background: #131618 !important;
+  border-top: 1px solid #293035 !important;
+}
+
+html.dark .sys-pagination-info,
+html.dark #range {
+  color: #9ba19f !important;
+}
+
+html.dark .pager button {
+  background: #181c1f !important;
+  border-color: #3a4248 !important;
+  color: #f1ede6 !important;
+}
+
+html.dark .pager button:hover:not(:disabled) {
+  background: #22272b !important;
+  color: #c6e24a !important;
+}
+
+html.dark .pager button:disabled {
+  opacity: 0.35;
+  color: #757c82 !important;
+}
+
+/* Tarjetas KPI */
+html.dark .kpis {
+  background: #181c1f !important;
+  border: 1px solid #293035 !important;
+}
+
+html.dark .kpi {
+  border-right-color: #293035 !important;
+}
+
+html.dark button.kpi:hover {
+  background: #22272b !important;
+}
+
+html.dark .kpi[aria-pressed=true] {
+  background: #22272b !important;
+}
+
+html.dark .kpi-l {
+  color: #9ba19f !important;
+}
+
+html.dark .kpi-v {
+  color: #f1ede6 !important;
+}
+
+html.dark .kpi-v.warn {
+  color: #fbbf24 !important;
+}
+
+html.dark .kpi-v.bad {
+  color: #f87171 !important;
+}
+
+/* Campos de búsqueda y filtros */
+html.dark .field,
+html.dark input.field,
+html.dark select.field {
+  background: #131618 !important;
+  border-color: #3a4248 !important;
+  color: #f1ede6 !important;
+}
+
+html.dark .field::placeholder {
+  color: #757c82 !important;
+}
+
+html.dark .kbd {
+  background: #22272b !important;
+  border-color: #3a4248 !important;
+  color: #9ba19f !important;
+}
+
+html.dark .pop {
+  background: #181c1f !important;
+  border-color: #3a4248 !important;
+  color: #f1ede6 !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6) !important;
+}
+
+html.dark .pop h3 {
+  color: #f1ede6 !important;
+}
+
+html.dark .pop .lbl {
+  color: #9ba19f !important;
+}
+
+html.dark .seg {
+  background: #131618 !important;
+  border-color: #3a4248 !important;
+}
+
+html.dark .seg button {
+  color: #9ba19f !important;
+}
+
+html.dark .seg button[aria-pressed=true] {
+  background: #22272b !important;
+  color: #c6e24a !important;
+}
+
+html.dark .chip {
+  background: #22272b !important;
+  border-color: #3a4248 !important;
+  color: #f1ede6 !important;
+}
+
+html.dark .chip button {
+  background: #3a4248 !important;
+  color: #f1ede6 !important;
+}
+
+html.dark .chip button:hover {
+  background: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+/* Botones */
+html.dark .inv-page .btn,
+html.dark .modal .btn {
+  background: #181c1f !important;
+  border-color: #3a4248 !important;
+  color: #f1ede6 !important;
+}
+
+html.dark .inv-page .btn:hover,
+html.dark .modal .btn:hover {
+  background: #22272b !important;
+  border-color: #5a646c !important;
+}
+
+html.dark .inv-page .btn.btn-primary,
+html.dark .modal .btn.btn-primary {
+  background: #c6e24a !important;
+  border-color: #c6e24a !important;
+  color: #111417 !important;
+}
+
+html.dark .inv-page .btn.btn-primary:hover,
+html.dark .modal .btn.btn-primary:hover {
+  background: #d5ee66 !important;
+  border-color: #d5ee66 !important;
+  color: #111417 !important;
+}
+
+/* Stock meter & tags */
+html.dark .stock-wrap .meter {
+  background: #22272b !important;
+  border-color: #3a4248 !important;
+}
+
+html.dark .meter.out i {
+  background: #ef4444 !important;
+}
+
+html.dark .meter.low i {
+  background: #f59e0b !important;
+}
+
+html.dark .meter i {
+  background: #10b981 !important;
+}
+
+html.dark .tag-on {
+  background: #132f1f !important;
+  border-color: #166534 !important;
+  color: #4ade80 !important;
+}
+
+html.dark .tag-off {
+  background: #381515 !important;
+  border-color: #7f1d1d !important;
+  color: #f87171 !important;
+}
+
+html.dark .modal .sheet {
+  background: #181c1f !important;
+  border-color: #3a4248 !important;
+  color: #f1ede6 !important;
+}
+
+html.dark .modal-head {
+  border-bottom-color: #293035 !important;
+}
+
+html.dark .modal-foot {
+  border-top-color: #293035 !important;
+  background: #131618 !important;
 }
 
 @media print {

@@ -2,11 +2,32 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     try {
-        const INK = '#15171a';
-        const TEXT_MUTED = '#4a4f55';
-        const TEXT_SOFT = '#6b7075';
-        const SURFACE = '#f8f6f0';
-        const GRID_LINE = 'rgba(21, 23, 26, 0.08)';
+        function isDarkTheme() {
+            return document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
+        }
+
+        function getThemeColors() {
+            const dark = isDarkTheme();
+            return {
+                ink: dark ? '#f1ede6' : '#15171a',
+                textMuted: dark ? '#a4aaad' : '#4a4f55',
+                textSoft: dark ? '#9ba19f' : '#6b7075',
+                surface: dark ? '#181c1f' : '#f8f6f0',
+                gridLine: dark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(21, 23, 26, 0.08)',
+                borderLine: dark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(21, 23, 26, 0.14)',
+                tooltipBg: dark ? '#0d0f11' : '#15181a',
+                tooltipTitle: dark ? '#f1ede6' : '#f8f6f0',
+                tooltipBody: dark ? '#c6e24a' : '#e5e7eb',
+                tooltipBorder: dark ? '#3a4248' : '#2d3339'
+            };
+        }
+
+        const getInk = () => getThemeColors().ink;
+        const getTextMuted = () => getThemeColors().textMuted;
+        const getTextSoft = () => getThemeColors().textSoft;
+        const getSurface = () => getThemeColors().surface;
+        const getGridLine = () => getThemeColors().gridLine;
+        const getBorderLine = () => getThemeColors().borderLine;
         const FONT_BODY = "'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif";
         const FONT_MONO = "'IBM Plex Mono', monospace";
         const FONT_DISPLAY = "'Bricolage Grotesque', 'IBM Plex Sans', sans-serif";
@@ -56,22 +77,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (cfg.label) {
                     ctx.font = `600 9.5px ${FONT_MONO}`;
-                    ctx.fillStyle = TEXT_SOFT;
+                    ctx.fillStyle = getTextSoft();
                     ctx.fillText(String(cfg.label).toUpperCase(), centerX, centerY - 12);
                 }
 
                 ctx.font = `700 18px ${FONT_DISPLAY}`;
-                ctx.fillStyle = INK;
+                ctx.fillStyle = getInk();
                 ctx.fillText(String(cfg.value), centerX, cfg.label ? centerY + 8 : centerY);
                 ctx.restore();
             }
         };
 
-        const baseTooltip = {
-            backgroundColor: '#15181a',
-            titleColor: '#f8f6f0',
-            bodyColor: '#e5e7eb',
-            borderColor: '#2d3339',
+        function getBaseTooltip() {
+            const tc = getThemeColors();
+            return {
+                backgroundColor: tc.tooltipBg,
+                titleColor: tc.tooltipTitle,
+                bodyColor: tc.tooltipBody,
+                borderColor: tc.tooltipBorder,
             borderWidth: 1,
             cornerRadius: 4,
             padding: 11,
@@ -79,7 +102,8 @@ document.addEventListener('DOMContentLoaded', () => {
             usePointStyle: true,
             titleFont: { family: FONT_BODY, size: 12, weight: '700' },
             bodyFont: { family: FONT_MONO, size: 11.5, weight: '500' }
-        };
+            };
+        }
 
         function hasNonZeroData(arr) {
             return Array.isArray(arr) && arr.some(v => Number(v) > 0);
@@ -92,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
             canvas.style.display = 'none';
             if (!parent.querySelector('.chart-empty-msg')) {
                 const div = document.createElement('div');
-                div.className = 'chart-empty-msg flex flex-col items-center justify-center h-full text-center text-xs font-mono text-[#6b7075] py-8';
+                div.className = 'chart-empty-msg flex flex-col items-center justify-center h-full text-center text-xs font-mono text-[#6b7075] dark:text-[#9ba19f] py-8';
                 div.innerHTML = `<span class="material-symbols-outlined text-[28px] mb-1.5 opacity-50">bar_chart</span><span>${message}</span>`;
                 parent.appendChild(div);
             }
@@ -134,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     legend: {
                         position: 'bottom',
                         labels: {
-                            color: INK,
+                            color: getInk(),
                             usePointStyle: true,
                             pointStyle: 'circle',
                             boxWidth: 9,
@@ -156,14 +180,14 @@ document.addEventListener('DOMContentLoaded', () => {
                                         pointStyle: 'circle',
                                         hidden,
                                         index: i,
-                                        fontColor: INK
+                                        fontColor: getInk()
                                     };
                                 });
                             }
                         }
                     },
                     tooltip: {
-                        ...baseTooltip,
+                        ...getBaseTooltip(),
                         callbacks: {
                             label(context) {
                                 const raw = Number(context.raw) || 0;
@@ -227,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     position: 'top',
                                     align: 'end',
                                     labels: {
-                                        color: INK,
+                                        color: getInk(),
                                         usePointStyle: true,
                                         pointStyle: 'circle',
                                         boxWidth: 8,
@@ -237,7 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     }
                                 },
                                 tooltip: {
-                                    ...baseTooltip,
+                                    ...getBaseTooltip(),
                                     callbacks: {
                                         label: (ctx) => ` ${ctx.dataset.label}: ${arsFull.format(Number(ctx.raw) || 0)}`
                                     }
@@ -247,18 +271,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 y: {
                                     beginAtZero: true,
                                     border: { display: false },
-                                    grid: { color: GRID_LINE },
+                                    grid: { color: getGridLine() },
                                     ticks: {
-                                        color: TEXT_MUTED,
+                                        color: getTextMuted(),
                                         font: { family: FONT_MONO, size: 11 },
                                         callback: (v) => arsCompact.format(v)
                                     }
                                 },
                                 x: {
-                                    border: { color: 'rgba(21, 23, 26, 0.14)' },
+                                    border: { color: getBorderLine() },
                                     grid: { display: false },
                                     ticks: {
-                                        color: INK,
+                                        color: getInk(),
                                         font: { family: FONT_BODY, size: 12, weight: '600' }
                                     }
                                 }
@@ -296,7 +320,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             plugins: {
                                 legend: { display: false },
                                 tooltip: {
-                                    ...baseTooltip,
+                                    ...getBaseTooltip(),
                                     callbacks: {
                                         label: (ctx) => ` Ingresos: ${arsFull.format(Number(ctx.raw) || 0)}`
                                     }
@@ -306,18 +330,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 y: {
                                     beginAtZero: true,
                                     border: { display: false },
-                                    grid: { color: GRID_LINE },
+                                    grid: { color: getGridLine() },
                                     ticks: {
-                                        color: TEXT_MUTED,
+                                        color: getTextMuted(),
                                         font: { family: FONT_MONO, size: 11 },
                                         callback: (v) => arsCompact.format(v)
                                     }
                                 },
                                 x: {
-                                    border: { color: 'rgba(21, 23, 26, 0.14)' },
+                                    border: { color: getBorderLine() },
                                     grid: { display: false },
                                     ticks: {
-                                        color: INK,
+                                        color: getInk(),
                                         font: { family: FONT_BODY, size: 12, weight: '600' }
                                     }
                                 }
@@ -356,7 +380,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             plugins: {
                                 legend: { display: false },
                                 tooltip: {
-                                    ...baseTooltip,
+                                    ...getBaseTooltip(),
                                     callbacks: {
                                         title: (items) => fullNames[items[0]?.dataIndex] || items[0]?.label || '',
                                         label: (ctx) => ` Margen neto: ${arsFull.format(Number(ctx.raw) || 0)}`
@@ -367,20 +391,20 @@ document.addEventListener('DOMContentLoaded', () => {
                                 x: {
                                     beginAtZero: true,
                                     border: { display: false },
-                                    grid: { color: GRID_LINE },
+                                    grid: { color: getGridLine() },
                                     ticks: {
                                         maxRotation: 0,
                                         minRotation: 0,
-                                        color: TEXT_MUTED,
+                                        color: getTextMuted(),
                                         font: { family: FONT_MONO, size: 11 },
                                         callback: (v) => arsCompact.format(v)
                                     }
                                 },
                                 y: {
-                                    border: { color: 'rgba(21, 23, 26, 0.14)' },
+                                    border: { color: getBorderLine() },
                                     grid: { display: false },
                                     ticks: {
-                                        color: INK,
+                                        color: getInk(),
                                         font: { family: FONT_BODY, size: 12, weight: '600' }
                                     }
                                 }
@@ -409,7 +433,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             datasets: [{
                                 data: values,
                                 backgroundColor: labels.map((_, i) => PALETTE[i % PALETTE.length]),
-                                borderColor: SURFACE,
+                                borderColor: getSurface(),
                                 borderWidth: 3,
                                 spacing: 2,
                                 borderRadius: 4,
@@ -453,7 +477,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             plugins: {
                                 legend: { display: false },
                                 tooltip: {
-                                    ...baseTooltip,
+                                    ...getBaseTooltip(),
                                     callbacks: {
                                         title: (items) => fullProducts[items[0]?.dataIndex] || items[0]?.label || '',
                                         label: (ctx) => ` En depósito: ${numFmt.format(Number(ctx.raw) || 0)} unidades`
@@ -462,20 +486,20 @@ document.addEventListener('DOMContentLoaded', () => {
                             },
                             scales: {
                                 x: {
-                                    border: { color: 'rgba(21, 23, 26, 0.14)' },
+                                    border: { color: getBorderLine() },
                                     grid: { display: false },
                                     ticks: {
-                                        color: INK,
+                                        color: getInk(),
                                         font: { family: FONT_BODY, size: 12, weight: '600' }
                                     }
                                 },
                                 y: {
                                     beginAtZero: true,
                                     border: { display: false },
-                                    grid: { color: GRID_LINE },
+                                    grid: { color: getGridLine() },
                                     ticks: {
                                         precision: 0,
-                                        color: TEXT_MUTED,
+                                        color: getTextMuted(),
                                         font: { family: FONT_MONO, size: 11 }
                                     }
                                 }
@@ -516,7 +540,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             plugins: {
                                 legend: { display: false },
                                 tooltip: {
-                                    ...baseTooltip,
+                                    ...getBaseTooltip(),
                                     callbacks: {
                                         label: (ctx) => ` Vendidas: ${numFmt.format(Number(ctx.raw) || 0)} unidades`
                                     }
@@ -526,18 +550,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 y: {
                                     beginAtZero: true,
                                     border: { display: false },
-                                    grid: { color: GRID_LINE },
+                                    grid: { color: getGridLine() },
                                     ticks: {
                                         precision: 0,
-                                        color: TEXT_MUTED,
+                                        color: getTextMuted(),
                                         font: { family: FONT_MONO, size: 11 }
                                     }
                                 },
                                 x: {
-                                    border: { color: 'rgba(21, 23, 26, 0.14)' },
+                                    border: { color: getBorderLine() },
                                     grid: { display: false },
                                     ticks: {
-                                        color: INK,
+                                        color: getInk(),
                                         font: { family: FONT_BODY, size: 12, weight: '600' }
                                     }
                                 }
@@ -565,7 +589,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             datasets: [{
                                 data: amounts,
                                 backgroundColor: sliceColors,
-                                borderColor: SURFACE,
+                                borderColor: getSurface(),
                                 borderWidth: 3,
                                 spacing: 2,
                                 borderRadius: 4,
@@ -610,7 +634,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             plugins: {
                                 legend: { display: false },
                                 tooltip: {
-                                    ...baseTooltip,
+                                    ...getBaseTooltip(),
                                     callbacks: {
                                         title: (items) => fullNames[items[0]?.dataIndex] || items[0]?.label || '',
                                         label: (ctx) => ` Unidades vendidas: ${numFmt.format(Number(ctx.raw) || 0)}`
@@ -621,18 +645,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 x: {
                                     beginAtZero: true,
                                     border: { display: false },
-                                    grid: { color: GRID_LINE },
+                                    grid: { color: getGridLine() },
                                     ticks: {
                                         precision: 0,
-                                        color: TEXT_MUTED,
+                                        color: getTextMuted(),
                                         font: { family: FONT_MONO, size: 11 }
                                     }
                                 },
                                 y: {
-                                    border: { color: 'rgba(21, 23, 26, 0.14)' },
+                                    border: { color: getBorderLine() },
                                     grid: { display: false },
                                     ticks: {
-                                        color: INK,
+                                        color: getInk(),
                                         font: { family: FONT_BODY, size: 12, weight: '600' }
                                     }
                                 }
@@ -671,7 +695,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             datasets: [{
                                 data: counts,
                                 backgroundColor: colors,
-                                borderColor: SURFACE,
+                                borderColor: getSurface(),
                                 borderWidth: 3,
                                 spacing: 2,
                                 borderRadius: 4,
@@ -715,7 +739,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             plugins: {
                                 legend: { display: false },
                                 tooltip: {
-                                    ...baseTooltip,
+                                    ...getBaseTooltip(),
                                     callbacks: {
                                         label: (ctx) => ` Órdenes ingresadas: ${numFmt.format(Number(ctx.raw) || 0)}`
                                     }
@@ -725,18 +749,18 @@ document.addEventListener('DOMContentLoaded', () => {
                                 y: {
                                     beginAtZero: true,
                                     border: { display: false },
-                                    grid: { color: GRID_LINE },
+                                    grid: { color: getGridLine() },
                                     ticks: {
                                         precision: 0,
-                                        color: TEXT_MUTED,
+                                        color: getTextMuted(),
                                         font: { family: FONT_MONO, size: 11 }
                                     }
                                 },
                                 x: {
-                                    border: { color: 'rgba(21, 23, 26, 0.14)' },
+                                    border: { color: getBorderLine() },
                                     grid: { display: false },
                                     ticks: {
-                                        color: INK,
+                                        color: getInk(),
                                         font: { family: FONT_BODY, size: 12, weight: '600' }
                                     }
                                 }
@@ -775,6 +799,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
         });
+
+        
+        function updateAllChartsTheme() {
+            const tc = getThemeColors();
+
+            Object.values(charts).forEach(chart => {
+                if (!chart) return;
+
+                if (chart.options.plugins?.tooltip) {
+                    chart.options.plugins.tooltip.backgroundColor = tc.tooltipBg;
+                    chart.options.plugins.tooltip.titleColor = tc.tooltipTitle;
+                    chart.options.plugins.tooltip.bodyColor = tc.tooltipBody;
+                    chart.options.plugins.tooltip.borderColor = tc.tooltipBorder;
+                }
+
+                if (chart.options.plugins?.legend?.labels) {
+                    chart.options.plugins.legend.labels.color = tc.ink;
+                }
+
+                if (chart.config.type === 'doughnut') {
+                    if (chart.data.datasets && chart.data.datasets[0]) {
+                        chart.data.datasets[0].borderColor = tc.surface;
+                    }
+                }
+
+                if (chart.options.scales) {
+                    const isHoriz = chart.options.indexAxis === 'y';
+                    if (chart.options.scales.x) {
+                        const sx = chart.options.scales.x;
+                        if (sx.ticks) sx.ticks.color = isHoriz ? tc.textMuted : tc.ink;
+                        if (sx.grid) sx.grid.color = isHoriz ? tc.gridLine : 'transparent';
+                        if (sx.border) sx.border.color = tc.borderLine;
+                    }
+                    if (chart.options.scales.y) {
+                        const sy = chart.options.scales.y;
+                        if (sy.ticks) sy.ticks.color = isHoriz ? tc.ink : tc.textMuted;
+                        if (sy.grid) sy.grid.color = isHoriz ? 'transparent' : tc.gridLine;
+                        if (sy.border) sy.border.color = tc.borderLine;
+                    }
+                }
+
+                chart.update('none');
+            });
+        }
+
+        window.addEventListener('themeChanged', updateAllChartsTheme);
+        const themeObserver = new MutationObserver(() => updateAllChartsTheme());
+        themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
 
         renderFinancial();
     } catch (error) {

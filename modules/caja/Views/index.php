@@ -209,7 +209,7 @@ krsort($uniqueMonths);
 
         <!-- Tabla de movimientos de la caja abierta -->
         <div class="nk-table-wrap">
-          <table class="nk-table">
+        <table class="nk-table">
             <thead>
               <tr>
                 <th scope="col" style="width:90px;">Hora</th>
@@ -301,17 +301,13 @@ krsort($uniqueMonths);
             <?php endforeach; ?>
           </select>
 
-          <button type="button" class="nk-btn nk-btn--sm" data-action="export" title="Exportar reporte en CSV">
-            <span class="material-symbols-outlined text-[16px]">download</span> CSV
-          </button>
-          <button type="button" class="nk-btn nk-btn--sm" data-action="print" title="Imprimir historial">
-            <span class="material-symbols-outlined text-[16px]">print</span> Imprimir
-          </button>
+          <!-- Botones de Exportación Unificados (Excel y PDF) -->
+          <?php echo Layout::renderExportButtons('cajas-table', 'Historial de Cajas', 'cajas'); ?>
         </div>
       </div>
 
       <div class="nk-table-wrap">
-        <table class="nk-table">
+        <table class="nk-table" id="cajas-table">
           <thead>
             <tr>
               <th scope="col">Fecha</th>
@@ -388,9 +384,6 @@ krsort($uniqueMonths);
       </div>
     </section>
 
-    <p style="text-align:right; margin:12px 0 0 0;">
-      <button type="button" class="linkbtn nk-cell-meta" data-action="reset-demo">Restablecer datos de demo</button>
-    </p>
   </div>
 </main>
 

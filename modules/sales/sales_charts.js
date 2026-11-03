@@ -1,11 +1,22 @@
 // assets/js/pages/sales_charts.js
 
 (function () {
-    const textMain = '#15171a';
-    const primary = '#0f766e';
-    const border = 'rgba(21, 23, 26, 0.08)';
-    const textMuted = '#4a4f55';
-    const surfaceBg = '#f8f6f0';
+    const isDark = () => document.documentElement.classList.contains('dark') || document.body.classList.contains('dark');
+    const getColors = () => {
+        const dark = isDark();
+        return {
+            textMain: dark ? '#f1ede6' : '#15171a',
+            primary: '#0f766e',
+            border: dark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(21, 23, 26, 0.08)',
+            textMuted: dark ? '#a4aaad' : '#4a4f55',
+            surfaceBg: dark ? '#181c1f' : '#f8f6f0'
+        };
+    };
+    const textMain = getColors().textMain;
+    const primary = getColors().primary;
+    const border = getColors().border;
+    const textMuted = getColors().textMuted;
+    const surfaceBg = getColors().surfaceBg;
 
     // Obtiene los datos pasados desde la vista
     const dates = window.salesData?.dates || [];
@@ -354,4 +365,33 @@
     const btnExportXls = document.getElementById('btnExportXls');
     if (btnExportPdf) setupCancellableExport(btnExportPdf, triggerPdfExport);
     if (btnExportXls) setupCancellableExport(btnExportXls, triggerXlsExport);
+    function updateSalesChartsTheme() {
+        const c = getColors();
+        [salesChart, methodsChart, topProductsChart].forEach(ch => {
+            if (!ch) return;
+            if (ch.options.plugins && ch.options.plugins.legend && ch.options.plugins.legend.labels) {
+                ch.options.plugins.legend.labels.color = c.textMain;
+            }
+            if (ch.options.scales) {
+                if (ch.options.scales.x) {
+                    if (ch.options.scales.x.ticks) ch.options.scales.x.ticks.color = c.textMuted;
+                    if (ch.options.scales.x.grid) ch.options.scales.x.grid.color = c.border;
+                }
+                if (ch.options.scales.y) {
+                    if (ch.options.scales.y.ticks) ch.options.scales.y.ticks.color = c.textMuted;
+                    if (ch.options.scales.y.grid) ch.options.scales.y.grid.color = c.border;
+                }
+            }
+            if (ch.config.type === 'doughnut') {
+                if (ch.data.datasets && ch.data.datasets[0]) {
+                    ch.data.datasets[0].borderColor = c.surfaceBg;
+                }
+            }
+            ch.update('none');
+        });
+    }
+    window.addEventListener('themeChanged', updateSalesChartsTheme);
+    const chartThemeObs = new MutationObserver(updateSalesChartsTheme);
+    chartThemeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
+
 })();

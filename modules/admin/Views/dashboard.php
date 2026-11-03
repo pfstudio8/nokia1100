@@ -1,17 +1,43 @@
 <?php
 Layout::renderHead('NOKIA1100 | Admin Panel');
 Layout::renderAdminSidebar('dashboard');
+
+// Saludo dinámico según la hora del día
+$username = $_SESSION['username'] ?? 'facuE';
+$hora = (int)date('G');
+if ($hora >= 5 && $hora < 12) {
+    $saludo = 'Buen día';
+    $iconHora = 'light_mode';
+    $iconColor = 'text-[#8a5200] dark:text-[#fbbf24]';
+} elseif ($hora >= 12 && $hora < 20) {
+    $saludo = 'Buenas tardes';
+    $iconHora = 'wb_twilight';
+    $iconColor = 'text-[#8a5200] dark:text-[#fbbf24]';
+} else {
+    $saludo = 'Buenas noches';
+    $iconHora = 'nights_stay';
+    $iconColor = 'text-[#15171a] dark:text-[#f1ede6]';
+}
 ?>
 
 <main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen flex flex-col bg-[#eeebe3]">
     <div class="max-w-7xl mx-auto w-full flex-grow">
         
+        <?php // Saludo superior estilo Nokia 1100 (icono y tipografía idénticos a segunda imagen) ?>
+        <div class="relative z-20 flex items-center gap-2 mb-4">
+            <span class="material-symbols-outlined <?php echo $iconColor; ?> text-[18px] select-none"><?php echo $iconHora; ?></span>
+            <p class="text-sm sm:text-base font-sans tracking-tight text-[#15171a] dark:text-[#f1ede6]">
+                <span class="text-[#5c6165] dark:text-[#9ba19f]"><?php echo $saludo; ?>,</span>
+                <span class="font-bold text-[#15171a] dark:text-[#f1ede6] font-mono ml-0.5"><?php echo htmlspecialchars($username); ?></span>
+            </p>
+        </div>
+
         <header class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
             <div>
-                <h1 class="text-2xl sm:text-3xl font-display font-bold text-[#15171a] tracking-tight">
+                <h1 class="text-2xl sm:text-3xl font-display font-bold text-[#15171a] dark:text-[#f1ede6] tracking-tight">
                     Resumen Operativo
                 </h1>
-                <p class="text-xs text-[#5c6165] mt-1 font-medium">Supervisión integral de rendimiento, flujo comercial y auditoría de inventario</p>
+                <p class="text-xs text-[#5c6165] dark:text-[#9ba19f] mt-1 font-medium">Supervisión integral de rendimiento, flujo comercial y auditoría de inventario</p>
             </div>
             <div class="flex items-center gap-2">
                 <a href="<?php echo BASE_URL; ?>/modules/inventory/index.php" class="btn btn-lcd text-xs">

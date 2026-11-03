@@ -67,7 +67,8 @@ foreach ($all_products as $p) {
 
 $jsVersion = file_exists(__DIR__ . '/../../../assets/js/inventory.js') ? filemtime(__DIR__ . '/../../../assets/js/inventory.js') : time();
 
-Layout::renderHead('NOKIA1100 | Inventario', ['/assets/css/inventory.css']);
+$cssVersion = file_exists(__DIR__ . '/../../../assets/css/inventory.css') ? filemtime(__DIR__ . '/../../../assets/css/inventory.css') : time();
+Layout::renderHead('NOKIA1100 | Inventario', ['/assets/css/inventory.css?v=' . $cssVersion]);
 if ($isAdmin) {
     Layout::renderAdminSidebar('inventario');
 } else {

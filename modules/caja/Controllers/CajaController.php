@@ -363,27 +363,6 @@ class CajaController extends BaseController
         exit;
     }
 
-    /**
-     * Restablece los datos de demo.
-     */
-    public function reset_demo()
-    {
-        $this->check_access('caja', $this->is_ajax());
-
-        $userId = (int)($_SESSION['user_id'] ?? 11);
-        $this->caja_model->reset_demo_data($userId);
-
-        require_once __DIR__ . '/../../../config/audit.php';
-        audit_log($this->conn, 'CAJA_RESET_DEMO', $userId, 'caja', 0, "Datos de demo de caja restablecidos.");
-
-        if ($this->is_ajax()) {
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode(['success' => true, 'message' => 'Datos de demo restablecidos con éxito.']);
-            exit;
-        }
-
-        $this->redirect('index.php?success=' . urlencode("Datos de demo restablecidos con éxito."));
-    }
 
     private function is_ajax(): bool
     {

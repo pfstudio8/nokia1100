@@ -19,13 +19,28 @@ if (isset($_SESSION['user_id'])) {
 }
 ?>
 <!DOCTYPE html>
-<html class="dark" lang="es">
+<html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Acceso al Sistema - Sistema Nokia 1100</title>
     
+    <script>
+        (function() {
+            try {
+                var theme = localStorage.getItem("nokia1100_theme");
+                if (theme === "dark") {
+                    document.documentElement.classList.add("dark");
+                    document.documentElement.setAttribute("data-theme", "dark");
+                } else {
+                    document.documentElement.classList.remove("dark");
+                    document.documentElement.setAttribute("data-theme", "light");
+                }
+            } catch (e) {}
+        })();
+    </script>
+
     <?php // Tailwind CSS ?>
     <script src="https://cdn.tailwindcss.com"></script>
     
@@ -42,9 +57,18 @@ if (isset($_SESSION['user_id'])) {
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/login.css?v=<?php echo time(); ?>">
 
     <script src="<?php echo BASE_URL; ?>/assets/js/tailwind_config.js?v=<?php echo time(); ?>"></script>
+    <script src="<?php echo BASE_URL; ?>/assets/js/theme.js?v=<?php echo time(); ?>"></script>
 </head>
 
-<body class="font-sans antialiased text-[#15171a] bg-[#eeebe3]">
+<body class="font-sans antialiased text-text-main bg-background">
+
+    <!-- Botón Flotante para Alternar Tema en Acceso -->
+    <div class="fixed top-4 right-4 z-50">
+        <button id="themeToggleBtn" type="button" class="sys-theme-toggle w-10 h-10 rounded-[2px] bg-surface border border-ink text-ink hover:bg-sunk flex items-center justify-center transition-all shadow-sm cursor-pointer" aria-label="Cambiar tema" title="Cambiar tema (Claro / Oscuro)">
+            <span class="material-symbols-outlined theme-icon-dark text-[20px]">dark_mode</span>
+            <span class="material-symbols-outlined theme-icon-light text-[20px] hidden">light_mode</span>
+        </button>
+    </div>
 
     <?php
     $isRegister = isset($_GET['action']) && $_GET['action'] === 'register';

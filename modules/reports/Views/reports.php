@@ -7,23 +7,75 @@ Layout::renderAdminSidebar('reportes');
 function renderRepairStatusBadge(string $estado): string
 {
     $e = mb_strtolower(trim($estado), 'UTF-8');
-    $style = 'background:#ece9e0; border-color:#c8c2b2; color:#4a4f55;';
+    $cls = 'repair-badge-default';
     if (str_contains($e, 'listo')) {
-        $style = 'background:#dcf2e3; border-color:#8ed0a6; color:#156835;';
+        $cls = 'repair-badge-listo';
     } elseif (str_contains($e, 'entregado')) {
-        $style = 'background:#def4f0; border-color:#8ad4c8; color:#0f5c52;';
+        $cls = 'repair-badge-entregado';
     } elseif (str_contains($e, 'reparaci')) {
-        $style = 'background:#fcf3cf; border-color:#dfb13b; color:#946800;';
+        $cls = 'repair-badge-reparacion';
     } elseif (str_contains($e, 'diagn')) {
-        $style = 'background:#f1ebfe; border-color:#ccb6fa; color:#5b2199;';
+        $cls = 'repair-badge-diagnostico';
     } elseif (str_contains($e, 'recibido')) {
-        $style = 'background:#e5effe; border-color:#a6c4f7; color:#1a4396;';
+        $cls = 'repair-badge-recibido';
     } elseif (str_contains($e, 'cancelado')) {
-        $style = 'background:#fde2e2; border-color:#ef9a9a; color:#b91c1c;';
+        $cls = 'repair-badge-cancelado';
     }
-    return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] border text-[10.5px] font-mono font-bold uppercase tracking-wider" style="' . $style . '">' . htmlspecialchars($estado, ENT_QUOTES, 'UTF-8') . '</span>';
+    return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-[3px] border text-[10.5px] font-mono font-bold uppercase tracking-wider ' . $cls . '">' . htmlspecialchars($estado, ENT_QUOTES, 'UTF-8') . '</span>';
 }
 ?>
+<style>
+/* Estilos Nokia 1100 para Reportes y Modo Oscuro */
+.tab-btn {
+    border-bottom-width: 2px;
+    font-weight: 600;
+    font-size: 0.875rem;
+    transition: all 0.16s ease;
+}
+.tab-btn.is-active,
+.tab-btn[data-active="true"] {
+    color: #15171a !important;
+    border-color: #15171a !important;
+}
+html.dark .tab-btn {
+    color: #9ba19f !important;
+    border-color: transparent !important;
+}
+html.dark .tab-btn:hover {
+    color: #f1ede6 !important;
+    border-color: #3a4248 !important;
+}
+html.dark .tab-btn.is-active,
+html.dark .tab-btn[data-active="true"] {
+    color: #c6e24a !important;
+    border-color: #c6e24a !important;
+}
+
+/* Insignias de Reparaciones */
+.repair-badge-listo { background: #dcf2e3; border-color: #8ed0a6; color: #156835; }
+.repair-badge-entregado { background: #def4f0; border-color: #8ad4c8; color: #0f5c52; }
+.repair-badge-reparacion { background: #fcf3cf; border-color: #dfb13b; color: #946800; }
+.repair-badge-diagnostico { background: #f1ebfe; border-color: #ccb6fa; color: #5b2199; }
+.repair-badge-recibido { background: #e5effe; border-color: #a6c4f7; color: #1a4396; }
+.repair-badge-cancelado { background: #fde2e2; border-color: #ef9a9a; color: #b91c1c; }
+.repair-badge-default { background: #ece9e0; border-color: #c8c2b2; color: #4a4f55; }
+
+html.dark .repair-badge-listo { background: #132f1f !important; border-color: #166534 !important; color: #4ade80 !important; }
+html.dark .repair-badge-entregado { background: #142d2a !important; border-color: #115e59 !important; color: #2dd4bf !important; }
+html.dark .repair-badge-reparacion { background: #35260c !important; border-color: #854d0e !important; color: #fbbf24 !important; }
+html.dark .repair-badge-diagnostico { background: #271b3d !important; border-color: #6b21a8 !important; color: #c084fc !important; }
+html.dark .repair-badge-recibido { background: #172738 !important; border-color: #1e40af !important; color: #60a5fa !important; }
+html.dark .repair-badge-cancelado { background: #381515 !important; border-color: #7f1d1d !important; color: #f87171 !important; }
+html.dark .repair-badge-default { background: #22272b !important; border-color: #3a4248 !important; color: #a4aaad !important; }
+
+/* Subtítulos de gráficos legibles en Modo Oscuro */
+html.dark .glass-card h3 {
+    color: #f1ede6 !important;
+}
+html.dark .glass-card p {
+    color: #9ba19f !important;
+}
+</style>
 <main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen">
     <div class="glass-card mb-8 border border-[#d3cebf] p-6 md:p-8">
         <header class="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 pb-4 border-b border-[#ded9cb]">

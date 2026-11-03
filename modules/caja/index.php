@@ -26,9 +26,6 @@ switch ($action) {
     case 'export_csv':
         $controller->export_csv();
         break;
-    case 'reset_demo':
-        $controller->reset_demo();
-        break;
     case 'index':
     default:
         $controller->index();

@@ -520,3 +520,120 @@ body {
         display: flex !important;
     }
 }
+
+
+/* ==========================================================================
+   NOKIA 1100 - MODO OSCURO PARA PANTALLA DE ACCESO (LOGIN & REGISTRO)
+   ========================================================================== */
+html.dark body {
+    background-color: #111417 !important;
+    color: #f1ede6 !important;
+}
+
+html.dark .double-slider-container {
+    background: #181c1f !important;
+    border-color: #293035 !important;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.45) !important;
+}
+
+html.dark .form-container {
+    background: #181c1f !important;
+}
+
+html.dark .form-title {
+    color: #f1ede6 !important;
+}
+
+html.dark .form-subtitle {
+    color: #9ba19f !important;
+}
+
+html.dark .form-header-badge {
+    color: #9ba19f !important;
+}
+
+html.dark .field-label {
+    color: #9ba19f !important;
+}
+
+html.dark .field-input-box input {
+    background: #131618 !important;
+    border-color: #2e353b !important;
+    color: #f1ede6 !important;
+}
+
+html.dark .field-input-box input:focus {
+    border-color: #c6e24a !important;
+    box-shadow: 0 0 0 1px #c6e24a !important;
+}
+
+html.dark .field-input-box .field-icon,
+html.dark .field-input-box .field-action-btn {
+    color: #9ba19f !important;
+}
+
+html.dark .field-input-box .field-action-btn:hover {
+    color: #c6e24a !important;
+}
+
+html.dark .field-input-box input:-webkit-autofill,
+html.dark .field-input-box input:-webkit-autofill:hover, 
+html.dark .field-input-box input:-webkit-autofill:focus, 
+html.dark .field-input-box input:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px #131618 inset !important;
+    -webkit-text-fill-color: #f1ede6 !important;
+    color: #f1ede6 !important;
+    caret-color: #f1ede6 !important;
+}
+
+html.dark .btn-primary-auth {
+    background: #c6e24a !important;
+    color: #111417 !important;
+    border-color: #c6e24a !important;
+}
+
+html.dark .btn-primary-auth:hover {
+    background: #d4eb67 !important;
+    color: #000000 !important;
+}
+
+html.dark .guest-access-divider::before {
+    background: #293035 !important;
+}
+
+html.dark .guest-access-divider span {
+    background: #181c1f !important;
+    color: #9ba19f !important;
+}
+
+html.dark .btn-guest-auth {
+    background: #22272b !important;
+    border-color: #2e353b !important;
+    color: #f1ede6 !important;
+}
+
+html.dark .btn-guest-auth:hover {
+    background: #2b3238 !important;
+    border-color: #c6e24a !important;
+    color: #ffffff !important;
+}
+
+html.dark .btn-guest-auth .material-symbols-outlined {
+    color: #c6e24a !important;
+}
+
+html.dark a.text-\[\#15171a\] {
+    color: #c6e24a !important;
+}
+
+html.dark a.text-\[\#15171a\]:hover {
+    color: #e9e6db !important;
+}
+
+html.dark .text-\[\#5c6165\] {
+    color: #9ba19f !important;
+}
+
+html.dark #password-strength-container {
+    background: #293035 !important;
+}

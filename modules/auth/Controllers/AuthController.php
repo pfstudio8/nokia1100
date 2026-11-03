@@ -255,65 +255,98 @@ class AuthController extends BaseController
 
                         $year = date('Y');
 
-                        // Diseño de Plantilla de Email
                         $mail->Body = "
                         <!DOCTYPE html>
-                        <html>
+                        <html lang=\"es\">
                         <head>
                             <meta charset=\"utf-8\">
-                            <title>Verificá tu Cuenta - Nokia 1100 System</title>
+                            <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+                            <title>Verificá tu Cuenta - Nokia 1100</title>
+                            <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">
+                            <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>
+                            <link href=\"https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;700;800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap\" rel=\"stylesheet\">
                         </head>
-                        <body style=\"margin: 0; padding: 0; background-color: #181E26; font-family: 'Inter', Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;\">
-                            <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"background-color: #181E26; padding: 40px 20px;\">
+                        <body style=\"margin: 0; padding: 0; background-color: #eeebe3; font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #15171a;\">
+                            <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"background-color: #eeebe3; padding: 40px 16px;\">
                                 <tr>
                                     <td align=\"center\">
-                                        <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"max-width: 500px; background-color: #1F2937; border: 1px solid #374151; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);\">
-                                            <!-- Línea de acento gradiente superior -->
+                                        <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"max-width: 480px; background-color: #f8f6f0; border: 1px solid #b5af9c; border-radius: 4px; overflow: hidden; box-shadow: 0 12px 32px -6px rgba(21, 23, 26, 0.08);\">
+                                            <!-- Barra Superior Grafito Oficial Nokia 1100 -->
                                             <tr>
-                                                <td height=\"4\" style=\"background: linear-gradient(90deg, #0EA5A0, #5EEAD4);\"></td>
-                                            </tr>
-                                            <!-- Cuerpo del Mensaje -->
-                                            <tr>
-                                                <td style=\"padding: 40px 30px; text-align: center;\">
-                                                    <!-- Logo -->
-                                                    <h1 style=\"margin: 0 0 5px 0; font-family: 'Outfit', Arial, sans-serif; font-size: 26px; font-weight: 800; color: #FAFAFA; letter-spacing: -0.5px;\">
-                                                        NOKIA<span style=\"color: #0EA5A0;\">1100</span>
-                                                    </h1>
-                                                    <p style=\"margin: 0 0 35px 0; font-size: 10px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 2px;\">
-                                                        Sistema de Gestión
-                                                    </p>
-                                                    
-                                                    <!-- Texto principal -->
-                                                    <h2 style=\"margin: 0 0 15px 0; font-family: 'Outfit', Arial, sans-serif; font-size: 20px; font-weight: 600; color: #FAFAFA; letter-spacing: -0.3px;\">
-                                                        ¡Hola, {$nombre}!
-                                                    </h2>
-                                                    <p style=\"margin: 0 0 35px 0; font-size: 14px; line-height: 1.6; color: #9CA3AF; font-weight: 400;\">
-                                                        Gracias por registrarte en el sistema Nokia 1100. Para poder activar tu cuenta y empezar a operar, necesitamos que verifiques tu dirección de correo electrónico haciendo clic en el botón de abajo.
-                                                    </p>
-                                                    
-                                                    <!-- Botón de acción -->
-                                                    <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 0 auto 35px auto;\">
+                                                <td style=\"background-color: #111315; padding: 16px 24px; border-bottom: 2px solid #c6e24a;\">
+                                                    <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">
                                                         <tr>
-                                                            <td align=\"center\" style=\"border-radius: 30px; background-color: #0EA5A0;\">
-                                                                <a href=\"{$verifyLink}\" target=\"_blank\" style=\"display: inline-block; padding: 14px 36px; font-size: 14px; font-weight: 700; color: #FFFFFF; text-decoration: none; border-radius: 30px;\">
-                                                                    Verificar mi Cuenta
-                                                                </a>
+                                                            <td align=\"left\" style=\"vertical-align: middle;\">
+                                                                <span style=\"font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #c6e24a; text-transform: uppercase;\">
+                                                                    SISTEMA NOKIA
+                                                                </span>
+                                                                <span style=\"display: inline-block; margin-left: 6px; background-color: #c6e24a; color: #15171a; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 2px; vertical-align: middle;\">
+                                                                    1100
+                                                                </span>
+                                                            </td>
+                                                            <td align=\"right\" style=\"vertical-align: middle;\">
+                                                                <span style=\"display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #c6e24a;\"></span>
                                                             </td>
                                                         </tr>
                                                     </table>
-                                                    
-                                                    <!-- Explicación de vencimiento -->
-                                                    <p style=\"margin: 0; font-size: 11px; color: #6B7280; line-height: 1.5;\">
-                                                        Este enlace vencerá en 24 horas.<br>
-                                                        Si no creaste esta cuenta, podés ignorar este correo de forma segura.
+                                                </td>
+                                            </tr>
+                                            <!-- Cuerpo del Mensaje -->
+                                            <tr>
+                                                <td style=\"padding: 36px 32px 30px; text-align: left;\">
+                                                    <!-- Badge de módulo -->
+                                                    <div style=\"margin-bottom: 14px;\">
+                                                        <span style=\"display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #5c6165; text-transform: uppercase; border: 1px solid #d3cebf; padding: 3px 8px; border-radius: 2px; background-color: #eeebe3;\">
+                                                            VERIFICACIÓN DE CUENTA
+                                                        </span>
+                                                    </div>
+
+                                                    <h1 style=\"margin: 0 0 14px 0; font-family: 'Bricolage Grotesque', 'IBM Plex Sans', Arial, sans-serif; font-size: 24px; font-weight: 800; color: #15171a; line-height: 1.2; letter-spacing: -0.02em;\">
+                                                        ¡Hola, {$nombre}!
+                                                    </h1>
+
+                                                    <p style=\"margin: 0 0 24px 0; font-size: 14px; line-height: 1.65; color: #464b4f; font-weight: 400;\">
+                                                        Gracias por registrarte en el sistema Nokia 1100. Para poder activar tu cuenta y empezar a operar con máxima precisión técnica, verificá tu dirección de correo electrónico haciendo clic en el siguiente botón:
+                                                    </p>
+
+                                                    <!-- Botón de acción Nokia 1100 -->
+                                                    <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"margin: 0 0 26px 0;\">
+                                                        <tr>
+                                                            <td align=\"center\">
+                                                                <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">
+                                                                    <tr>
+                                                                        <td align=\"center\" style=\"border-radius: 2px; background-color: #15171a; border: 1px solid #15171a; box-shadow: 3px 3px 0 #c6e24a;\">
+                                                                            <a href=\"{$verifyLink}\" target=\"_blank\" style=\"display: inline-block; padding: 13px 34px; font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 14px; font-weight: 700; color: #ffffff; text-decoration: none; border-radius: 2px; letter-spacing: 0.02em;\">
+                                                                                Verificar mi cuenta &rarr;
+                                                                            </a>
+                                                                        </td>
+                                                                    </tr>
+                                                                </table>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+
+                                                    <!-- Caja informativa con validez -->
+                                                    <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"background-color: #e5e1d6; border: 1px solid #d3cebf; border-radius: 2px; margin-bottom: 20px;\">
+                                                        <tr>
+                                                            <td style=\"padding: 12px 16px; font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 12px; color: #5c6165; line-height: 1.5;\">
+                                                                <strong style=\"color: #15171a;\">Seguridad:</strong> Este enlace vencerá en <strong>24 horas</strong>.<br>
+                                                                Si no creaste esta cuenta, podés ignorar este correo de forma segura.
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+
+                                                    <p style=\"margin: 0; font-size: 11px; line-height: 1.5; color: #757c82;\">
+                                                        Si el botón no abre el enlace, copiá y pegá la siguiente URL en tu navegador:<br>
+                                                        <a href=\"{$verifyLink}\" target=\"_blank\" style=\"color: #1f4e8c; word-break: break-all; text-decoration: underline;\">{$verifyLink}</a>
                                                     </p>
                                                 </td>
                                             </tr>
                                             <!-- Footer -->
                                             <tr>
-                                                <td style=\"padding: 20px 30px; background-color: #181E26; border-top: 1px solid #374151; text-align: center;\">
-                                                    <p style=\"margin: 0; font-size: 10px; color: #6B7280;\">
-                                                        &copy; {$year} Nokia 1100 System. Todos los derechos reservados.
+                                                <td style=\"padding: 18px 28px; background-color: #111315; border-top: 1px solid #222729; text-align: center;\">
+                                                    <p style=\"margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9ba19f; letter-spacing: 0.05em; text-transform: uppercase;\">
+                                                        &copy; {$year} Nokia 1100 · Sistema de Gestión y Stock
                                                     </p>
                                                 </td>
                                             </tr>
@@ -409,64 +442,99 @@ class AuthController extends BaseController
                     $mail->isHTML(true);
                     $mail->Subject = 'Recuperación de contraseña - Nokia 1100';
                     $year = date('Y');
+
                     $mail->Body = "
                     <!DOCTYPE html>
-                    <html>
+                    <html lang=\"es\">
                     <head>
                         <meta charset=\"utf-8\">
-                        <title>Recuperación de Contraseña - Nokia 1100 System</title>
+                        <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+                        <title>Recuperación de Contraseña - Nokia 1100</title>
+                        <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">
+                        <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>
+                        <link href=\"https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;700;800&family=IBM+Plex+Mono:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap\" rel=\"stylesheet\">
                     </head>
-                    <body style=\"margin: 0; padding: 0; background-color: #181E26; font-family: 'Inter', Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;\">
-                        <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"background-color: #181E26; padding: 40px 20px;\">
+                    <body style=\"margin: 0; padding: 0; background-color: #eeebe3; font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; color: #15171a;\">
+                        <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"background-color: #eeebe3; padding: 40px 16px;\">
                             <tr>
                                 <td align=\"center\">
-                                    <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"max-width: 500px; background-color: #1F2937; border: 1px solid #374151; border-radius: 20px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);\">
-                                        <!-- Línea de acento gradiente superior -->
+                                    <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"max-width: 480px; background-color: #f8f6f0; border: 1px solid #b5af9c; border-radius: 4px; overflow: hidden; box-shadow: 0 12px 32px -6px rgba(21, 23, 26, 0.08);\">
+                                        <!-- Barra Superior Grafito Oficial Nokia 1100 -->
                                         <tr>
-                                            <td height=\"4\" style=\"background: linear-gradient(90deg, #0EA5A0, #5EEAD4);\"></td>
-                                        </tr>
-                                        <!-- Cuerpo del Mensaje -->
-                                        <tr>
-                                            <td style=\"padding: 40px 30px; text-align: center;\">
-                                                <!-- Logo -->
-                                                <h1 style=\"margin: 0 0 5px 0; font-family: 'Outfit', Arial, sans-serif; font-size: 26px; font-weight: 800; color: #FAFAFA; letter-spacing: -0.5px;\">
-                                                    NOKIA<span style=\"color: #0EA5A0;\">1100</span>
-                                                </h1>
-                                                <p style=\"margin: 0 0 35px 0; font-size: 10px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 2px;\">
-                                                    Sistema de Gestión
-                                                </p>
-                                                
-                                                <!-- Texto principal -->
-                                                <h2 style=\"margin: 0 0 15px 0; font-family: 'Outfit', Arial, sans-serif; font-size: 20px; font-weight: 600; color: #FAFAFA; letter-spacing: -0.3px;\">
-                                                    Hola, {$nombre}
-                                                </h2>
-                                                <p style=\"margin: 0 0 35px 0; font-size: 14px; line-height: 1.6; color: #9CA3AF; font-weight: 400;\">
-                                                    Recibimos una solicitud para restablecer la contraseña de tu cuenta. Hacé clic en el siguiente botón para crear una nueva contraseña segura.
-                                                </p>
-                                                
-                                                <!-- Botón de acción -->
-                                                <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin: 0 auto 35px auto;\">
+                                            <td style=\"background-color: #111315; padding: 16px 24px; border-bottom: 2px solid #c6e24a;\">
+                                                <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\">
                                                     <tr>
-                                                        <td align=\"center\" style=\"border-radius: 30px; background-color: #0EA5A0;\">
-                                                            <a href=\"{$resetLink}\" target=\"_blank\" style=\"display: inline-block; padding: 14px 36px; font-size: 14px; font-weight: 700; color: #FFFFFF; text-decoration: none; border-radius: 30px;\">
-                                                                Restablecer Contraseña
-                                                            </a>
+                                                        <td align=\"left\" style=\"vertical-align: middle;\">
+                                                            <span style=\"font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: #c6e24a; text-transform: uppercase;\">
+                                                                SISTEMA NOKIA
+                                                            </span>
+                                                            <span style=\"display: inline-block; margin-left: 6px; background-color: #c6e24a; color: #15171a; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 2px; vertical-align: middle;\">
+                                                                1100
+                                                            </span>
+                                                        </td>
+                                                        <td align=\"right\" style=\"vertical-align: middle;\">
+                                                            <span style=\"display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: #c6e24a;\"></span>
                                                         </td>
                                                     </tr>
                                                 </table>
-                                                
-                                                <!-- Explicación de vencimiento -->
-                                                <p style=\"margin: 0; font-size: 11px; color: #6B7280; line-height: 1.5;\">
-                                                    Este enlace vencerá en 1 hora.<br>
-                                                    Si no solicitaste este cambio, podés ignorar este correo de forma segura.
+                                            </td>
+                                        </tr>
+                                        <!-- Cuerpo del Mensaje -->
+                                        <tr>
+                                            <td style=\"padding: 36px 32px 30px; text-align: left;\">
+                                                <!-- Badge de módulo -->
+                                                <div style=\"margin-bottom: 14px;\">
+                                                    <span style=\"display: inline-block; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: #5c6165; text-transform: uppercase; border: 1px solid #d3cebf; padding: 3px 8px; border-radius: 2px; background-color: #eeebe3;\">
+                                                        RECUPERACIÓN DE ACCESO
+                                                    </span>
+                                                </div>
+
+                                                <h1 style=\"margin: 0 0 14px 0; font-family: 'Bricolage Grotesque', 'IBM Plex Sans', Arial, sans-serif; font-size: 24px; font-weight: 800; color: #15171a; line-height: 1.2; letter-spacing: -0.02em;\">
+                                                    Hola, {$nombre}
+                                                </h1>
+
+                                                <p style=\"margin: 0 0 24px 0; font-size: 14px; line-height: 1.65; color: #464b4f; font-weight: 400;\">
+                                                    Recibimos una solicitud para restablecer la contraseña de tu cuenta en el sistema Nokia 1100. Hacé clic en el siguiente botón para crear una nueva clave segura:
+                                                </p>
+
+                                                <!-- Botón de acción Nokia 1100 -->
+                                                <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"margin: 0 0 26px 0;\">
+                                                    <tr>
+                                                        <td align=\"center\">
+                                                            <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\">
+                                                                <tr>
+                                                                    <td align=\"center\" style=\"border-radius: 2px; background-color: #15171a; border: 1px solid #15171a; box-shadow: 3px 3px 0 #c6e24a;\">
+                                                                        <a href=\"{$resetLink}\" target=\"_blank\" style=\"display: inline-block; padding: 13px 34px; font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 14px; font-weight: 700; color: #ffffff; text-decoration: none; border-radius: 2px; letter-spacing: 0.02em;\">
+                                                                            Restablecer contraseña &rarr;
+                                                                        </a>
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                                        </td>
+                                                    </tr>
+                                                </table>
+
+                                                <!-- Caja informativa con validez -->
+                                                <table role=\"presentation\" border=\"0\" cellpadding=\"0\" cellspacing=\"0\" width=\"100%\" style=\"background-color: #e5e1d6; border: 1px solid #d3cebf; border-radius: 2px; margin-bottom: 20px;\">
+                                                    <tr>
+                                                        <td style=\"padding: 12px 16px; font-family: 'IBM Plex Sans', Arial, sans-serif; font-size: 12px; color: #5c6165; line-height: 1.5;\">
+                                                            <strong style=\"color: #15171a;\">Seguridad:</strong> Por motivos de seguridad, este enlace vencerá en <strong>60 minutos</strong> desde su solicitud.<br>
+                                                            Si no solicitaste este cambio, podés ignorar este correo de forma segura.
+                                                        </td>
+                                                    </tr>
+                                                </table>
+
+                                                <p style=\"margin: 0; font-size: 11px; line-height: 1.5; color: #757c82;\">
+                                                    Si el botón no abre el enlace, copiá y pegá la siguiente URL en tu navegador:<br>
+                                                    <a href=\"{$resetLink}\" target=\"_blank\" style=\"color: #1f4e8c; word-break: break-all; text-decoration: underline;\">{$resetLink}</a>
                                                 </p>
                                             </td>
                                         </tr>
                                         <!-- Footer -->
                                         <tr>
-                                            <td style=\"padding: 20px 30px; background-color: #181E26; border-top: 1px solid #374151; text-align: center;\">
-                                                <p style=\"margin: 0; font-size: 10px; color: #6B7280;\">
-                                                    &copy; {$year} Nokia 1100 System. Todos los derechos reservados.
+                                            <td style=\"padding: 18px 28px; background-color: #111315; border-top: 1px solid #222729; text-align: center;\">
+                                                <p style=\"margin: 0; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9ba19f; letter-spacing: 0.05em; text-transform: uppercase;\">
+                                                    &copy; {$year} Nokia 1100 · Sistema de Gestión y Stock
                                                 </p>
                                             </td>
                                         </tr>
@@ -477,6 +545,7 @@ class AuthController extends BaseController
                     </body>
                     </html>
                     ";
+
                     $mail->AltBody = "Hola {$nombre},\n\nRestablece tu contraseña con este enlace: {$resetLink}\n\nEste enlace vence en 1 hora.\n\nSi no solicitaste este cambio, ignora este correo.";
 
                     $mail->send();

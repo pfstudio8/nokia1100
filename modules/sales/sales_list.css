@@ -365,3 +365,143 @@
     text-decoration-color: #e88b8b !important;
     text-decoration-thickness: 1.5px !important;
 }
+
+/* ===========================================================
+   Modo Oscuro Oficial - Historial de Ventas (Graphite OLED)
+   ========================================================== */
+html.dark .glass-card {
+    background: #181c1f !important;
+    border: 1px solid #293035 !important;
+}
+
+html.dark .dashboard-header h2 {
+    color: #f1ede6 !important;
+}
+
+html.dark .dashboard-header p {
+    color: #9ba19f !important;
+}
+
+html.dark #search-input {
+    background: #131618 !important;
+    border: 1px solid #3a4248 !important;
+    color: #f1ede6 !important;
+}
+
+html.dark #search-input::placeholder {
+    color: #757c82 !important;
+}
+
+html.dark .sales-table-wrap {
+    background: #181c1f !important;
+    border: 1px solid #293035 !important;
+}
+
+html.dark #sales-table thead tr {
+    background: #131618 !important;
+    border-bottom: 1px solid #293035 !important;
+}
+
+html.dark #search-input::placeholder {
+    color: #757c82 !important;
+}
+
+html.dark #sales-table thead th {
+    background: #131618 !important;
+    color: #9ba19f !important;
+    border-bottom: 1px solid #293035 !important;
+}
+
+html.dark #sales-table tbody tr {
+    background: #181c1f !important;
+    border-bottom: 1px solid #293035 !important;
+    color: #f1ede6 !important;
+}
+
+html.dark #sales-table tbody tr:hover {
+    background: #22272b !important;
+}
+
+html.dark #sales-table tbody td {
+    border-bottom: 1px solid #293035 !important;
+    color: #f1ede6 !important;
+}
+
+html.dark #sales-table tbody tr:not(.sale-row-voided) td {
+    color: #f1ede6 !important;
+}
+
+html.dark #sales-table tbody tr:not(.sale-row-voided) td[class*="text-[#15171a]"] {
+    color: #f1ede6 !important;
+}
+
+html.dark #search-input {
+    background: #131618 !important;
+    border: 1px solid #3a4248 !important;
+    color: #f1ede6 !important;
+}
+
+html.dark #sales-table tbody tr:not(.sale-row-voided) td[class*="text-[#464b4f]"] {
+    color: #a4aaad !important;
+}
+
+/* Filas de ventas anuladas */
+html.dark #sales-table tr.sale-row-voided {
+    background: #231517 !important;
+    border-bottom: 1px solid #3d1d22 !important;
+}
+
+html.dark #sales-table tr.sale-row-voided:hover {
+    background: #2d191c !important;
+}
+
+html.dark #sales-table tr.sale-row-voided td {
+    color: #8a8f94 !important;
+    border-bottom-color: #3d1d22 !important;
+}
+
+html.dark #sales-table tr.sale-row-voided .line-through {
+    color: #8a8f94 !important;
+    text-decoration-line: line-through !important;
+    text-decoration-color: #f87171 !important;
+}
+
+/* Estados de Venta */
+html.dark .sale-status-completed {
+    background: #132f1f !important;
+    border: 1px solid #166534 !important;
+    color: #4ade80 !important;
+}
+
+html.dark .sale-status-voided {
+    background: #381515 !important;
+    border: 1px solid #7f1d1d !important;
+    color: #f87171 !important;
+}
+
+/* Botones de acción en tabla de ventas */
+html.dark #sales-table .sale-btn-invoice {
+    background: #22272b !important;
+    border: 1px solid #3a4248 !important;
+    color: #f1ede6 !important;
+}
+
+html.dark #sales-table .sale-btn-invoice:hover {
+    background: #2f363c !important;
+    border-color: #c6e24a !important;
+    color: #c6e24a !important;
+}
+
+html.dark #sales-table .sale-btn-rollback,
+html.dark #sales-table .sale-btn-creditnote {
+    background: #381515 !important;
+    border: 1px solid #7f1d1d !important;
+    color: #f87171 !important;
+}
+
+html.dark #sales-table .sale-btn-rollback:hover,
+html.dark #sales-table .sale-btn-creditnote:hover {
+    background: #dc2626 !important;
+    border-color: #dc2626 !important;
+    color: #ffffff !important;
+}

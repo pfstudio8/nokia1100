@@ -5,7 +5,7 @@ require_once __DIR__ . '/../../../classes/BaseModel.php';
 
 class AuthModel extends BaseModel
 {
-    public function find_by_username($username)
+    public function find_by_username(string $username): ?array
     {
         $stmt = $this->conn->prepare(
             "SELECT id_usuario, nombre_usuario, contrasena, rol, verificado, is_active
@@ -16,10 +16,10 @@ class AuthModel extends BaseModel
         $stmt->execute();
         $res = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        return $res;
+        return $res ?: null;
     }
 
-    public function username_exists($username)
+    public function username_exists(string $username): bool
     {
         $stmt = $this->conn->prepare("SELECT id_usuario FROM usuario WHERE nombre_usuario = ?");
         $stmt->bind_param("s", $username);
@@ -30,7 +30,7 @@ class AuthModel extends BaseModel
         return $count > 0;
     }
 
-    public function dni_exists($dni)
+    public function dni_exists(string $dni): bool
     {
         $stmt = $this->conn->prepare("SELECT id_persona FROM persona WHERE dni = ?");
         $stmt->bind_param("s", $dni);
@@ -41,7 +41,7 @@ class AuthModel extends BaseModel
         return $count > 0;
     }
 
-    public function email_exists($email)
+    public function email_exists(string $email): bool
     {
         $stmt = $this->conn->prepare("SELECT id_persona FROM persona WHERE email = ?");
         $stmt->bind_param("s", $email);
@@ -52,7 +52,7 @@ class AuthModel extends BaseModel
         return $count > 0;
     }
 
-    public function create_user_transaction($persona_data, $user_data)
+    public function create_user_transaction(array $persona_data, array $user_data): array
     {
         $this->conn->begin_transaction();
         try {
@@ -126,7 +126,7 @@ class AuthModel extends BaseModel
         }
     }
 
-    public function find_by_email($email)
+    public function find_by_email(string $email): ?array
     {
         $stmt = $this->conn->prepare("
             SELECT u.id_usuario, p.nombre 
@@ -138,10 +138,10 @@ class AuthModel extends BaseModel
         $stmt->execute();
         $res = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        return $res;
+        return $res ?: null;
     }
 
-    public function set_reset_token($id_usuario, $token, $expira)
+    public function set_reset_token(int $id_usuario, string $token, string $expira): bool
     {
         $stmt = $this->conn->prepare("UPDATE usuario SET token_verificacion = ?, token_expira = ? WHERE id_usuario = ?");
         $stmt->bind_param("ssi", $token, $expira, $id_usuario);
@@ -150,17 +150,17 @@ class AuthModel extends BaseModel
         return $success;
     }
 
-    public function find_by_valid_token($token)
+    public function find_by_valid_token(string $token): ?array
     {
         $stmt = $this->conn->prepare("SELECT id_usuario FROM usuario WHERE token_verificacion = ? AND token_expira > NOW()");
         $stmt->bind_param("s", $token);
         $stmt->execute();
         $res = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        return $res;
+        return $res ?: null;
     }
 
-    public function update_password($id_usuario, $hashed_password)
+    public function update_password(int $id_usuario, string $hashed_password): bool
     {
         $stmt = $this->conn->prepare("UPDATE usuario SET contrasena = ?, token_verificacion = NULL, token_expira = NULL, session_token = NULL WHERE id_usuario = ?");
         $stmt->bind_param("si", $hashed_password, $id_usuario);
@@ -169,7 +169,7 @@ class AuthModel extends BaseModel
         return $success;
     }
 
-    public function update_session_token($id_usuario, $token)
+    public function update_session_token(int $id_usuario, string $token): bool
     {
         $stmt = $this->conn->prepare("UPDATE usuario SET session_token = ? WHERE id_usuario = ?");
         $stmt->bind_param("si", $token, $id_usuario);

@@ -24,6 +24,20 @@ class Layout
     <meta name="current-user" content="' . htmlspecialchars($currentUser, ENT_QUOTES, 'UTF-8') . '"/>
     <meta name="csrf-token" content="' . htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') . '"/>
     <title>' . htmlspecialchars($title) . '</title>
+    <script>
+        (function() {
+            try {
+                var theme = localStorage.getItem("nokia1100_theme");
+                if (theme === "dark") {
+                    document.documentElement.classList.add("dark");
+                    document.documentElement.setAttribute("data-theme", "dark");
+                } else {
+                    document.documentElement.classList.remove("dark");
+                    document.documentElement.setAttribute("data-theme", "light");
+                }
+            } catch (e) {}
+        })();
+    </script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,23 +46,23 @@ class Layout
     <link rel="stylesheet" href="' . BASE_URL . '/assets/css/style.css?v=' . self::getAssetVersion('/assets/css/style.css') . '">' . $extraLinks . '
     <script>window.BASE_URL = "' . BASE_URL . '";</script>
     <script src="' . BASE_URL . '/assets/js/tailwind_config.js?v=' . self::getAssetVersion('/assets/js/tailwind_config.js') . '"></script>
-    <script src="' . BASE_URL . '/assets/js/session-cache.js?v=' . self::getAssetVersion('/assets/js/session-cache.js') . '"></script>
+    <script src="' . BASE_URL . '/assets/js/theme.js?v=' . self::getAssetVersion('/assets/js/theme.js') . '"></script>
+        <script src="' . BASE_URL . '/assets/js/session-cache.js?v=' . self::getAssetVersion('/assets/js/session-cache.js') . '"></script>
 </head>
-<body class="nk-base font-sans antialiased text-[#15171a] bg-[#eeebe3] selection:bg-[#c6e24a] selection:text-[#15171a]">
+<body class="nk-base font-sans antialiased text-text-main bg-background selection:bg-[#c6e24a] selection:text-[#15171a]">
     <script>
         (function() {
             try {
+                if (document.documentElement.classList.contains("dark")) {
+                    document.body.classList.add("dark");
+                }
                 document.body.classList.add("sidebar-preload");
                 if (localStorage.getItem("sidebarCollapsed") === "true") {
                     document.body.classList.add("sidebar-collapsed");
                 }
             } catch (e) {}
         })();
-    </script>
-    <div id="top-right-user" class="fixed top-[9px] right-6 z-40 hidden md:flex items-center gap-3 bg-[#f8f6f0] border border-[#d3cebf] px-3.5 py-1.5 rounded-[2px] opacity-0 transition-opacity duration-300">
-        <div class="w-7 h-7 rounded-[2px] bg-[#15181a] text-[#c6e24a] flex items-center justify-center font-mono font-bold text-xs" id="tr-initial"></div>
-        <span id="tr-username" class="text-xs font-mono font-semibold text-[#15171a]"></span>
-    </div>';
+    </script>';
     }
 
     public static function getAllowedModules(int|string|null $userId): ?array
@@ -232,6 +246,9 @@ class Layout
     private static function renderModuleTopBar(string $activePage): string
     {
         $moduleLabel = htmlspecialchars(self::resolveModuleLabel($activePage), ENT_QUOTES, 'UTF-8');
+        $username = $_SESSION['username'] ?? '';
+        $userInitial = !empty($username) ? strtoupper(substr($username, 0, 1)) : 'U';
+        $userDisplay = !empty($username) ? htmlspecialchars($username, ENT_QUOTES, 'UTF-8') : 'Usuario';
 
         return '
 <!-- Barra Superior Unificada con Indicador de Módulo -->
@@ -247,6 +264,16 @@ class Layout
             <span class="sys-crumb-sep" aria-hidden="true">/</span>
             <span class="sys-crumb-current">' . $moduleLabel . '</span>
         </nav>
+    </div>
+    <div class="sys-topbar-right flex items-center gap-2.5">
+        <button id="themeToggleBtn" type="button" class="sys-topbar-btn sys-theme-toggle" aria-label="Cambiar tema" title="Cambiar tema (Claro / Oscuro)">
+            <span class="material-symbols-outlined theme-icon-dark text-[19px]">dark_mode</span>
+            <span class="material-symbols-outlined theme-icon-light text-[19px] hidden">light_mode</span>
+        </button>
+        <div id="top-right-user" class="hidden md:flex items-center gap-2.5 bg-surface border border-border px-3 py-1.5 rounded-[2px] transition-opacity duration-300">
+            <div class="w-6 h-6 rounded-[2px] bg-graphite text-lcd flex items-center justify-center font-mono font-bold text-xs" id="tr-initial">' . $userInitial . '</div>
+            <span id="tr-username" class="text-xs font-mono font-semibold text-text-main">' . $userDisplay . '</span>
+        </div>
     </div>
 </header>
 
