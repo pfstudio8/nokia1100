@@ -9,6 +9,9 @@ switch ($action) {
     case 'edit_supplier':
         $controller->edit_supplier();
         break;
+    case 'save_supplier':
+        $controller->save_supplier();
+        break;
     case 'new_purchase':
         $controller->new_purchase();
         break;
@@ -20,6 +23,9 @@ switch ($action) {
         break;
     case 'cancel_purchase':
         $controller->cancel_purchase();
+        break;
+    case 'quick_product':
+        $controller->quick_product();
         break;
     case 'suppliers':
     case 'add':

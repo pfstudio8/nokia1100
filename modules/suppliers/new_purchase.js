@@ -122,7 +122,7 @@ function submitPurchase() {
     if (!idProveedor) { showPurchaseFeedback('Seleccione un proveedor principal', 'error'); return; }
     if (cart.length === 0) { showPurchaseFeedback('Agregue productos a la orden de compra', 'warning'); return; }
 
-    fetch('new_purchase.php', {
+    fetch('index.php?action=new_purchase', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
