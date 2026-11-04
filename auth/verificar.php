@@ -111,9 +111,7 @@ if (isset($_GET['token'])) {
         );
     }
 } else {
-    renderVerificationView(
-        false,
-        'Enlace incompleto',
-        'No se recibió un token de verificación válido.'
-    );
+    $emailParam = isset($_GET['email']) ? "&email=" . urlencode($_GET['email']) : "";
+    header("Location: " . BASE_URL . "/index.php?action=verify_otp_modal" . $emailParam);
+    exit();
 }

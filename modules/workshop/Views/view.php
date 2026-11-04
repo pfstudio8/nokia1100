@@ -407,13 +407,17 @@ if ($_SESSION['role'] === 'admin') {
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <?php foreach($images as $img): ?>
                             <div class="relative group">
-                                <a href="<?php echo BASE_URL; ?>/assets/img/reparaciones/<?php echo htmlspecialchars($img['ruta_archivo']); ?>" target="_blank" class="block aspect-square overflow-hidden rounded-xl border border-border relative">
-                                    <img src="<?php echo BASE_URL; ?>/assets/img/reparaciones/<?php echo htmlspecialchars($img['ruta_archivo']); ?>" alt="Foto" class="w-full h-full object-cover hover:scale-110 transition-transform duration-300">
-                                </a>
-                                <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] p-1 text-center font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div class="block aspect-square overflow-hidden rounded-xl border border-border relative cursor-pointer bg-black/5 group/img" onclick="openWorkshopLightbox('<?php echo BASE_URL; ?>/assets/img/reparaciones/<?php echo htmlspecialchars($img['ruta_archivo']); ?>', 'Foto de Reparación · <?php echo htmlspecialchars($img['tipo']); ?>')" title="Hacé clic para ver la foto en pantalla completa">
+                                    <img src="<?php echo BASE_URL; ?>/assets/img/reparaciones/<?php echo htmlspecialchars($img['ruta_archivo']); ?>" alt="Foto" class="w-full h-full object-cover select-none transition-transform duration-300 group-hover/img:scale-105">
+                                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 text-white pointer-events-none z-10">
+                                        <span class="material-symbols-outlined text-[24px]">visibility</span>
+                                        <span class="text-[10px] font-medium tracking-wide uppercase">Ver foto</span>
+                                    </div>
+                                </div>
+                                <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] p-1 text-center font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                     <?php echo htmlspecialchars($img['tipo']); ?>
                                 </div>
-                                <form method="POST" action="" class="absolute top-2 right-2">
+                                <form method="POST" action="" class="absolute top-2 right-2 z-20">
                                     <input type="hidden" name="action" value="delete_image">
                                     <input type="hidden" name="id_imagen" value="<?php echo $img['id_imagen']; ?>">
                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
@@ -428,6 +432,54 @@ if ($_SESSION['role'] === 'admin') {
                             <p class="text-sm text-text-muted text-center py-4">No hay fotos subidas para esta reparación.</p>
                         <?php endif; ?>
                     </div>
+
+                    <!-- Modal Lightbox para visualización de fotos en view.php -->
+                    <div id="viewPhotoLightbox" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden opacity-0 transition-opacity duration-200">
+                        <div class="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
+                            <button type="button" onclick="closeWorkshopLightbox()" class="absolute -top-10 right-0 text-white/80 hover:text-white transition-colors flex items-center gap-1 font-mono text-xs cursor-pointer">
+                                <span>CERRAR</span>
+                                <span class="material-symbols-outlined text-[20px]">close</span>
+                            </button>
+                            <div class="overflow-hidden rounded-xl border border-white/20 shadow-2xl bg-black flex items-center justify-center">
+                                <img id="viewLightboxImg" src="" alt="Foto ampliada" class="max-w-full max-h-[80vh] object-contain select-none">
+                            </div>
+                            <p id="viewLightboxCaption" class="text-xs text-white/70 font-mono mt-3 text-center"></p>
+                        </div>
+                    </div>
+
+                    <script>
+                    function openWorkshopLightbox(src, caption) {
+                        const modal = document.getElementById('viewPhotoLightbox');
+                        const img = document.getElementById('viewLightboxImg');
+                        const cap = document.getElementById('viewLightboxCaption');
+                        if (!modal || !img) return;
+                        img.src = src;
+                        if (cap) cap.textContent = caption || '';
+                        modal.classList.remove('hidden');
+                        setTimeout(() => modal.classList.remove('opacity-0'), 10);
+                    }
+
+                    function closeWorkshopLightbox() {
+                        const modal = document.getElementById('viewPhotoLightbox');
+                        const img = document.getElementById('viewLightboxImg');
+                        if (!modal) return;
+                        modal.classList.add('opacity-0');
+                        setTimeout(() => {
+                            modal.classList.add('hidden');
+                            if (img) img.src = '';
+                        }, 200);
+                    }
+
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'Escape') closeWorkshopLightbox();
+                    });
+                    const viewModal = document.getElementById('viewPhotoLightbox');
+                    if (viewModal) {
+                        viewModal.addEventListener('click', (e) => {
+                            if (e.target === viewModal) closeWorkshopLightbox();
+                        });
+                    }
+                    </script>
                 </div>
 
                 <?php // REPUESTOS ?>
@@ -448,9 +500,41 @@ if ($_SESSION['role'] === 'admin') {
                             <input type="hidden" name="action" value="add_repuesto">
                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                             <select name="id_producto" required class="flex-1 bg-surface border border-border px-3 py-2 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
-                                <option value="">Seleccionar repuesto del inventario...</option>
-                                <?php foreach($productos_opt as $po): ?>
-                                    <option value="<?php echo $po['id_producto']; ?>"><?php echo htmlspecialchars($po['nombre']); ?> - $<?php echo number_format($po['precio'],2); ?> (Stock: <?php echo $po['cantidad']; ?>)</option>
+                                <option value="">Seleccionar repuesto o pieza del inventario...</option>
+                                <?php 
+                                $grouped_prods = [];
+                                foreach ($productos_opt as $po) {
+                                    $catKey = !empty($po['categoria']) ? trim($po['categoria']) : 'Otros';
+                                    $grouped_prods[$catKey][] = $po;
+                                }
+                                uksort($grouped_prods, function($a, $b) {
+                                    if ($a === 'Repuestos') return -1;
+                                    if ($b === 'Repuestos') return 1;
+                                    return strcasecmp($a, $b);
+                                });
+                                foreach ($grouped_prods as $catTitle => $items): 
+                                ?>
+                                    <optgroup label="── <?php echo htmlspecialchars($catTitle); ?> ──">
+                                        <?php foreach ($items as $po): 
+                                            $marca = trim($po['marca'] ?? '');
+                                            $modelo = trim($po['modelo'] ?? '');
+                                            $marcaModelo = trim($marca . ' ' . $modelo);
+                                            $tipoRep = trim($po['tipo_repuesto'] ?? '');
+                                            
+                                            $labelParts = [];
+                                            $labelParts[] = '[' . $catTitle . ']';
+                                            $labelParts[] = trim($po['nombre'] ?? '');
+                                            if ($marcaModelo !== '') {
+                                                $labelParts[] = '· ' . $marcaModelo;
+                                            }
+                                            if ($tipoRep !== '' && stripos($po['nombre'], $tipoRep) === false) {
+                                                $labelParts[] = '(' . $tipoRep . ')';
+                                            }
+                                            $labelTxt = implode(' ', $labelParts) . ' — $' . number_format($po['precio'], 2) . ' (Stock: ' . $po['cantidad'] . ')';
+                                        ?>
+                                            <option value="<?php echo (int)$po['id_producto']; ?>"><?php echo htmlspecialchars($labelTxt); ?></option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
                                 <?php endforeach; ?>
                             </select>
                             <button type="submit" class="bg-surface hover:bg-surface-hover border border-border px-4 py-2 rounded-lg text-sm font-medium transition-colors text-text-main whitespace-nowrap">Asignar Pieza</button>
@@ -471,7 +555,23 @@ if ($_SESSION['role'] === 'admin') {
                                 <?php if(count($repuestos)>0): ?>
                                     <?php foreach($repuestos as $rep): ?>
                                     <tr class="hover:bg-surface/30 transition-colors">
-                                        <td class="p-3"><?php echo htmlspecialchars($rep['nombre']); ?></td>
+                                        <td class="p-3">
+                                            <div class="font-medium text-text-main"><?php echo htmlspecialchars($rep['nombre']); ?></div>
+                                            <?php 
+                                            $marcaModeloRep = trim(($rep['marca'] ?? '') . ' ' . ($rep['modelo'] ?? ''));
+                                            $catRep = trim($rep['categoria'] ?? '');
+                                            if ($marcaModeloRep !== '' || $catRep !== ''): 
+                                            ?>
+                                                <div class="text-xs text-text-muted flex items-center gap-1.5 mt-0.5">
+                                                    <?php if ($catRep !== ''): ?>
+                                                        <span class="inline-block px-1.5 py-0.2 rounded bg-surface-hover text-[10px] uppercase font-mono text-text-muted border border-border/40"><?php echo htmlspecialchars($catRep); ?></span>
+                                                    <?php endif; ?>
+                                                    <?php if ($marcaModeloRep !== ''): ?>
+                                                        <span><?php echo htmlspecialchars($marcaModeloRep); ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </td>
                                         <td class="p-3 text-center"><?php echo $rep['cantidad']; ?></td>
                                         <td class="p-3 text-right">$<?php echo number_format($rep['precio_unitario'], 2); ?></td>
                                         <td class="p-3 text-center">

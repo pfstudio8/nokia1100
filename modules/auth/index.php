@@ -12,6 +12,12 @@ switch ($action) {
     case 'register':
         $controller->register();
         break;
+    case 'verify_otp':
+        $controller->verify_otp();
+        break;
+    case 'resend_otp':
+        $controller->resend_otp();
+        break;
     case 'forgot_password':
         $controller->forgot_password();
         break;

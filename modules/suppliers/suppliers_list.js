@@ -95,21 +95,24 @@
   }
 
   function openModal(id) {
-    const m = document.getElementById(id);
+    const m = typeof id === 'string' ? document.getElementById(id) : id;
     if (!m) return;
     m.hidden = false;
+    m.classList.add('is-open');
     document.body.classList.add('is-locked');
     setTimeout(() => {
-      const focusEl = m.querySelector('[data-autofocus]') || m.querySelector('input:not([type="hidden"]), select, button.nk-btn--primary');
+      const focusEl = m.querySelector('[data-autofocus]') || m.querySelector('input:not([type="hidden"]), textarea, select, button.nk-btn--primary');
       if (focusEl) focusEl.focus();
-    }, 30);
+    }, 40);
   }
 
   function closeModal(modalEl) {
     const m = typeof modalEl === 'string' ? document.getElementById(modalEl) : modalEl;
     if (!m) return;
+    m.classList.remove('is-open');
     m.hidden = true;
-    if (!$$('.nk-modal:not([hidden])').length) {
+    const anyOpen = $('.nk-modal.is-open:not([hidden])').length > 0;
+    if (!anyOpen) {
       document.body.classList.remove('is-locked');
     }
   }
@@ -246,6 +249,26 @@
     if (titleEl) titleEl.textContent = meta.title;
     if (subEl) subEl.textContent = meta.sub;
 
+    const VIEW_TABLE_MAP = {
+      sec1: { id: 'suppliers-table', title: 'Directorio de Proveedores', file: 'proveedores' },
+      sec2: { id: 'smart-table', title: 'Artículos en Reposición', file: 'reposicion_stock' },
+      sec3: { id: 'manual-table', title: 'Orden Manual de Compra', file: 'orden_compra' },
+      sec4: { id: 'purchases-table', title: 'Historial de Pedidos a Proveedores', file: 'pedidos_proveedores' },
+      secStock: { id: 'stock-table', title: 'Inventario Físico en Vivo', file: 'stock_en_vivo' }
+    };
+    const wrap = document.getElementById('headerExportWrap');
+    if (wrap) {
+      const info = VIEW_TABLE_MAP[viewId] || VIEW_TABLE_MAP.sec1;
+      const btnExcel = wrap.querySelector('button[title*="Excel"]');
+      const btnPdf = wrap.querySelector('button[title*="PDF"]');
+      if (btnExcel) {
+        btnExcel.setAttribute('onclick', "exportTableToExcel('" + info.id + "', '" + info.file + "', this)");
+      }
+      if (btnPdf) {
+        btnPdf.setAttribute('onclick', "exportTableToPDF('" + info.id + "', '" + info.title + "', '" + info.file + "', this)");
+      }
+    }
+
     try {
       const url = new URL(window.location.href);
       url.searchParams.set('view', viewId);
@@ -258,13 +281,6 @@
     $$('#roleSeg button').forEach(btn => {
       btn.setAttribute('aria-pressed', btn.dataset.v === currentRole ? 'true' : 'false');
     });
-    const isMostrador = currentRole === 'empleado';
-    $$('[data-admin-only]').forEach(el => {
-      el.hidden = isMostrador;
-    });
-    const headNewSup = $('#btnHeadNewSup');
-    if (headNewSup) headNewSup.hidden = isMostrador;
-
     renderSuppliers();
     renderHistory();
   }
@@ -306,7 +322,10 @@
         <td data-label="Contacto">${s.atencion ? esc(s.atencion) : '<span class="nk-cell-meta">Sin especificar</span>'}</td>
         <td data-label="WhatsApp">
           ${waClean
-            ? `<a class="link nk-mono" href="https://wa.me/${waClean}" target="_blank" rel="noopener">+${esc(waClean)}</a>`
+            ? `<button type="button" class="nk-wa-pill" data-action="wa-supplier" data-id="${s.id}" title="Armar mensaje de WhatsApp para ${esc(s.nombre)}">
+                 <svg class="nk-icon" aria-hidden="true" style="stroke:#1d6a38"><use href="#nk-i-chat"/></svg>
+                 <span>+${esc(waClean)}</span>
+               </button>`
             : '<span class="nk-cell-meta">No cargado</span>'}
         </td>
         <td data-label="Email de órdenes">
@@ -319,6 +338,9 @@
           <div class="nk-cell-actions">
             <button type="button" class="nk-btn nk-btn--sm nk-btn--lcd" data-action="order-supplier" data-id="${s.id}" title="Abrir asistente de reposición con este proveedor">
               Pedir
+            </button>
+            <button type="button" class="nk-btn nk-btn--sm" data-action="wa-supplier" data-id="${s.id}" title="Armar mensaje de WhatsApp para ${esc(s.nombre)}">
+              <svg class="nk-icon" aria-hidden="true" style="stroke:#1d6a38"><use href="#nk-i-chat"/></svg>WhatsApp
             </button>
             <button type="button" class="nk-btn nk-btn--sm" data-action="filter-supplier-orders" data-id="${s.id}" title="Ver órdenes de este proveedor">
               Pedidos (${orderCount})
@@ -822,9 +844,12 @@
     if (btn) btn.setAttribute('aria-busy', 'true');
 
     try {
-      const res = await fetch('index.php?action=receive_purchase', {
+      const res = await fetch((BOOT.baseUrl || '') + '/modules/suppliers/index.php?action=receive_purchase', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
         body: JSON.stringify({
           id_compra: activeReceiveOrder.id,
           items: activeReceiveOrder.items,
@@ -916,6 +941,45 @@
   // =====================================================================
   // MODAL: WHATSAPP (#waModal)
   // =====================================================================
+  function openSupplierChatModal(supplierId) {
+    const sup = suppliers.find(s => s.id === Number(supplierId));
+    if (!sup) {
+      toast('Proveedor no encontrado.', 'err');
+      return;
+    }
+    const phone = cleanPhone(sup.telefono);
+    const contactGreeting = sup.atencion ? `Hola ${sup.atencion} (${sup.nombre})` : `Hola ${sup.nombre}`;
+    
+    // Revisar si hay artículos con alerta para reponer
+    const alertItems = catalog.filter(p => p.stock <= p.minimo);
+    let text = '';
+    if (alertItems.length > 0) {
+      const lines = alertItems.slice(0, 6).map(i => {
+        const qty = Math.max(1, (i.minimo * 2) - i.stock);
+        const label = [i.nombre, i.marca, i.modelo].filter(Boolean).join(' ');
+        return `  • *${qty} u.* · [${i.sku}] ${label}`;
+      }).join('\n');
+      text = `${contactGreeting}, te contacto de *Nokia 1100*.\n\nQuería consultar cotización y stock para reposición de los siguientes artículos:\n\n${lines}\n\n¿Tenés disponibilidad para retiro o envío? ¡Muchas gracias!`;
+    } else {
+      text = `${contactGreeting}, te contacto desde *Nokia 1100* para consultar sobre disponibilidad de stock y lista de precios actualizada de repuestos y accesorios.\n\n¡Muchas gracias!`;
+    }
+
+    currentWaPayload = { phone, text, supplierName: sup.nombre };
+    const toEl = $('#waTo');
+    const txtEl = $('#waText');
+    if (toEl) {
+      toEl.textContent = `Destinatario: ${sup.nombre}${phone ? ' (+' + phone + ')' : ' (sin teléfono registrado)'}`;
+    }
+    if (txtEl) {
+      if (txtEl.tagName === 'TEXTAREA') {
+        txtEl.value = text;
+      } else {
+        txtEl.textContent = text;
+      }
+    }
+    openModal('waModal');
+  }
+
   function openWhatsAppModal(supplierId, items, refCode = '') {
     const sup = suppliers.find(s => s.id === Number(supplierId));
     if (!sup) {
@@ -935,10 +999,10 @@
 
     const itemLines = items.map(i => {
       const label = [i.nombre, i.marca, i.modelo].filter(Boolean).join(' ');
-      return `• *${i.cantidad} u.* × [${i.sku}] ${label} — ${money(i.costo)} c/u`;
+      return `  • *${i.cantidad} u.* · [${i.sku}] ${label} - ${money(i.costo)} c/u`;
     }).join('\n');
 
-    const text = `${headerLine}\n\n${itemLines}\n\n*Total estimado:* ${money(total)}\n\nPor favor confirmanos disponibilidad y demora de retiro/envío. ¡Gracias!`;
+    const text = `${headerLine}\n\n${itemLines}\n\n*Total estimado:* ${money(total)}\n\nPor favor confirmanos disponibilidad y demora de retiro/envío. ¡Muchas gracias!`;
     const phone = cleanPhone(sup.telefono);
 
     currentWaPayload = { phone, text, supplierName: sup.nombre };
@@ -947,7 +1011,13 @@
     if (toEl) {
       toEl.textContent = `Destinatario: ${sup.nombre}${phone ? ' (+' + phone + ')' : ' (sin teléfono registrado)'}`;
     }
-    if (txtEl) txtEl.textContent = text;
+    if (txtEl) {
+      if (txtEl.tagName === 'TEXTAREA') {
+        txtEl.value = text;
+      } else {
+        txtEl.textContent = text;
+      }
+    }
     openModal('waModal');
   }
 
@@ -966,9 +1036,12 @@
 
     if (btnEl) btnEl.setAttribute('aria-busy', 'true');
     try {
-      const res = await fetch('index.php?action=new_purchase', {
+      const res = await fetch((BOOT.baseUrl || '') + '/modules/suppliers/index.php?action=new_purchase', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
         body: JSON.stringify({
           id_proveedor: supplierId,
           items: items,
@@ -1075,9 +1148,13 @@
     if (btn) btn.setAttribute('aria-busy', 'true');
 
     try {
-      const res = await fetch('index.php?action=save_supplier', {
+      const apiUrl = (BOOT.baseUrl || '') + '/modules/suppliers/index.php?action=save_supplier';
+      const res = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
         body: JSON.stringify({
           id_proveedor: id,
           nombre,
@@ -1140,9 +1217,12 @@
     if (!ok) return;
 
     try {
-      const res = await fetch('index.php?action=delete_supplier', {
+      const res = await fetch((BOOT.baseUrl || '') + '/modules/suppliers/index.php?action=delete_supplier', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
         body: JSON.stringify({
           id_proveedor: sup.id,
           csrf_token: csrfToken
@@ -1187,9 +1267,12 @@
     if (btn) btn.setAttribute('aria-busy', 'true');
 
     try {
-      const res = await fetch('index.php?action=quick_product', {
+      const res = await fetch((BOOT.baseUrl || '') + '/modules/suppliers/index.php?action=quick_product', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
         body: JSON.stringify({
           sku,
           categoria,
@@ -1257,9 +1340,12 @@
     if (!ok) return;
 
     try {
-      const res = await fetch('index.php?action=cancel_purchase', {
+      const res = await fetch((BOOT.baseUrl || '') + '/modules/suppliers/index.php?action=cancel_purchase', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
         body: JSON.stringify({
           id_compra: ord.id,
           csrf_token: csrfToken
@@ -1282,40 +1368,402 @@
   // =====================================================================
   // EVENTOS DELEGADOS E INICIALIZACIÓN
   // =====================================================================
-  document.addEventListener('DOMContentLoaded', () => {
-    populateSupplierSelects(BOOT.preselectedSupplier || 0);
-    populateCatalogSelect();
-    updateKPIs();
-    renderSuppliers();
-    renderSmartReplenishment();
-    renderManualOrder();
-    renderHistory();
-    renderLiveStock();
-    applyRoleMode(currentRole);
-    switchView(currentView);
 
-    // Atajo de teclado "/" para enfocar el buscador visible
-    document.addEventListener('keydown', e => {
-      if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
-        const searchEl = currentView === 'secStock' ? $('#stockSearch') : $('#supSearch');
-        if (searchEl && !searchEl.closest('[hidden]')) {
-          e.preventDefault();
-          searchEl.focus();
-        }
-      } else if (e.key === 'Escape') {
-        const openModals = $$('.nk-modal:not([hidden])');
-        if (openModals.length) {
-          closeModal(openModals[openModals.length - 1]);
-        }
+  // Atajo de teclado "/" para enfocar el buscador visible y Escape para modales
+  document.addEventListener('keydown', e => {
+    if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+      const searchEl = currentView === 'secStock' ? $('#stockSearch') : $('#supSearch');
+      if (searchEl && !searchEl.closest('[hidden]')) {
+        e.preventDefault();
+        searchEl.focus();
       }
-    });
+    } else if (e.key === 'Escape') {
+      const openModals = $$('.nk-modal.is-open:not([hidden])');
+      if (openModals.length) {
+        closeModal(openModals[openModals.length - 1]);
+      }
+    }
+  });
+
+  // Delegación de cambios en inputs de tablas (Reposición, Manual, Recepción)
+  document.addEventListener('input', e => {
+    const t = e.target;
+    if (!t) return;
+
+    // Reposición inteligente: cantidad o costo
+    if (t.matches('[data-smart-qty]')) {
+      const id = Number(t.dataset.smartQty);
+      const st = smartState.get(id);
+      if (st) {
+        st.qty = Math.max(1, parseInt(t.value, 10) || 1);
+        const subEl = $(`[data-smart-sub="${id}"]`);
+        if (subEl) subEl.textContent = money(st.checked ? st.qty * st.costo : 0);
+        updateSmartDock();
+      }
+    } else if (t.matches('[data-smart-cost]')) {
+      const id = Number(t.dataset.smartCost);
+      const st = smartState.get(id);
+      if (st) {
+        st.costo = Math.max(0, parseFloat(t.value) || 0);
+        const subEl = $(`[data-smart-sub="${id}"]`);
+        if (subEl) subEl.textContent = money(st.checked ? st.qty * st.costo : 0);
+        updateSmartDock();
+      }
+    }
+
+    // Orden Manual: cantidad o costo
+    else if (t.matches('[data-manual-qty]')) {
+      const idx = Number(t.dataset.manualQty);
+      if (manualCart[idx]) {
+        manualCart[idx].cantidad = Math.max(1, parseInt(t.value, 10) || 1);
+        const subEl = $(`[data-manual-sub="${idx}"]`);
+        if (subEl) subEl.textContent = money(manualCart[idx].cantidad * manualCart[idx].costo);
+        const sum = manualCart.reduce((a, i) => a + (i.cantidad * i.costo), 0);
+        const tot = $('#manualTotal');
+        if (tot) tot.textContent = money(sum);
+      }
+    } else if (t.matches('[data-manual-cost]')) {
+      const idx = Number(t.dataset.manualCost);
+      if (manualCart[idx]) {
+        manualCart[idx].costo = Math.max(0, parseFloat(t.value) || 0);
+        const subEl = $(`[data-manual-sub="${idx}"]`);
+        if (subEl) subEl.textContent = money(manualCart[idx].cantidad * manualCart[idx].costo);
+        const sum = manualCart.reduce((a, i) => a + (i.cantidad * i.costo), 0);
+        const tot = $('#manualTotal');
+        if (tot) tot.textContent = money(sum);
+      }
+    }
+
+    // Control de Recepción: recibido real o costo
+    else if (t.matches('[data-rec-qty]') && activeReceiveOrder) {
+      const idx = Number(t.dataset.recQty);
+      const item = activeReceiveOrder.items[idx];
+      if (item) {
+        item.recibido = Math.max(0, parseInt(t.value, 10) || 0);
+        renderReceiveModalRows();
+      }
+    } else if (t.matches('[data-rec-cost]') && activeReceiveOrder) {
+      const idx = Number(t.dataset.recCost);
+      const item = activeReceiveOrder.items[idx];
+      if (item) {
+        item.costo = Math.max(0, parseFloat(t.value) || 0);
+        const total = activeReceiveOrder.items.reduce((a, i) => a + (i.recibido * i.costo), 0);
+        const totEl = $('#recTotal');
+        if (totEl) totEl.textContent = money(total);
+      }
+    }
+  });
+
+  document.addEventListener('change', e => {
+    const t = e.target;
+    if (!t) return;
+    if (t.matches('[data-smart-check]')) {
+      const id = Number(t.dataset.smartCheck);
+      const st = smartState.get(id);
+      if (st) {
+        st.checked = t.checked;
+        const tr = t.closest('tr');
+        if (tr) tr.classList.toggle('is-off', !st.checked);
+        const subEl = $(`[data-smart-sub="${id}"]`);
+        if (subEl) subEl.textContent = money(st.checked ? st.qty * st.costo : 0);
+        updateSmartDock();
+      }
+    }
+  });
+
+  // Delegación general de clics (activa de forma inmediata y global)
+  document.addEventListener('click', e => {
+    const targetEl = e.target instanceof Element ? e.target : e.target?.parentElement;
+    if (!targetEl) return;
+
+    // Cerrar modal con [data-nk-close] o clic en fondo oscuro .nk-modal
+    const closeBtn = targetEl.closest('[data-nk-close]');
+    if (closeBtn) {
+      closeModal(closeBtn.closest('.nk-modal'));
+      return;
+    }
+    if (targetEl.classList && typeof targetEl.classList.contains === 'function' && targetEl.classList.contains('nk-modal')) {
+      closeModal(targetEl);
+      return;
+    }
+
+    // Steppers de Reposición
+    const smartStep = targetEl.closest('[data-smart-step]');
+    if (smartStep) {
+      const id = Number(smartStep.dataset.id);
+      const delta = Number(smartStep.dataset.smartStep);
+      const st = smartState.get(id);
+      if (st) {
+        st.qty = Math.max(1, st.qty + delta);
+        renderSmartReplenishment();
+      }
+      return;
+    }
+
+    // Steppers de Orden Manual
+    const manualStep = targetEl.closest('[data-manual-step]');
+    if (manualStep) {
+      const idx = Number(manualStep.dataset.idx);
+      const delta = Number(manualStep.dataset.manualStep);
+      if (manualCart[idx]) {
+        manualCart[idx].cantidad = Math.max(1, manualCart[idx].cantidad + delta);
+        renderManualOrder();
+      }
+      return;
+    }
+
+    // Steppers de Recepción
+    const recStep = targetEl.closest('[data-rec-step]');
+    if (recStep && activeReceiveOrder) {
+      const idx = Number(recStep.dataset.idx);
+      const delta = Number(recStep.dataset.recStep);
+      if (activeReceiveOrder.items[idx]) {
+        activeReceiveOrder.items[idx].recibido = Math.max(0, activeReceiveOrder.items[idx].recibido + delta);
+        renderReceiveModalRows();
+      }
+      return;
+    }
+
+    // Control segmentado de Estado en Historial
+    const statusBtn = targetEl.closest('#statusSeg button');
+    if (statusBtn) {
+      statusFilter = statusBtn.dataset.v;
+      renderHistory();
+      return;
+    }
+
+    // Acciones con data-action
+    const actEl = targetEl.closest('[data-action]');
+    if (!actEl) return;
+    const action = actEl.dataset.action;
+
+    switch (action) {
+      case 'view':
+        switchView(actEl.dataset.view);
+        break;
+
+      case 'new-supplier':
+        openSupplierModal(0);
+        break;
+
+      case 'edit-supplier':
+        openSupplierModal(Number(actEl.dataset.id));
+        break;
+
+      case 'save-supplier':
+        saveSupplierFromModal();
+        break;
+
+      case 'delete-supplier':
+        deleteSupplierById(Number(actEl.dataset.id));
+        break;
+
+      case 'order-supplier': {
+        const supId = Number(actEl.dataset.id);
+        populateSupplierSelects(supId);
+        const hasAlerts = catalog.some(p => p.stock <= p.minimo);
+        switchView(hasAlerts ? 'sec2' : 'sec3');
+        toast('Proveedor seleccionado en el asistente de pedido.');
+        break;
+      }
+
+      case 'filter-supplier-orders': {
+        supplierOrderFilter = Number(actEl.dataset.id);
+        statusFilter = 'ALL';
+        renderHistory();
+        switchView('sec4');
+        break;
+      }
+
+      case 'clear-sup-filter':
+        supplierOrderFilter = null;
+        renderHistory();
+        break;
+
+      case 'wa-supplier': {
+        openSupplierChatModal(Number(actEl.dataset.id));
+        break;
+      }
+
+      case 'wa': {
+        const supId = Number($('#smartSupplier')?.value || 0);
+        const items = getSelectedSmartItems();
+        openWhatsAppModal(supId, items);
+        break;
+      }
+
+      case 'wa-manual': {
+        const supId = Number($('#manualSupplier')?.value || 0);
+        openWhatsAppModal(supId, manualCart);
+        break;
+      }
+
+      case 'wa-order': {
+        const ord = orders.find(o => o.id === Number(actEl.dataset.id));
+        if (ord) {
+          openWhatsAppModal(ord.id_proveedor, ord.details || [], `#OC-${String(ord.id).padStart(4, '0')}`);
+        }
+        break;
+      }
+
+      case 'wa-copy': {
+        const text = $('#waText')?.value || currentWaPayload.text || '';
+        if (text) {
+          if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => {
+              toast('Mensaje copiado al portapapeles.');
+            }).catch(() => {
+              $('#waText')?.select();
+              document.execCommand('copy');
+              toast('Mensaje copiado al portapapeles.');
+            });
+          } else {
+            $('#waText')?.select();
+            document.execCommand('copy');
+            toast('Mensaje copiado al portapapeles.');
+          }
+        }
+        break;
+      }
+
+      case 'wa-open': {
+        const text = $('#waText')?.value || currentWaPayload.text || '';
+        const encoded = encodeURIComponent(text);
+        const phone = currentWaPayload.phone;
+        const url = phone
+          ? `https://wa.me/${phone}?text=${encoded}`
+          : `https://wa.me/?text=${encoded}`;
+        window.open(url, '_blank', 'noopener');
+        break;
+      }
+
+      case 'print':
+        window.print();
+        break;
+
+      case 'register-smart': {
+        const supId = Number($('#smartSupplier')?.value || 0);
+        const items = getSelectedSmartItems();
+        submitPurchaseOrder({
+          supplierId: supId,
+          items,
+          descripcion: 'Reposición automática de stock crítico',
+          tiempoEntrega: 'A coordinar',
+          btnEl: $('#btnRegister')
+        });
+        break;
+      }
+
+      case 'quick-product':
+        openModal('quickModal');
+        break;
+
+      case 'save-quick':
+        saveQuickProductFromModal();
+        break;
+
+      case 'manual-add': {
+        const prodId = Number($('#manualProduct')?.value || 0);
+        const prod = catalog.find(p => p.id === prodId);
+        if (!prod) {
+          toast('Elegí un producto del catálogo o creá uno nuevo.', 'err');
+          return;
+        }
+        addProductToManualCart(prod, 1);
+        toast(`«${prod.nombre}» agregado a la orden manual.`);
+        break;
+      }
+
+      case 'manual-remove': {
+        const idx = Number(actEl.dataset.idx);
+        manualCart.splice(idx, 1);
+        renderManualOrder();
+        break;
+      }
+
+      case 'save-manual': {
+        const supId = Number($('#manualSupplier')?.value || 0);
+        const desc = ($('#manualDesc')?.value || '').trim() || 'Orden de compra manual';
+        const eta = ($('#manualEta')?.value || '').trim() || 'A coordinar';
+        submitPurchaseOrder({
+          supplierId: supId,
+          items: manualCart,
+          descripcion: desc,
+          tiempoEntrega: eta,
+          btnEl: $('#btnSaveManual')
+        }).then(ok => {
+          if (ok) {
+            manualCart = [];
+            if ($('#manualDesc')) $('#manualDesc').value = '';
+            if ($('#manualEta')) $('#manualEta').value = '';
+            renderManualOrder();
+          }
+        });
+        break;
+      }
+
+      case 'open-receive':
+        openReceiveModal(Number(actEl.dataset.id));
+        break;
+
+      case 'confirm-receive':
+        confirmReceivePurchase();
+        break;
+
+      case 'cancel-order':
+        cancelOrderById(Number(actEl.dataset.id));
+        break;
+
+      case 'view-order':
+        openOrderDetailModal(Number(actEl.dataset.id));
+        break;
+
+      case 'stock-to-manual': {
+        const prod = catalog.find(p => p.id === Number(actEl.dataset.id));
+        if (prod) {
+          const suggested = Math.max(1, (prod.minimo * 2) - prod.stock);
+          addProductToManualCart(prod, suggested);
+          switchView('sec3');
+          toast(`«${prod.nombre}» enviado a Compra manual (${suggested} u.).`);
+        }
+        break;
+      }
+    }
+  });
+
+  // Inicialización de la vista
+  function initModule() {
+    try {
+      populateSupplierSelects(BOOT.preselectedSupplier || 0);
+      populateCatalogSelect();
+      updateKPIs();
+      renderSuppliers();
+      renderSmartReplenishment();
+      renderManualOrder();
+      renderHistory();
+      renderLiveStock();
+      applyRoleMode(currentRole);
+      switchView(currentView);
+    } catch (err) {
+      console.error('[NK_SUPPLIERS] Error durante inicialización:', err);
+    }
 
     // Buscadores en vivo
     $('#supSearch')?.addEventListener('input', renderSuppliers);
     $('#stockSearch')?.addEventListener('input', renderLiveStock);
     $('#smartSupplier')?.addEventListener('change', renderSmartSupplierMeta);
 
-    // Checkbox Seleccionar todos en Reposición
+    // Formularios
+    $('#supplierForm')?.addEventListener('submit', e => {
+      e.preventDefault();
+      saveSupplierFromModal();
+    });
+
+    $('#quickForm')?.addEventListener('submit', e => {
+      e.preventDefault();
+      saveQuickProductFromModal();
+    });
+
     $('#smartAll')?.addEventListener('change', e => {
       const checked = e.target.checked;
       for (const st of smartState.values()) {
@@ -1323,336 +1771,27 @@
       }
       renderSmartReplenishment();
     });
+  }
 
-    // Delegación de cambios en inputs de tablas (Reposición, Manual, Recepción)
-    document.addEventListener('input', e => {
-      const t = e.target;
+  // Ejecutar inicialización ya sea si el DOM ya cargó o cuando termine de cargar
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initModule);
+  } else {
+    initModule();
+  }
 
-      // Reposición: cantidad o costo
-      if (t.matches('[data-smart-qty]')) {
-        const id = Number(t.dataset.smartQty);
-        const st = smartState.get(id);
-        if (st) {
-          st.qty = Math.max(1, parseInt(t.value, 10) || 1);
-          const subEl = $(`[data-smart-sub="${id}"]`);
-          if (subEl) subEl.textContent = money(st.checked ? st.qty * st.costo : 0);
-          updateSmartDock();
-        }
-      } else if (t.matches('[data-smart-cost]')) {
-        const id = Number(t.dataset.smartCost);
-        const st = smartState.get(id);
-        if (st) {
-          st.costo = Math.max(0, parseFloat(t.value) || 0);
-          const subEl = $(`[data-smart-sub="${id}"]`);
-          if (subEl) subEl.textContent = money(st.checked ? st.qty * st.costo : 0);
-          updateSmartDock();
-        }
-      }
+  // Exponer métodos clave a window para interoperabilidad total
+  window.NK_SUPPLIERS = {
+    openSupplierModal,
+    openSupplierChatModal,
+    openWhatsAppModal,
+    switchView,
+    renderSuppliers,
+    renderHistory,
+    renderLiveStock
+  };
 
-      // Orden Manual: cantidad o costo
-      else if (t.matches('[data-manual-qty]')) {
-        const idx = Number(t.dataset.manualQty);
-        if (manualCart[idx]) {
-          manualCart[idx].cantidad = Math.max(1, parseInt(t.value, 10) || 1);
-          const subEl = $(`[data-manual-sub="${idx}"]`);
-          if (subEl) subEl.textContent = money(manualCart[idx].cantidad * manualCart[idx].costo);
-          const sum = manualCart.reduce((a, i) => a + (i.cantidad * i.costo), 0);
-          const tot = $('#manualTotal');
-          if (tot) tot.textContent = money(sum);
-        }
-      } else if (t.matches('[data-manual-cost]')) {
-        const idx = Number(t.dataset.manualCost);
-        if (manualCart[idx]) {
-          manualCart[idx].costo = Math.max(0, parseFloat(t.value) || 0);
-          const subEl = $(`[data-manual-sub="${idx}"]`);
-          if (subEl) subEl.textContent = money(manualCart[idx].cantidad * manualCart[idx].costo);
-          const sum = manualCart.reduce((a, i) => a + (i.cantidad * i.costo), 0);
-          const tot = $('#manualTotal');
-          if (tot) tot.textContent = money(sum);
-        }
-      }
-
-      // Control de Recepción: recibido real o costo
-      else if (t.matches('[data-rec-qty]') && activeReceiveOrder) {
-        const idx = Number(t.dataset.recQty);
-        const item = activeReceiveOrder.items[idx];
-        if (item) {
-          item.recibido = Math.max(0, parseInt(t.value, 10) || 0);
-          renderReceiveModalRows();
-        }
-      } else if (t.matches('[data-rec-cost]') && activeReceiveOrder) {
-        const idx = Number(t.dataset.recCost);
-        const item = activeReceiveOrder.items[idx];
-        if (item) {
-          item.costo = Math.max(0, parseFloat(t.value) || 0);
-          const total = activeReceiveOrder.items.reduce((a, i) => a + (i.recibido * i.costo), 0);
-          const totEl = $('#recTotal');
-          if (totEl) totEl.textContent = money(total);
-        }
-      }
-    });
-
-    document.addEventListener('change', e => {
-      const t = e.target;
-      if (t.matches('[data-smart-check]')) {
-        const id = Number(t.dataset.smartCheck);
-        const st = smartState.get(id);
-        if (st) {
-          st.checked = t.checked;
-          const tr = t.closest('tr');
-          if (tr) tr.classList.toggle('is-off', !st.checked);
-          const subEl = $(`[data-smart-sub="${id}"]`);
-          if (subEl) subEl.textContent = money(st.checked ? st.qty * st.costo : 0);
-          updateSmartDock();
-        }
-      }
-    });
-
-    // Delegación general de clics
-    document.addEventListener('click', e => {
-      // Cerrar modal con [data-nk-close] o clic en fondo oscuro .nk-modal
-      const closeBtn = e.target.closest('[data-nk-close]');
-      if (closeBtn) {
-        closeModal(closeBtn.closest('.nk-modal'));
-        return;
-      }
-      if (e.target.classList.contains('nk-modal')) {
-        closeModal(e.target);
-        return;
-      }
-
-      // Steppers de Reposición
-      const smartStep = e.target.closest('[data-smart-step]');
-      if (smartStep) {
-        const id = Number(smartStep.dataset.id);
-        const delta = Number(smartStep.dataset.smartStep);
-        const st = smartState.get(id);
-        if (st) {
-          st.qty = Math.max(1, st.qty + delta);
-          renderSmartReplenishment();
-        }
-        return;
-      }
-
-      // Steppers de Orden Manual
-      const manualStep = e.target.closest('[data-manual-step]');
-      if (manualStep) {
-        const idx = Number(manualStep.dataset.idx);
-        const delta = Number(manualStep.dataset.manualStep);
-        if (manualCart[idx]) {
-          manualCart[idx].cantidad = Math.max(1, manualCart[idx].cantidad + delta);
-          renderManualOrder();
-        }
-        return;
-      }
-
-      // Steppers de Recepción
-      const recStep = e.target.closest('[data-rec-step]');
-      if (recStep && activeReceiveOrder) {
-        const idx = Number(recStep.dataset.idx);
-        const delta = Number(recStep.dataset.recStep);
-        if (activeReceiveOrder.items[idx]) {
-          activeReceiveOrder.items[idx].recibido = Math.max(0, activeReceiveOrder.items[idx].recibido + delta);
-          renderReceiveModalRows();
-        }
-        return;
-      }
-
-      // Control segmentado de Perfil (Admin / Mostrador)
-      const roleBtn = e.target.closest('#roleSeg button');
-      if (roleBtn) {
-        applyRoleMode(roleBtn.dataset.v);
-        toast(roleBtn.dataset.v === 'empleado' ? 'Vista de Mostrador activada.' : 'Vista de Administración activada.');
-        return;
-      }
-
-      // Control segmentado de Estado en Historial
-      const statusBtn = e.target.closest('#statusSeg button');
-      if (statusBtn) {
-        statusFilter = statusBtn.dataset.v;
-        renderHistory();
-        return;
-      }
-
-      // Acciones con data-action
-      const actEl = e.target.closest('[data-action]');
-      if (!actEl) return;
-      const action = actEl.dataset.action;
-
-      switch (action) {
-        case 'view':
-          switchView(actEl.dataset.view);
-          break;
-
-        case 'new-supplier':
-          openSupplierModal(0);
-          break;
-
-        case 'edit-supplier':
-          openSupplierModal(Number(actEl.dataset.id));
-          break;
-
-        case 'save-supplier':
-          saveSupplierFromModal();
-          break;
-
-        case 'delete-supplier':
-          deleteSupplierById(Number(actEl.dataset.id));
-          break;
-
-        case 'order-supplier': {
-          const supId = Number(actEl.dataset.id);
-          populateSupplierSelects(supId);
-          const hasAlerts = catalog.some(p => p.stock <= p.minimo);
-          switchView(hasAlerts ? 'sec2' : 'sec3');
-          toast('Proveedor seleccionado en el asistente de pedido.');
-          break;
-        }
-
-        case 'filter-supplier-orders': {
-          supplierOrderFilter = Number(actEl.dataset.id);
-          statusFilter = 'ALL';
-          renderHistory();
-          switchView('sec4');
-          break;
-        }
-
-        case 'clear-sup-filter':
-          supplierOrderFilter = null;
-          renderHistory();
-          break;
-
-        case 'wa': {
-          const supId = Number($('#smartSupplier')?.value || 0);
-          const items = getSelectedSmartItems();
-          openWhatsAppModal(supId, items);
-          break;
-        }
-
-        case 'wa-manual': {
-          const supId = Number($('#manualSupplier')?.value || 0);
-          openWhatsAppModal(supId, manualCart);
-          break;
-        }
-
-        case 'wa-order': {
-          const ord = orders.find(o => o.id === Number(actEl.dataset.id));
-          if (ord) {
-            openWhatsAppModal(ord.id_proveedor, ord.details || [], `#OC-${String(ord.id).padStart(4, '0')}`);
-          }
-          break;
-        }
-
-        case 'wa-copy': {
-          if (navigator.clipboard && currentWaPayload.text) {
-            navigator.clipboard.writeText(currentWaPayload.text).then(() => {
-              toast('Mensaje copiado al portapapeles.');
-            });
-          }
-          break;
-        }
-
-        case 'wa-open': {
-          const encoded = encodeURIComponent(currentWaPayload.text || '');
-          const url = currentWaPayload.phone
-            ? `https://wa.me/${currentWaPayload.phone}?text=${encoded}`
-            : `https://wa.me/?text=${encoded}`;
-          window.open(url, '_blank', 'noopener');
-          break;
-        }
-
-        case 'print':
-          window.print();
-          break;
-
-        case 'register-smart': {
-          const supId = Number($('#smartSupplier')?.value || 0);
-          const items = getSelectedSmartItems();
-          submitPurchaseOrder({
-            supplierId: supId,
-            items,
-            descripcion: 'Reposición automática de stock crítico',
-            tiempoEntrega: 'A coordinar',
-            btnEl: $('#btnRegister')
-          });
-          break;
-        }
-
-        case 'quick-product':
-          openModal('quickModal');
-          break;
-
-        case 'save-quick':
-          saveQuickProductFromModal();
-          break;
-
-        case 'manual-add': {
-          const prodId = Number($('#manualProduct')?.value || 0);
-          const prod = catalog.find(p => p.id === prodId);
-          if (!prod) {
-            toast('Elegí un producto del catálogo o creá uno nuevo.', 'err');
-            return;
-          }
-          addProductToManualCart(prod, 1);
-          toast(`«${prod.nombre}» agregado a la orden manual.`);
-          break;
-        }
-
-        case 'manual-remove': {
-          const idx = Number(actEl.dataset.idx);
-          manualCart.splice(idx, 1);
-          renderManualOrder();
-          break;
-        }
-
-        case 'save-manual': {
-          const supId = Number($('#manualSupplier')?.value || 0);
-          const desc = ($('#manualDesc')?.value || '').trim() || 'Orden de compra manual';
-          const eta = ($('#manualEta')?.value || '').trim() || 'A coordinar';
-          submitPurchaseOrder({
-            supplierId: supId,
-            items: manualCart,
-            descripcion: desc,
-            tiempoEntrega: eta,
-            btnEl: $('#btnSaveManual')
-          }).then(ok => {
-            if (ok) {
-              manualCart = [];
-              if ($('#manualDesc')) $('#manualDesc').value = '';
-              if ($('#manualEta')) $('#manualEta').value = '';
-              renderManualOrder();
-            }
-          });
-          break;
-        }
-
-        case 'open-receive':
-          openReceiveModal(Number(actEl.dataset.id));
-          break;
-
-        case 'confirm-receive':
-          confirmReceivePurchase();
-          break;
-
-        case 'cancel-order':
-          cancelOrderById(Number(actEl.dataset.id));
-          break;
-
-        case 'view-order':
-          openOrderDetailModal(Number(actEl.dataset.id));
-          break;
-
-        case 'stock-to-manual': {
-          const prod = catalog.find(p => p.id === Number(actEl.dataset.id));
-          if (prod) {
-            const suggested = Math.max(1, (prod.minimo * 2) - prod.stock);
-            addProductToManualCart(prod, suggested);
-            switchView('sec3');
-            toast(`«${prod.nombre}» enviado a Compra manual (${suggested} u.).`);
-          }
-          break;
-        }
-      }
-    });
-  });
+  // Alias directos en window por si se llaman desde onclick
+  window.openSupplierModal = openSupplierModal;
+  window.switchSupplierView = switchView;
 })();

@@ -8,11 +8,11 @@ class AuthModel extends BaseModel
     public function find_by_username(string $username): ?array
     {
         $stmt = $this->conn->prepare(
-            "SELECT id_usuario, nombre_usuario, contrasena, rol, verificado, is_active
+            "SELECT id_usuario, nombre_usuario, contrasena, rol, verificado, is_active, email
              FROM usuario
-             WHERE nombre_usuario = ?"
+             WHERE nombre_usuario = ? OR email = ?"
         );
-        $stmt->bind_param("s", $username);
+        $stmt->bind_param("ss", $username, $username);
         $stmt->execute();
         $res = $stmt->get_result()->fetch_assoc();
         $stmt->close();
@@ -173,6 +173,68 @@ class AuthModel extends BaseModel
     {
         $stmt = $this->conn->prepare("UPDATE usuario SET session_token = ? WHERE id_usuario = ?");
         $stmt->bind_param("si", $token, $id_usuario);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
+
+    public function find_unverified_by_email_or_user(string $identifier): ?array
+    {
+        $stmt = $this->conn->prepare("
+            SELECT u.id_usuario, u.nombre_usuario, u.email, u.verificado, u.token_verificacion, u.token_expira, p.nombre, p.apellido
+            FROM usuario u
+            LEFT JOIN persona p ON u.id_persona = p.id_persona
+            WHERE (u.email = ? OR u.nombre_usuario = ? OR p.email = ?)
+            LIMIT 1
+        ");
+        $stmt->bind_param("sss", $identifier, $identifier, $identifier);
+        $stmt->execute();
+        $res = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $res ?: null;
+    }
+
+    public function verify_otp(string $identifier, string $otp): array
+    {
+        $user = $this->find_unverified_by_email_or_user($identifier);
+        if (!$user) {
+            return ['success' => false, 'message' => 'Usuario no encontrado.'];
+        }
+
+        if ((int)$user['verificado'] === 1) {
+            return ['success' => true, 'already_verified' => true, 'message' => 'Esta cuenta ya se encuentra verificada.'];
+        }
+
+        if (empty($user['token_verificacion']) || $user['token_verificacion'] !== $otp) {
+            return ['success' => false, 'message' => 'El código de verificación es incorrecto.'];
+        }
+
+        if (!empty($user['token_expira']) && strtotime($user['token_expira']) < time()) {
+            return ['success' => false, 'expired' => true, 'message' => 'El código ha expirado (validez: 15 minutos). Por favor solicitá uno nuevo.'];
+        }
+
+        // Activar cuenta
+        $stmt = $this->conn->prepare("UPDATE usuario SET verificado = 1, token_verificacion = NULL, token_expira = NULL WHERE id_usuario = ?");
+        $stmt->bind_param("i", $user['id_usuario']);
+        $ok = $stmt->execute();
+        $stmt->close();
+
+        if ($ok) {
+            return [
+                'success' => true,
+                'id_usuario' => $user['id_usuario'],
+                'username' => $user['nombre_usuario'],
+                'message' => '¡Cuenta verificada exitosamente!'
+            ];
+        }
+
+        return ['success' => false, 'message' => 'Error de base de datos al activar la cuenta.'];
+    }
+
+    public function update_otp(int $id_usuario, string $otp, string $expira): bool
+    {
+        $stmt = $this->conn->prepare("UPDATE usuario SET token_verificacion = ?, token_expira = ? WHERE id_usuario = ?");
+        $stmt->bind_param("ssi", $otp, $expira, $id_usuario);
         $success = $stmt->execute();
         $stmt->close();
         return $success;

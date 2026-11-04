@@ -55,6 +55,7 @@ if (isset($_SESSION['user_id'])) {
     <?php // Estilos Personalizados del Sistema ?>
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/login.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/one-time-code.css?v=<?php echo time(); ?>">
 
     <script src="<?php echo BASE_URL; ?>/assets/js/tailwind_config.js?v=<?php echo time(); ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/theme.js?v=<?php echo time(); ?>"></script>
@@ -83,7 +84,7 @@ if (isset($_SESSION['user_id'])) {
                 <h2 class="form-title">Crear cuenta</h2>
                 <p class="form-subtitle">Ingresá tus datos para unirte al equipo.</p>
 
-                <form action="<?php echo BASE_URL; ?>/modules/auth/index.php?action=register" method="POST" novalidate>
+                <form id="registerForm" action="<?php echo BASE_URL; ?>/modules/auth/index.php?action=register" method="POST" novalidate>
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                     
                     <div class="grid grid-cols-2 gap-3">
@@ -195,7 +196,7 @@ if (isset($_SESSION['user_id'])) {
                 <h2 class="form-title">Iniciar sesión</h2>
                 <p class="form-subtitle">Ingresá con tu usuario para continuar.</p>
 
-                <form action="<?php echo BASE_URL; ?>/modules/auth/index.php?action=login" method="POST" novalidate>
+                <form id="loginForm" action="<?php echo BASE_URL; ?>/modules/auth/index.php?action=login" method="POST" novalidate>
                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($csrf_token); ?>">
                     
                     <div class="field-group">
@@ -339,11 +340,66 @@ if (isset($_SESSION['user_id'])) {
 
     </div>
 
+    <?php // Modal Emergente de Verificación OTP (Nokia 1100 + Bencho OneTimeCode) ?>
+    <div id="otpModal" class="fixed inset-0 z-[9990] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm hidden opacity-0 transition-opacity duration-300">
+        <div class="relative w-full max-w-md bg-surface border border-line rounded-[2px] shadow-2xl p-6 md:p-8 flex flex-col items-center text-center transform scale-95 transition-transform duration-300" id="otpModalCard" style="border: 2px solid var(--nk-graphite, #15181a); box-shadow: 0 16px 40px rgba(0,0,0,0.35);">
+            
+            <!-- Botón Cerrar Modal -->
+            <button type="button" id="closeOtpModalBtn" class="absolute top-3 right-3 text-text-muted hover:text-text-main transition-colors p-1" title="Cerrar ventana">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+
+            <!-- Badge y Título Oficial Nokia 1100 -->
+            <div class="mb-2">
+                <span class="form-header-badge" style="background: var(--nk-sunk, #e5e1d6); border: 1px solid var(--nk-line, #d3cebf); font-family: var(--nk-f-mono, monospace); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: var(--nk-ink-3, #5c6165); padding: 3px 8px; border-radius: 2px; text-transform: uppercase;">
+                    SEGURIDAD · OTP
+                </span>
+            </div>
+            
+            <h3 class="text-xl font-extrabold text-text-main font-heading mb-1" style="font-family: var(--nk-f-head, 'Bricolage Grotesque', sans-serif); letter-spacing: -0.02em;">
+                Verificá tu cuenta
+            </h3>
+            
+            <p class="text-xs text-text-muted mb-2 max-w-xs leading-relaxed" style="font-family: var(--nk-f-body, sans-serif);">
+                Ingresá el código numérico de <strong class="text-text-main font-semibold">6 dígitos</strong> enviado a:
+            </p>
+            <div class="mb-3">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 bg-sunk border border-line rounded-[2px] font-mono font-medium text-text-main text-[13px] tracking-tight shadow-sm select-all">
+                    <span class="material-symbols-outlined text-[15px] text-text-muted">mail</span>
+                    <span id="otpTargetEmail">correo@ejemplo.com</span>
+                </span>
+            </div>
+
+            <!-- Contenedor del componente Bencho OneTimeCode -->
+            <div id="otpMount" class="py-3 my-1 flex items-center justify-center min-h-[64px] w-full">
+                <!-- Se inyecta dinámicamente OneTimeCode -->
+            </div>
+
+            <!-- Estado / Mensaje de feedback -->
+            <div id="otpStatusMsg" class="min-h-[22px] text-xs font-mono font-medium transition-all text-text-muted my-2">
+                Validez: 15 minutos
+            </div>
+
+            <!-- Acciones inferiores -->
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-3 w-full pt-4 mt-2 border-t border-line text-xs">
+                <button type="button" id="resendOtpBtn" class="text-text-muted hover:text-text-main font-medium underline underline-offset-2 flex items-center gap-1 transition-colors cursor-pointer bg-transparent border-0">
+                    <span class="material-symbols-outlined text-[16px]">refresh</span>
+                    <span id="resendOtpLabel">Reenviar código</span>
+                </button>
+                <button type="button" id="cancelOtpBtn" class="text-text-muted hover:text-text-main font-mono text-[11px] transition-colors cursor-pointer bg-transparent border-0">
+                    Volver al login
+                </button>
+            </div>
+
+        </div>
+    </div>
+
     <?php // Contenedor Unificado para Notificaciones Toasts Flotantes ?>
     <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col items-end pointer-events-none gap-2"></div>
 
     <?php // Cargar Scripts del Sistema ?>
     <script src="<?php echo BASE_URL; ?>/assets/js/framer-toaster.js?v=<?php echo time(); ?>"></script>
+    <script src="<?php echo BASE_URL; ?>/assets/js/one-time-code.js?v=<?php echo time(); ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/main.js?v=<?php echo time(); ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/login.js?v=<?php echo time(); ?>"></script>
     

@@ -44,8 +44,8 @@ $alertCount = 0;
 foreach ($inventory as $p) {
   $idProd = (int) $p['id_producto'];
   $stock = (int) ($p['cantidad'] ?? 0);
-  $minimo = max(1, (int) ($p['stock_minimo'] ?? 3));
-  if ($stock <= $minimo) {
+  $minimo = isset($p['stock_minimo']) ? (int) $p['stock_minimo'] : 0;
+  if ($minimo > 0 ? ($stock <= $minimo) : ($stock <= 0)) {
     $alertCount++;
   }
   $sku = trim((string) ($p['codigo'] ?? ''));
@@ -199,6 +199,10 @@ if ($isAdmin) {
           mercadería.</p>
       </div>
       <div class="nk-actions">
+        <!-- Botones de Exportación Unificados (Excel y PDF) -->
+        <div id="headerExportWrap" style="display:inline-flex;gap:8px;align-items:center;">
+          <?php echo Layout::renderExportButtons('suppliers-table', 'Directorio de Proveedores', 'proveedores'); ?>
+        </div>
         <button type="button" class="nk-btn" data-action="view" data-view="sec2">
           <svg class="nk-icon" aria-hidden="true">
             <use href="#nk-i-box" />
@@ -233,15 +237,6 @@ if ($isAdmin) {
         <button type="button" class="nk-nav__item" data-action="view" data-view="secStock">
           <span class="nav-n">05</span><span>Stock en vivo</span>
         </button>
-      </div>
-
-      <div class="nk-subnav__role" role="group" aria-label="Perfil de operación">
-        <span class="nk-subnav__role-lbl" id="roleHint">Vista:</span>
-        <div class="nk-seg" id="roleSeg" data-nk-seg>
-          <button type="button" data-v="admin" aria-pressed="<?php echo $isAdmin ? 'true' : 'false'; ?>">Admin</button>
-          <button type="button" data-v="empleado"
-            aria-pressed="<?php echo !$isAdmin ? 'true' : 'false'; ?>">Mostrador</button>
-        </div>
       </div>
     </div>
 
@@ -291,7 +286,7 @@ if ($isAdmin) {
               <span class="nk-kbd" aria-hidden="true">/</span>
             </div>
             <?php echo Layout::renderExportButtons('suppliers-table', 'Directorio de Proveedores', 'proveedores'); ?>
-            <button type="button" class="nk-btn nk-btn--primary" data-action="new-supplier" data-admin-only>
+            <button type="button" class="nk-btn nk-btn--primary" data-action="new-supplier">
               <svg class="nk-icon" aria-hidden="true">
                 <use href="#nk-i-plus" />
               </svg>Nuevo proveedor
@@ -344,12 +339,15 @@ if ($isAdmin) {
             <p class="nk-panel__desc">Stock igual o menor al mínimo. Sugerimos pedir el doble del mínimo menos lo que
               hay; ajustalo con − y +.</p>
           </div>
-          <label class="nk-tools" style="gap:8px;font-weight:600;font-size:.84rem;cursor:pointer">
-            <input type="checkbox" class="nk-check" id="smartAll" checked> Seleccionar todos
-          </label>
+          <div class="nk-tools">
+            <label style="display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:.84rem;cursor:pointer">
+              <input type="checkbox" class="nk-check" id="smartAll" checked> Seleccionar todos
+            </label>
+            <?php echo Layout::renderExportButtons('smart-table', 'Artículos en Reposición', 'reposicion_stock'); ?>
+          </div>
         </div>
         <div class="nk-table-wrap">
-          <table class="nk-table nk-table--cards">
+          <table class="nk-table nk-table--cards" id="smart-table">
             <caption class="nk-vh">Artículos a reponer</caption>
             <thead>
               <tr>
@@ -444,7 +442,7 @@ if ($isAdmin) {
         </div>
 
         <div class="nk-table-wrap">
-          <table class="nk-table nk-table--cards">
+          <table class="nk-table nk-table--cards" id="manual-table">
             <caption class="nk-vh">Artículos de la orden manual</caption>
             <thead>
               <tr>
@@ -555,10 +553,11 @@ if ($isAdmin) {
               <input type="search" id="stockSearch" class="nk-field" placeholder="Filtrar por SKU, producto o marca…"
                 autocomplete="off">
             </div>
+            <?php echo Layout::renderExportButtons('stock-table', 'Inventario Físico en Vivo', 'stock_en_vivo'); ?>
           </div>
         </div>
         <div class="nk-table-wrap">
-          <table class="nk-table nk-table--cards">
+          <table class="nk-table nk-table--cards" id="stock-table">
             <caption class="nk-vh">Stock actual por producto</caption>
             <thead>
               <tr>
@@ -632,8 +631,8 @@ if ($isAdmin) {
   <div class="nk-dialog nk-dialog--md" role="dialog" aria-modal="true" aria-labelledby="waTitle">
     <div class="nk-dialog__head">
       <div>
-        <h3 id="waTitle">Mensaje listo para enviar</h3>
-        <p id="waTo"></p>
+        <h3 id="waTitle">Mensaje para proveedor (WhatsApp)</h3>
+        <p id="waTo" style="font-weight:600;color:var(--nk-ink)"></p>
       </div>
       <button type="button" class="nk-btn nk-btn--sm" data-nk-close aria-label="Cerrar"><svg class="nk-icon"
           aria-hidden="true">
@@ -641,7 +640,8 @@ if ($isAdmin) {
         </svg></button>
     </div>
     <div class="nk-dialog__body">
-      <pre class="nk-bubble" id="waText"></pre>
+      <label class="nk-label" for="waText">Texto del mensaje (podés editarlo antes de enviar):</label>
+      <textarea class="nk-field" id="waText" rows="9" placeholder="Escribí o ajustá el mensaje para el proveedor…"></textarea>
     </div>
     <div class="nk-dialog__foot foot-split">
       <button type="button" class="nk-btn" data-action="wa-copy">
@@ -673,7 +673,9 @@ if ($isAdmin) {
           <use href="#nk-i-x" />
         </svg></button>
     </div>
-    <form class="nk-dialog__body" id="quickForm" novalidate>
+    <form id="quickForm" novalidate>
+      <div class="nk-dialog__body">
+
       <div class="nk-grid-2">
         <div>
           <label class="nk-label" for="qpSku">Código SKU (opcional)</label>
@@ -718,12 +720,13 @@ if ($isAdmin) {
           <input class="nk-field nk-field--num" type="number" id="qpQty" value="10" min="1" inputmode="numeric">
         </div>
       </div>
+    
+      </div>
+      <div class="nk-dialog__foot">
+        <button type="button" class="nk-btn" data-nk-close>Cancelar</button>
+        <button type="submit" class="nk-btn nk-btn--primary" id="btnSaveQuick">Crear y sumar a la orden</button>
+      </div>
     </form>
-    <div class="nk-dialog__foot">
-      <button type="button" class="nk-btn" data-nk-close>Cancelar</button>
-      <button type="button" class="nk-btn nk-btn--primary" data-action="save-quick" id="btnSaveQuick">Crear y sumar a la
-        orden</button>
-    </div>
   </div>
 </div>
 
@@ -740,7 +743,9 @@ if ($isAdmin) {
           <use href="#nk-i-x" />
         </svg></button>
     </div>
-    <form class="nk-dialog__body" id="supplierForm" novalidate>
+    <form id="supplierForm" novalidate>
+      <div class="nk-dialog__body">
+
       <input type="hidden" id="nsId" value="0">
       <div>
         <label class="nk-label" for="nsName">Razón social o nombre *</label>
@@ -768,12 +773,13 @@ if ($isAdmin) {
         <label class="nk-label" for="nsAddress">Dirección o depósito de retiro</label>
         <input class="nk-field" id="nsAddress" placeholder="Ej: Av. Pueyrredón 480 · CABA" autocomplete="off">
       </div>
+    
+      </div>
+      <div class="nk-dialog__foot">
+        <button type="button" class="nk-btn" data-nk-close>Cancelar</button>
+        <button type="submit" class="nk-btn nk-btn--primary" id="btnSaveSupplier">Guardar proveedor</button>
+      </div>
     </form>
-    <div class="nk-dialog__foot">
-      <button type="button" class="nk-btn" data-nk-close>Cancelar</button>
-      <button type="button" class="nk-btn nk-btn--primary" data-action="save-supplier" id="btnSaveSupplier">Guardar
-        proveedor</button>
-    </div>
   </div>
 </div>
 

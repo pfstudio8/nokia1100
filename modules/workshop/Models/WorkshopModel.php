@@ -269,9 +269,14 @@ class WorkshopModel extends BaseModel
     public function get_repair_repuestos(int $id_reparacion)
     {
         $id_reparacion = intval($id_reparacion);
-        $sql = "SELECT rr.*, p.nombre 
+        $sql = "SELECT rr.*, p.nombre,
+                       COALESCE(d.marca, '') AS marca,
+                       COALESCE(d.modelo, '') AS modelo,
+                       COALESCE(d.categoria, '') AS categoria,
+                       COALESCE(d.tipo_repuesto, '') AS tipo_repuesto
                 FROM reparacion_repuesto rr 
                 JOIN producto p ON rr.id_producto = p.id_producto 
+                LEFT JOIN producto_detalle d ON p.id_producto = d.id_producto
                 WHERE rr.id_reparacion = ?";
         
         $stmt = $this->conn->prepare($sql);
@@ -310,14 +315,19 @@ class WorkshopModel extends BaseModel
         $stmt->close();
         return $historial;
     }
-
-    public function get_active_products_in_stock()
+public function get_active_products_in_stock()
     {
-        $sql = "SELECT p.id_producto, p.nombre, p.precio, i.cantidad 
+        $sql = "SELECT p.id_producto, p.nombre, p.precio, i.cantidad,
+                       COALESCE(d.marca, '') AS marca,
+                       COALESCE(d.modelo, '') AS modelo,
+                       COALESCE(d.categoria, '') AS categoria,
+                       COALESCE(d.tipo_repuesto, '') AS tipo_repuesto,
+                       COALESCE(d.codigo, '') AS codigo
                 FROM producto p 
                 JOIN inventario i ON p.id_producto = i.id_producto 
-                WHERE p.is_active = 1 AND i.cantidad > 0 AND " . ServiceProduct::excludeSql('p') . "
-                ORDER BY p.nombre ASC";
+                INNER JOIN producto_detalle d ON p.id_producto = d.id_producto
+                WHERE p.is_active = 1 AND i.cantidad > 0 AND " . ServiceProduct::excludeSql('p', 'd') . "
+                ORDER BY (d.categoria = 'Repuestos') DESC, d.categoria ASC, p.nombre ASC, d.marca ASC, d.modelo ASC";
         $result = $this->conn->query($sql);
         $products = [];
         if ($result) {
