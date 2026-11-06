@@ -11,6 +11,7 @@ switch ($action) {
         break;
     case 'add':
     case 'index':
+    case 'clients':
         $controller->index();
         break;
     default:

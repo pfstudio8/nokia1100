@@ -92,12 +92,12 @@ class ClientsController extends BaseController
         $id_cliente = isset($_GET['id']) ? (int) $_GET['id'] : 0;
 
         if ($id_cliente === 0) {
-            $this->redirect('clients.php');
+            $this->redirect('index.php');
         }
 
         $client = $this->client_model->find($id_cliente);
         if (!$client) {
-            $this->redirect('clients.php');
+            $this->redirect('index.php');
         }
 
         $nombre = $client['nombre'];

@@ -123,6 +123,9 @@ class SuppliersController extends BaseController
     public function save_supplier()
     {
         $this->check_access('proveedores', true);
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
         header('Content-Type: application/json; charset=utf-8');
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {

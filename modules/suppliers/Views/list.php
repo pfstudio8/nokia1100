@@ -186,6 +186,11 @@ if ($isAdmin) {
     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z" />
     <circle cx="12" cy="12" r="3" />
   </symbol>
+  <symbol id="nk-i-cart" viewBox="0 0 24 24">
+    <circle cx="9" cy="21" r="1" />
+    <circle cx="20" cy="21" r="1" />
+    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+  </symbol>
 </svg>
 
 <main id="main" class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen">
@@ -203,10 +208,10 @@ if ($isAdmin) {
         <div id="headerExportWrap" style="display:inline-flex;gap:8px;align-items:center;">
           <?php echo Layout::renderExportButtons('suppliers-table', 'Directorio de Proveedores', 'proveedores'); ?>
         </div>
-        <button type="button" class="nk-btn" data-action="view" data-view="sec2">
+        <button type="button" class="nk-btn" data-action="view" data-view="sec3">
           <svg class="nk-icon" aria-hidden="true">
-            <use href="#nk-i-box" />
-          </svg>Asistente de reposición
+            <use href="#nk-i-cart" />
+          </svg>Compra manual
         </button>
         <button type="button" class="nk-btn nk-btn--lcd" data-action="new-supplier" id="btnHeadNewSup">
           <svg class="nk-icon" aria-hidden="true">

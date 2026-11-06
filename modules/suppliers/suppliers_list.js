@@ -111,7 +111,7 @@
     if (!m) return;
     m.classList.remove('is-open');
     m.hidden = true;
-    const anyOpen = $('.nk-modal.is-open:not([hidden])').length > 0;
+    const anyOpen = $$('.nk-modal.is-open:not([hidden])').length > 0;
     if (!anyOpen) {
       document.body.classList.remove('is-locked');
     }
@@ -336,14 +336,8 @@
         <td data-label="Retiro / Depósito">${s.domicilio ? esc(s.domicilio) : '<span class="nk-cell-meta">Envío a coordinar</span>'}</td>
         <td data-label="Acciones" class="is-r">
           <div class="nk-cell-actions">
-            <button type="button" class="nk-btn nk-btn--sm nk-btn--lcd" data-action="order-supplier" data-id="${s.id}" title="Abrir asistente de reposición con este proveedor">
-              Pedir
-            </button>
-            <button type="button" class="nk-btn nk-btn--sm" data-action="wa-supplier" data-id="${s.id}" title="Armar mensaje de WhatsApp para ${esc(s.nombre)}">
-              <svg class="nk-icon" aria-hidden="true" style="stroke:#1d6a38"><use href="#nk-i-chat"/></svg>WhatsApp
-            </button>
-            <button type="button" class="nk-btn nk-btn--sm" data-action="filter-supplier-orders" data-id="${s.id}" title="Ver órdenes de este proveedor">
-              Pedidos (${orderCount})
+            <button type="button" class="nk-btn nk-btn--sm nk-btn--lcd" data-action="manual-order-supplier" data-id="${s.id}" title="Realizar compra manual a ${esc(s.nombre)}">
+              <svg class="nk-icon" aria-hidden="true"><use href="#nk-i-cart"/></svg>Compra manual
             </button>
             ${!isMostrador ? `
               <button type="button" class="nk-btn nk-btn--sm" data-action="edit-supplier" data-id="${s.id}" title="Editar datos del proveedor">
@@ -1186,7 +1180,8 @@
       renderSuppliers();
       toast(data.message || 'Proveedor guardado.');
     } catch (err) {
-      toast('Error de red al guardar el proveedor.', 'err');
+      console.error('Error al guardar proveedor:', err);
+      toast('Error al guardar el proveedor.', 'err');
     } finally {
       if (btn) btn.removeAttribute('aria-busy');
     }
@@ -1558,12 +1553,13 @@
         deleteSupplierById(Number(actEl.dataset.id));
         break;
 
+      case 'manual-order-supplier':
       case 'order-supplier': {
         const supId = Number(actEl.dataset.id);
         populateSupplierSelects(supId);
-        const hasAlerts = catalog.some(p => p.stock <= p.minimo);
-        switchView(hasAlerts ? 'sec2' : 'sec3');
-        toast('Proveedor seleccionado en el asistente de pedido.');
+        switchView('sec3');
+        const sup = suppliers.find(s => s.id === supId);
+        toast(`Compra manual para ${sup ? sup.nombre : 'proveedor'}.`);
         break;
       }
 
