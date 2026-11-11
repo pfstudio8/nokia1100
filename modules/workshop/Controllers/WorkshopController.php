@@ -33,9 +33,11 @@ class WorkshopController extends BaseController
         $total_pages = ceil($total_items / $limit);
 
         $repairs = $this->workshop_model->get_repairs($estado_filter, $search, $limit, $offset);
+        $received_repairs = $this->workshop_model->get_received_repairs();
 
         $this->render_view(__DIR__ . '/../Views/index.php', [
             'repairs' => $repairs,
+            'received_repairs' => $received_repairs,
             'estado_filter' => $estado_filter,
             'search' => $search,
             'page' => $page,
@@ -72,9 +74,9 @@ class WorkshopController extends BaseController
     public function add()
     {
         $this->check_auth();
-        $this->check_access('taller');
+        $this->check_any_access(['registrar_equipo', 'taller', 'venta', 'ventas', 'dashboard']);
         
-        if ($_SESSION['role'] !== 'admin') {
+        if (isset($_SESSION['role']) && $_SESSION['role'] === 'guest') {
             $this->redirect(BASE_URL . "/modules/workshop/index.php");
         }
 
@@ -128,17 +130,43 @@ class WorkshopController extends BaseController
                     }
                 }
 
-                $this->redirect("index.php?action=view&id=$id_reparacion&success=created");
+                $created = $this->workshop_model->find_repair_by_id($id_reparacion);
+                $codigo = $created['codigo_orden'] ?? $id_reparacion;
+
+                require_once __DIR__ . '/../../../classes/Layout.php';
+                if (Layout::hasAccess('taller')) {
+                    $this->redirect("index.php?new_intake=" . $id_reparacion . "&success=" . urlencode("¡Tienes un equipo que ha ingresado! Orden #$codigo registrada y derivada al Taller."));
+                } else {
+                    $this->redirect("index.php?action=add&new_intake=" . $id_reparacion . "&success=" . urlencode("¡Equipo #$codigo registrado y enviado al Taller! Podés imprimir su recibo en el historial."));
+                }
             } catch (Exception $e) {
                 $this->redirect("index.php?action=add&error=" . urlencode($e->getMessage()));
             }
         }
 
+        $estado_filter = $_GET['estado'] ?? '';
+        $search = $_GET['search'] ?? '';
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        if ($page < 1) $page = 1;
+        $limit = 10;
+        $offset = ($page - 1) * $limit;
+
+        $total_items = $this->workshop_model->get_repairs_count($estado_filter, $search);
+        $total_pages = (int)max(1, ceil($total_items / $limit));
+        $repairs = $this->workshop_model->get_repairs($estado_filter, $search, $limit, $offset);
+
         $clients = $this->workshop_model->get_all_clients();
 
         $this->render_view(__DIR__ . '/../Views/add.php', [
             'error' => $error,
-            'clients' => $clients
+            'clients' => $clients,
+            'repairs' => $repairs,
+            'estado_filter' => $estado_filter,
+            'search' => $search,
+            'page' => $page,
+            'total_pages' => $total_pages,
+            'total_items' => $total_items,
+            'limit' => $limit
         ]);
     }
 
@@ -318,7 +346,7 @@ class WorkshopController extends BaseController
 
     public function print_receipt()
     {
-        $this->check_access('taller');
+        $this->check_any_access(['registrar_equipo', 'taller', 'cobrar_reparaciones', 'ventas', 'venta']);
 
         $id_reparacion = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         if (!$id_reparacion) {
@@ -338,21 +366,64 @@ class WorkshopController extends BaseController
     public function track()
     {
         // Página de seguimiento de acceso público
-        $codigo = isset($_GET['code']) ? trim($_GET['code']) : '';
+        $codigo = isset($_GET['code']) ? ltrim(trim($_GET['code']), '#') : '';
         $order_found = false;
         $repair = null;
+        $historial = [];
+        $images = [];
 
         if ($codigo) {
             $repair = $this->workshop_model->find_repair_by_code($codigo);
             if ($repair) {
                 $order_found = true;
+                $id_rep = (int)($repair['id_reparacion'] ?? 0);
+                if ($id_rep > 0) {
+                    $historial = $this->workshop_model->get_repair_historial($id_rep);
+                    $images = $this->workshop_model->get_repair_images($id_rep);
+                }
             }
+        }
+
+        // Endpoint JSON en tiempo real para detectar cambios de estado sin recargar
+        if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
+            header('Content-Type: application/json; charset=utf-8');
+            if (!$order_found || !$repair) {
+                echo json_encode(['success' => false]);
+                exit();
+            }
+            $total_est = floatval($repair['presupuesto'] ?? 0) + floatval($repair['costo_total'] ?? 0);
+            $hist_formatted = array_map(function ($h) {
+                return [
+                    'estado_nuevo' => (string)($h['estado_nuevo'] ?? ''),
+                    'nota'         => (string)($h['nota'] ?? ''),
+                    'fecha_cambio' => !empty($h['fecha_cambio']) ? date('d/m/Y H:i', strtotime($h['fecha_cambio'])) . ' hs' : '',
+                ];
+            }, $historial);
+
+            $img_formatted = array_map(function ($img) {
+                return [
+                    'url'  => BASE_URL . '/assets/img/reparaciones/' . rawurlencode($img['ruta_archivo']),
+                    'tipo' => (string)($img['tipo'] ?? 'Taller'),
+                ];
+            }, $images);
+
+            echo json_encode([
+                'success'          => true,
+                'estado'           => (string)$repair['estado'],
+                'total_estimado'   => $total_est,
+                'total_formatted'  => $total_est > 0 ? '$ ' . number_format($total_est, 2, ',', '.') : 'En evaluación',
+                'historial'        => $hist_formatted,
+                'images'           => $img_formatted,
+            ]);
+            exit();
         }
 
         $this->render_view(__DIR__ . '/../Views/track.php', [
             'codigo' => $codigo,
             'order_found' => $order_found,
-            'repair' => $repair
+            'repair' => $repair,
+            'historial' => $historial,
+            'images' => $images
         ]);
     }
 
