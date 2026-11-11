@@ -57,9 +57,9 @@ if ($_SESSION['role'] === 'admin') {
                 </div>
             </div>
             
-            <div class="flex items-center gap-3">
-                <a href="index.php?action=print_receipt&id=<?php echo $id_reparacion; ?>" target="_blank" class="bg-surface hover:bg-surface-hover border border-border px-4 py-2.5 rounded-xl font-medium text-xs text-text-main transition-all flex items-center gap-2 shadow-sm">
-                    <span class="material-symbols-outlined text-[18px]">print</span> Comprobante Ingreso
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <a href="index.php?action=print_receipt&id=<?php echo $id_reparacion; ?>" target="_blank" class="bg-primary hover:bg-primary-hover px-4 py-2.5 rounded-xl font-semibold text-xs text-background transition-all flex items-center gap-2 shadow-sm">
+                    <span class="material-symbols-outlined text-[18px]">print</span> Comprobante y QR
                 </a>
             </div>
         </div>

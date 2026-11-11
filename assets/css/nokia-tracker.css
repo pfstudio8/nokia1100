@@ -1,0 +1,435 @@
+/* ==========================================================================
+   Nokia 1100 · Línea de seguimiento v2.0   (prefijo nkt-)
+   Estilo del kit: nodos cuadrados, números 01–05, actual en verde LCD con
+   sombra dura, línea de tinta que avanza con un píxel LCD adelante.
+
+   Secuencia al aparecer:
+     1) la línea negra avanza tramo a tramo; cada nodo aparece cuando llega
+     2) los hechos (grafito) rebotan y dibujan su tilde
+     3) el actual (LCD) "aterriza" con ondas cuadradas y destellos de píxeles,
+        su ícono cobra vida y queda flotando suavemente
+     4) si el actual es el ÚLTIMO paso: se despliega una escena donde una mano
+        trae un paquete, lo apoya sobre el felpudo, se retira y aparece el sello
+
+   Si el estado cambia (NKTracker.set) solo anima el tramo nuevo.
+   Respeta prefers-reduced-motion. Sin animación se ve el estado final.
+   ========================================================================== */
+
+.nkt {
+  --nkt-ink: var(--nk-ink, #15171a);
+  --nkt-ink-3: var(--nk-ink-3, #5c6165);
+  --nkt-line: var(--nk-line, #d3cebf);
+  --nkt-line-2: var(--nk-line-2, #b5af9c);
+  --nkt-lcd: var(--nk-lcd, #c6e24a);
+  --nkt-sunk: var(--nk-sunk, #e5e1d6);
+  --nkt-field: var(--nk-field, #fff);
+  --nkt-ease: cubic-bezier(.16, 1, .3, 1);
+  --nkt-spring: cubic-bezier(.34, 1.56, .64, 1);
+
+  --node: 52px;
+  --gap: 3px;            /* aire entre la línea y los nodos */
+  --seg: .55s;           /* lo que tarda la línea en recorrer un tramo */
+  --n: 5;                /* cantidad de pasos (lo setea el JS) */
+  --cur: 1;              /* paso actual, empezando en 1 */
+  --prev: 0;             /* paso desde el que se anima (0 = desde cero) */
+  /* cuándo llega la animación al último nodo + un respiro */
+  --dl: calc((var(--cur) - max(var(--prev), 1)) * var(--seg) + .9s);
+
+  position: relative;
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  color: var(--nkt-ink);
+}
+
+/* ---------- Pasos ---------- */
+.nkt__steps {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.nkt__step {
+  --seglen: calc(100% - var(--node) - 2 * var(--gap));
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+.nkt__step.is-new {
+  --d: calc((var(--s) - max(var(--prev), 1)) * var(--seg));   /* cuándo llega la línea a este nodo */
+}
+
+/* ---------- Línea: pista gris (::before) + relleno de tinta (::after) ---------- */
+.nkt__step::before,
+.nkt__step::after {
+  content: '';
+  position: absolute;
+  top: calc(11px + 10px + var(--node) / 2 - 2px);
+  left: calc(-50% + var(--node) / 2 + var(--gap));
+  height: 4px;
+}
+.nkt__step::before {
+  width: var(--seglen);
+  background: var(--nkt-line);
+}
+.nkt__step::after {
+  width: 0;
+  background: var(--nkt-ink);
+  border-right: 0 solid var(--nkt-ink);
+}
+.nkt__step:first-child::before,
+.nkt__step:first-child::after { display: none; }
+.nkt__step.is-reach::after {                 /* tramo ya recorrido */
+  width: var(--seglen);
+  border-right-width: 0;
+}
+
+/* ---------- Número ---------- */
+.nkt__num {
+  height: 11px;
+  font: 600 .68rem/11px 'IBM Plex Mono', ui-monospace, monospace;
+  letter-spacing: .12em;
+  color: var(--nkt-ink-3);
+}
+.nkt__step.is-done .nkt__num,
+.nkt__step.is-current .nkt__num { color: var(--nkt-ink); }
+
+/* ---------- Nodo ---------- */
+.nkt__node {
+  position: relative;
+  z-index: 1;
+  width: var(--node);
+  height: var(--node);
+  display: grid;
+  place-items: center;
+  border-radius: 2px;
+  color: var(--nkt-ink-3);
+}
+.nkt__node svg {
+  grid-area: 1 / 1;
+  width: 46%;
+  height: 46%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  overflow: visible;
+}
+.nkt__chk { display: none; }
+.nkt__chk path { stroke-dasharray: 1; stroke-dashoffset: 0; }
+.nkt__ico [pathLength] { stroke-dasharray: 1; stroke-dashoffset: 0; }
+
+.nkt__label {
+  max-width: 100%;
+  padding: 0 4px;
+  font-size: .86rem;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--nkt-ink-3);
+  overflow-wrap: break-word;
+}
+
+/* Hecho: cuadrado de grafito con tilde */
+.nkt__step.is-done .nkt__node { background: var(--nkt-ink); color: var(--nk-paper, #fff); }
+.nkt__step.is-done .nkt__ico { display: none; }
+.nkt__step.is-done .nkt__chk { display: block; width: 50%; height: 50%; stroke-width: 2.6; stroke: var(--nk-paper, #fff); }
+.nkt__step.is-done .nkt__label { color: var(--nkt-ink); }
+
+/* Actual: LCD con sombra dura */
+.nkt__step.is-current .nkt__node {
+  background: var(--nkt-lcd);
+  color: #15171a;
+  box-shadow: 0 4px 0 var(--nkt-ink);
+}
+.nkt__step.is-current .nkt__label { color: var(--nkt-ink); font-weight: 700; }
+
+/* ---------- Ondas cuadradas y píxeles al llegar ---------- */
+.nkt__node::before,
+.nkt__node::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 2px solid var(--nkt-ink);
+  border-radius: 2px;
+  opacity: 0;
+  pointer-events: none;
+}
+.nkt__spark {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 5px; height: 5px;
+  margin: -2.5px 0 0 -2.5px;
+  background: var(--nkt-ink);
+  opacity: 0;
+  pointer-events: none;
+  transform: rotate(var(--a)) translateY(calc(var(--node) * -.62));
+}
+
+/* ---------- Antes de empezar (JS armado): lo nuevo espera oculto ---------- */
+.nkt.is-armed:not(.is-play) .nkt__step.is-new .nkt__node { opacity: 0; scale: .4; }
+.nkt.is-armed:not(.is-play) .nkt__step.is-new .nkt__label,
+.nkt.is-armed:not(.is-play) .nkt__step.is-new .nkt__num { opacity: .3; }
+.nkt.is-armed:not(.is-play) .nkt__step.is-new::after { width: 0; border-right-width: 0; }
+
+/* ---------- Reproducción ---------- */
+.nkt.is-play .nkt__step.is-new.is-reach::after {
+  animation: nkt-seg var(--seg) linear calc(var(--d) - var(--seg)) both;
+}
+.nkt.is-play .nkt__step.is-new .nkt__num {
+  animation: nkt-rise .4s var(--nkt-ease) var(--d) both;
+}
+.nkt.is-play .nkt__step.is-new .nkt__label {
+  animation: nkt-rise .5s var(--nkt-ease) calc(var(--d) + .1s) both;
+}
+
+/* hechos */
+.nkt.is-play .nkt__step.is-done.is-new .nkt__node {
+  animation: nkt-pop .45s var(--nkt-spring) var(--d) both;
+}
+.nkt.is-play .nkt__step.is-done.is-new .nkt__chk path {
+  animation: nkt-draw .3s var(--nkt-ease) calc(var(--d) + .18s) both;
+}
+
+/* actual */
+.nkt.is-play .nkt__step.is-current.is-new .nkt__node {
+  animation:
+    nkt-land .75s var(--nkt-spring) var(--d) both,
+    nkt-bob 1.8s ease-in-out calc(var(--d) + .95s) infinite alternate;
+}
+.nkt.is-play .nkt__step.is-current:not(.is-new) .nkt__node {
+  animation: nkt-bob 1.8s ease-in-out infinite alternate;
+}
+.nkt.is-play .nkt__step.is-current.is-new .nkt__label {
+  animation: nkt-label-pop .6s var(--nkt-spring) calc(var(--d) + .2s) both;
+}
+.nkt.is-play .nkt__step.is-current.is-new .nkt__node::before {
+  animation: nkt-ripple 1.3s cubic-bezier(.2, .6, .3, 1) calc(var(--d) + .3s) 2 both;
+}
+.nkt.is-play .nkt__step.is-current.is-new .nkt__node::after {
+  animation: nkt-ripple 1.3s cubic-bezier(.2, .6, .3, 1) calc(var(--d) + .75s) 2 both;
+}
+.nkt.is-play .nkt__step.is-current.is-new .nkt__spark {
+  animation: nkt-spark .7s cubic-bezier(.2, .7, .2, 1) calc(var(--d) + .3s) both;
+}
+
+/* el ícono del paso actual cobra vida */
+.nkt.is-play .nkt__step.is-current .nkt__ecg {
+  animation: nkt-ecg 1.7s linear calc(var(--d, 0s) + .9s) infinite;
+}
+.nkt.is-play .nkt__step.is-current .nkt__wr {
+  transform-origin: 50% 50%;
+  animation: nkt-wrench 1.6s ease-in-out calc(var(--d, 0s) + .9s) infinite;
+}
+.nkt.is-play .nkt__step.is-current .nkt__a1 {
+  animation: nkt-ecg 2.2s var(--nkt-ease) calc(var(--d, 0s) + .9s) infinite;
+}
+.nkt.is-play .nkt__step.is-current .nkt__tray {
+  animation: nkt-tray 1.6s ease-in-out calc(var(--d, 0s) + .9s) infinite;
+}
+
+/* ==========================================================================
+   Entrega: la mano trae el paquete (solo cuando el paso actual es el último)
+   El estado base del SVG ES el final (paquete apoyado, sin mano), así que
+   con "reducir movimiento" se ve la escena ya resuelta.
+   ========================================================================== */
+.nkt__deliver {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .55s var(--nkt-ease);
+  visibility: hidden;
+}
+.nkt.is-final .nkt__deliver { grid-template-rows: 1fr; visibility: visible; }
+.nkt.is-armed.is-final:not(.is-play) .nkt__deliver { grid-template-rows: 0fr; visibility: hidden; }
+.nkt.is-play.is-final .nkt__deliver { transition-delay: var(--dl); }
+
+.nkt__deliver-clip { min-height: 0; overflow: hidden; }
+.nkt__deliver-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 28px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+  padding: 14px 20px;
+  background: var(--nkt-sunk);
+  border: 1px solid var(--nkt-line-2);
+  border-top: 2px solid var(--nkt-ink);
+  border-radius: 2px;
+}
+.nkt__scene {
+  flex: 0 1 320px;
+  width: 320px;
+  max-width: 100%;
+  height: auto;
+  overflow: hidden;
+}
+.nkt__deliver-txt { display: grid; gap: 2px; text-align: left; }
+.nkt__deliver-txt strong {
+  font: 700 1.5rem/1.1 'Bricolage Grotesque', 'IBM Plex Sans', sans-serif;
+  letter-spacing: -.025em;
+  color: var(--nkt-ink);
+}
+.nkt__deliver-txt span { color: var(--nkt-ink-3); font-size: .9rem; max-width: 26ch; }
+
+/* dibujo */
+.nkt .g-line { fill: none; stroke: var(--nkt-ink); stroke-width: 2; }
+.nkt .g-mat  { fill: var(--nkt-ink); }
+.nkt .bx { fill: var(--nkt-lcd); stroke: var(--nkt-ink); stroke-width: 2.5; stroke-linejoin: round; }
+.nkt .tp { fill: var(--nkt-ink); }
+.nkt .lb { fill: var(--nkt-field); stroke: var(--nkt-ink); stroke-width: 1.5; }
+.nkt .ln { fill: none; stroke: var(--nkt-ink); stroke-width: 1.6; stroke-linecap: round; }
+.nkt .sl { fill: var(--nkt-ink); }
+.nkt .cf { fill: var(--nkt-lcd); }
+.nkt .pm { fill: var(--nkt-field); stroke: var(--nkt-ink); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.nkt .cr { fill: none; stroke: var(--nkt-ink); stroke-width: 2; stroke-linecap: round; }
+.nkt .ok-bg { fill: var(--nkt-ink); }
+.nkt .ok-ck { fill: none; stroke: var(--nk-paper, #fff); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.nkt .dust { fill: var(--nkt-ink); opacity: 0; }
+
+.nkt .pk, .nkt .pk-ok { transform-box: fill-box; transform-origin: 50% 100%; }
+.nkt .pk-ok { transform-origin: 50% 50%; }
+.nkt .hd { translate: 240px -26px; }       /* base: fuera de escena (a la derecha) */
+
+.nkt.is-play.is-final .pk     { animation: nkt-pk 2.7s linear calc(var(--dl) + .55s) both; }
+.nkt.is-play.is-final .hd     { animation: nkt-hd 2.7s linear calc(var(--dl) + .55s) both; }
+.nkt.is-play.is-final .dust   { animation: nkt-dust 2.7s linear calc(var(--dl) + .55s) both; }
+.nkt.is-play.is-final .pk-ok  { animation: nkt-stamp 2.7s linear calc(var(--dl) + .55s) both; }
+.nkt.is-play.is-final .nkt__deliver-txt { animation: nkt-rise .6s var(--nkt-ease) calc(var(--dl) + .55s + 1.8s) both; }
+
+/* ---------- Keyframes ---------- */
+@keyframes nkt-seg {
+  0%   { width: 0; border-right-width: 0; border-right-color: var(--nkt-lcd); }
+  4%   { border-right-width: 7px; border-right-color: var(--nkt-lcd); }
+  92%  { border-right-width: 7px; border-right-color: var(--nkt-lcd); }
+  100% { width: var(--seglen); border-right-width: 7px; border-right-color: var(--nkt-ink); }
+}
+@keyframes nkt-pop {
+  from { opacity: 0; scale: .4; }
+  to   { opacity: 1; scale: 1; }
+}
+@keyframes nkt-land {
+  0%   { opacity: 0; translate: 0 -14px; scale: .8;  box-shadow: 0 0 0 var(--nkt-ink); }
+  55%  { opacity: 1; translate: 0 3px;   scale: 1.06; box-shadow: 0 4px 0 var(--nkt-ink); }
+  75%  { translate: 0 -2px; scale: .99; }
+  100% { opacity: 1; translate: 0 0;     scale: 1;    box-shadow: 0 4px 0 var(--nkt-ink); }
+}
+@keyframes nkt-bob {
+  from { translate: 0 0;    box-shadow: 0 4px 0 var(--nkt-ink); }
+  to   { translate: 0 -2px; box-shadow: 0 6px 0 var(--nkt-ink); }
+}
+@keyframes nkt-draw {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes nkt-ripple {
+  0%   { opacity: .55; scale: 1; }
+  100% { opacity: 0;   scale: 1.9; }
+}
+@keyframes nkt-spark {
+  0%   { opacity: 1; transform: rotate(var(--a)) translateY(calc(var(--node) * -.62)); }
+  100% { opacity: 0; transform: rotate(var(--a)) translateY(calc(var(--node) * -1.1)); }
+}
+@keyframes nkt-rise {
+  from { opacity: 0; translate: 0 6px; }
+  to   { opacity: 1; translate: 0 0; }
+}
+@keyframes nkt-label-pop {
+  0%   { opacity: 0; translate: 0 8px; }
+  60%  { opacity: 1; translate: 0 -3px; }
+  100% { opacity: 1; translate: 0 0; }
+}
+@keyframes nkt-ecg {
+  0%   { stroke-dashoffset: 1; }
+  55%, 100% { stroke-dashoffset: 0; }
+}
+@keyframes nkt-wrench {
+  0%, 100% { rotate: 0deg; }
+  30% { rotate: -16deg; }
+  60% { rotate: 12deg; }
+}
+@keyframes nkt-tray {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 1.5px; }
+}
+
+/* escena: línea de tiempo común de 2.7 s
+   0–33%  la mano entra con el paquete sobre la palma
+   33–44% lo sostiene un instante
+   44–55% la mano se retira de DEBAJO del paquete (100 px: queda sin apoyo)
+   54–60% el paquete cae sobre el felpudo · 60–70% squash y rebote
+   55–88% la mano termina de salir · 62–76% sello · 60–100% polvo */
+@keyframes nkt-pk {
+  0%   { translate: 240px -26px; scale: 1 1; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+  33%, 54% { translate: 0 -26px; scale: 1 1; animation-timing-function: cubic-bezier(.5, 0, 1, .6); }
+  60%  { translate: 0 0;         scale: 1 1; }
+  62%  { translate: 0 0;         scale: 1.08 .88; animation-timing-function: ease-out; }
+  66%  { translate: 0 -4px;      scale: .98 1.04; animation-timing-function: ease-in; }
+  70%, 100% { translate: 0 0;    scale: 1 1; }
+}
+@keyframes nkt-hd {
+  0%   { translate: 240px -26px; animation-timing-function: cubic-bezier(.2, .8, .2, 1); }
+  33%, 44% { translate: 0 -26px; animation-timing-function: cubic-bezier(.4, 0, .7, 1); }
+  55%  { translate: 100px -26px; animation-timing-function: cubic-bezier(.5, 0, .9, .6); }
+  88%, 100% { translate: 240px -26px; }
+}
+@keyframes nkt-dust {
+  0%, 59% { opacity: 0; translate: 0 0; }
+  61%     { opacity: .9; translate: 0 0; }
+  100%    { opacity: 0; translate: var(--dx) var(--dy); }
+}
+@keyframes nkt-stamp {
+  0%, 62% { opacity: 0; scale: 0; }
+  69%     { opacity: 1; scale: 1.3; }
+  76%, 100% { opacity: 1; scale: 1; }
+}
+
+/* ---------- Pantallas chicas ---------- */
+@media (max-width: 560px) {
+  .nkt { --node: 40px; --gap: 2px; }
+  .nkt__label {
+    padding: 0;
+    font-size: .68rem;
+    letter-spacing: -.01em;
+    overflow-wrap: normal;
+    word-break: normal;
+    hyphens: none;
+  }
+  .nkt__num { font-size: .6rem; }
+  .nkt__deliver-row { flex-direction: column; text-align: center; }
+  .nkt__deliver-txt { text-align: center; justify-items: center; }
+}
+@media (max-width: 420px) {
+  .nkt__label { font-size: .62rem; }
+}
+@media (max-width: 360px) {
+  .nkt { --node: 34px; }
+  .nkt__label { font-size: .58rem; }
+}
+@media (max-width: 340px) {
+  .nkt__label { font-size: .54rem; letter-spacing: -.02em; }
+}
+
+/* ---------- Reducir movimiento: estado final, sin animación ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .nkt *, .nkt *::before, .nkt *::after { animation: none !important; transition: none !important; }
+  .nkt.is-armed:not(.is-play) .nkt__step.is-new .nkt__node { opacity: 1; scale: 1; }
+  .nkt.is-armed:not(.is-play) .nkt__step.is-new .nkt__label,
+  .nkt.is-armed:not(.is-play) .nkt__step.is-new .nkt__num { opacity: 1; }
+  .nkt.is-armed:not(.is-play) .nkt__step.is-new.is-reach::after { width: var(--seglen); }
+  .nkt.is-armed.is-final:not(.is-play) .nkt__deliver { grid-template-rows: 1fr; visibility: visible; }
+}
+
+.nkt .nkt__sr {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+

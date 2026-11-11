@@ -317,11 +317,28 @@ class SalesController extends BaseController
             ];
         }
 
+        $received = $workshop_model->get_received_repairs();
+        $received_count = count($received);
+        $received_summary = [];
+        foreach ($received as $rec) {
+            $received_summary[] = [
+                'id' => (int)$rec['id_reparacion'],
+                'codigo' => $rec['codigo_orden'],
+                'cliente' => $rec['cliente_nombre'],
+                'equipo' => trim($rec['equipo_marca'] . ' ' . $rec['equipo_modelo']),
+                'falla' => $rec['falla_declarada'] ?? '',
+                'operario' => $rec['operario_nombre'] ?? 'Empleado',
+                'fecha' => !empty($rec['fecha_ingreso']) ? date('d/m H:i', strtotime($rec['fecha_ingreso'])) . ' hs' : ''
+            ];
+        }
+
         echo json_encode([
             'success' => true,
             'count' => $count,
             'repairs' => $summary,
-            'latest_id' => !empty($summary) ? $summary[count($summary) - 1]['id'] : 0
+            'latest_id' => !empty($summary) ? $summary[count($summary) - 1]['id'] : 0,
+            'received_count' => $received_count,
+            'received_repairs' => $received_summary
         ]);
         exit();
     }

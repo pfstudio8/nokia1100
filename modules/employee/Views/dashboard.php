@@ -13,7 +13,7 @@ $ventas_recientes = $ventas_recientes ?? [];
 $productos = $productos ?? [];
 $ready_to_charge = $ready_to_charge ?? 0;
 
-$username = $_SESSION['username'] ?? 'Operario';
+$username = $_SESSION['username'] ?? 'Empleado';
 $hora = (int)date('G');
 if ($hora >= 5 && $hora < 12) {
     $saludo = 'Buen día';
@@ -51,6 +51,11 @@ Layout::renderEmployeeSidebar('dashboard');
         </div>
         <?php if ($_SESSION['role'] !== 'guest'): ?>
             <div class="flex items-center gap-2 flex-wrap">
+                <a href="<?php echo BASE_URL; ?>/modules/workshop/index.php?action=add"
+                    class="btn text-xs bg-[#15181a] text-[#e9e6db] border-[#15181a] hover:bg-[#222729]">
+                    <span class="material-symbols-outlined text-[16px] text-[#c6e24a]">add_to_home_screen</span>
+                    Nueva Orden de Equipo
+                </a>
                 <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=repairs_to_charge"
                     class="btn text-xs">
                     <span class="material-symbols-outlined text-[16px]">build_circle</span>
@@ -67,6 +72,28 @@ Layout::renderEmployeeSidebar('dashboard');
             </div>
         <?php endif; ?>
     </header>
+
+    <?php if (isset($_GET['new_intake']) && (int)$_GET['new_intake'] > 0): 
+        $intake_id = (int)$_GET['new_intake'];
+    ?>
+        <div class="p-4 rounded-[2px] mb-6 border border-[#15181a] border-l-4 border-l-[#c6e24a] bg-[#15181a] text-[#e9e6db] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-[2px] bg-[#c6e24a] text-[#15171a] flex items-center justify-center flex-shrink-0">
+                    <span class="material-symbols-outlined text-[20px]">check_circle</span>
+                </div>
+                <div>
+                    <h3 class="text-sm font-display font-bold text-[#c6e24a] flex items-center gap-2">
+                        <span>¡Equipo registrado y derivado al Taller!</span>
+                    </h3>
+                    <p class="text-xs text-[#9ba19f] mt-0.5">El taller y la administración ya recibieron la notificación de ingreso. Podés entregarle el comprobante con código QR al cliente.</p>
+                </div>
+            </div>
+            <a href="<?php echo BASE_URL; ?>/modules/workshop/index.php?action=print_receipt&id=<?php echo $intake_id; ?>" target="_blank" class="btn btn-lcd text-xs whitespace-nowrap">
+                <span class="material-symbols-outlined text-[15px]">qr_code_2</span>
+                Imprimir Comprobante y QR
+            </a>
+        </div>
+    <?php endif; ?>
 
     <?php if ($ready_to_charge > 0): ?>
         <div class="p-4 rounded-[2px] mb-6 border border-[#8a5200] border-l-4 border-l-[#8a5200] bg-[#f6e8c8] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shadow-sm">

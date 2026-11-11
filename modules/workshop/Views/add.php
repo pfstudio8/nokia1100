@@ -5,26 +5,59 @@
 $clients = $clients ?? [];
 /** @var string|null $error */
 $error = $error ?? null;
+/** @var array<int, array<string, mixed>> $repairs */
+$repairs = $repairs ?? [];
+/** @var string $estado_filter */
+$estado_filter = $estado_filter ?? '';
+/** @var string $search */
+$search = $search ?? '';
+/** @var int $page */
+$page = $page ?? 1;
+/** @var int $total_pages */
+$total_pages = $total_pages ?? 1;
+/** @var int $total_items */
+$total_items = $total_items ?? 0;
+/** @var int $limit */
+$limit = $limit ?? 10;
 
-Layout::renderHead('Ingresar Equipo - Nokia 1100');
+$new_intake_id = isset($_GET['new_intake']) ? (int)$_GET['new_intake'] : 0;
+$has_taller_access = Layout::hasAccess('taller');
+
+Layout::renderHead('Registrar Nuevo Equipo - Nokia 1100');
 
 if ($_SESSION['role'] === 'admin') {
     Layout::renderAdminSidebar('taller');
 } else {
-    Layout::renderEmployeeSidebar('taller');
+    Layout::renderEmployeeSidebar('registrar_equipo');
 }
+
+$back_url = $has_taller_access ? 'index.php' : (BASE_URL . '/modules/employee/index.php');
 ?>
 
 <main class="md:ml-64 p-6 md:p-10 pt-20 md:pt-10 min-h-screen">
-    <div class="max-w-4xl mx-auto">
-        <div class="mb-6 flex items-center gap-4">
-            <a href="index.php" class="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-text-muted hover:text-text-main transition-colors">
-                <span class="material-symbols-outlined">arrow_back</span>
-            </a>
-            <div>
-                <h2 class="text-3xl font-display font-medium text-text-main">Nueva Orden de Reparación</h2>
-                <p class="text-text-muted mt-1 text-sm">Registrar el ingreso de un equipo al taller</p>
+    <div class="max-w-6xl mx-auto">
+        <div class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <a href="<?php echo htmlspecialchars($back_url, ENT_QUOTES, 'UTF-8'); ?>" class="w-10 h-10 rounded-full bg-surface border border-border flex items-center justify-center text-text-muted hover:text-text-main transition-colors">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </a>
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="px-2 py-0.5 rounded-[2px] text-[10px] font-mono font-bold uppercase tracking-wider bg-[#15181a] text-[#c6e24a]">Recepción en Mostrador</span>
+                    </div>
+                    <h2 class="text-3xl font-display font-medium text-text-main">Registrar Nuevo Equipo</h2>
+                    <p class="text-text-muted mt-1 text-sm">Registrar el ingreso de un equipo y enviarlo con notificación inmediata al Taller Técnico</p>
+                </div>
             </div>
+            <?php if (($_SESSION['role'] ?? '') !== 'admin'): ?>
+            <div class="flex items-center gap-2 self-start sm:self-auto">
+                <a href="#historial-equipos" class="no-transition bg-surface text-text-main hover:bg-surface-hover px-4 py-2 border border-border rounded-lg font-medium text-sm transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+                    <span>Historial de Equipos Registrados</span>
+                    <span class="px-1.5 py-0.5 rounded-[2px] text-[11px] font-mono font-bold bg-[#15181a] text-[#c6e24a]"><?php echo (int)$total_items; ?></span>
+                </a>
+            </div>
+            <?php endif; ?>
         </div>
 
 
@@ -145,10 +178,144 @@ if ($_SESSION['role'] === 'admin') {
             </div>
 
             <div class="flex justify-end gap-3 pt-6 border-t border-border/50">
-                <a href="index.php" class="px-6 py-2.5 bg-surface border border-border text-text-main rounded-xl text-sm font-medium hover:bg-surface-hover transition-colors">Cancelar</a>
-                <button type="submit" class="px-6 py-2.5 bg-primary text-background rounded-xl text-sm font-medium hover:bg-primary-hover transition-all shadow-lg hover:shadow-primary/25">Generar Orden</button>
+                <a href="<?php echo htmlspecialchars($back_url, ENT_QUOTES, 'UTF-8'); ?>" class="px-6 py-2.5 bg-surface border border-border text-text-main rounded-xl text-sm font-medium hover:bg-surface-hover transition-colors">Cancelar</a>
+                <button type="submit" class="px-6 py-2.5 bg-primary text-background rounded-xl text-sm font-medium hover:bg-primary-hover transition-all shadow-lg hover:shadow-primary/25 flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">send_to_mobile</span>
+                    Registrar y Enviar al Taller
+                </button>
             </div>
         </form>
+
+        <?php if (($_SESSION['role'] ?? '') !== 'admin'): ?>
+        <!-- Historial de Equipos Registrados (exclusivo para Empleado, con opción permanente para imprimir recibo y QR) -->
+        <div id="historial-equipos" class="glass-card rounded-2xl p-6 md:p-8 mt-8 scroll-mt-6">
+            <div class="dashboard-header border-b border-border/50 pb-6 mb-6">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="px-2 py-0.5 rounded-[2px] text-[10px] font-mono font-bold uppercase tracking-wider bg-[#15181a] text-[#c6e24a]">Registro Histórico</span>
+                    </div>
+                    <h3 class="text-2xl font-display font-medium text-text-main">Historial de Equipos Registrados</h3>
+                    <p class="text-text-muted mt-1 text-sm">Consultá todos los equipos ingresados y reimprimí su comprobante de ingreso o código QR en cualquier momento</p>
+                </div>
+                <div class="flex items-center gap-2.5 flex-wrap">
+                    <?php echo Layout::renderExportButtons('registered-devices-table', 'Equipos Registrados', 'taller'); ?>
+                </div>
+            </div>
+
+            <form method="GET" action="index.php#historial-equipos" class="flex gap-3 mb-6 items-center flex-wrap">
+                <input type="hidden" name="action" value="add">
+                <div class="relative flex-1 max-w-md">
+                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px]">search</span>
+                    <input type="text" id="search-input" name="search" placeholder="Buscar por código, cliente, modelo..." value="<?php echo htmlspecialchars($search); ?>" class="w-full bg-surface border border-border pl-10 pt-2.5 pb-2.5 pr-4 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
+                </div>
+                <select name="estado" class="bg-surface border border-border px-4 py-2.5 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
+                    <option value="">Todos los estados</option>
+                    <option value="Recibido" <?php if($estado_filter==='Recibido') echo 'selected'; ?>>Recibido</option>
+                    <option value="En diagnóstico" <?php if($estado_filter==='En diagnóstico') echo 'selected'; ?>>En diagnóstico</option>
+                    <option value="En reparación" <?php if($estado_filter==='En reparación') echo 'selected'; ?>>En reparación</option>
+                    <option value="Listo" <?php if($estado_filter==='Listo') echo 'selected'; ?>>Listo</option>
+                    <option value="Entregado" <?php if($estado_filter==='Entregado') echo 'selected'; ?>>Entregado</option>
+                    <option value="Cancelado" <?php if($estado_filter==='Cancelado') echo 'selected'; ?>>Cancelado</option>
+                </select>
+                <button type="submit" class="bg-surface hover:bg-surface-hover border border-border px-4 py-2.5 rounded-xl text-sm font-medium transition-colors text-text-main">Filtrar</button>
+                <?php if ($search || $estado_filter): ?>
+                    <a href="index.php?action=add#historial-equipos" class="text-red-400 hover:text-red-300 text-sm font-medium ml-2 transition-colors">Limpiar</a>
+                <?php endif; ?>
+            </form>
+
+            <div class="table-container rounded-2xl border border-border overflow-x-auto">
+                <table class="w-full text-left" id="registered-devices-table">
+                    <thead class="bg-surface/50 border-b border-border text-xs uppercase text-text-muted tracking-wider">
+                        <tr>
+                            <th class="p-4 font-semibold">Orden</th>
+                            <th class="p-4 font-semibold">Cliente</th>
+                            <th class="p-4 font-semibold">Equipo</th>
+                            <th class="p-4 font-semibold">Estado</th>
+                            <th class="p-4 font-semibold">Fecha Ingreso</th>
+                            <th class="p-4 font-semibold">Presupuesto</th>
+                            <th class="p-4 font-semibold text-right">Comprobante / Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-border/50">
+                        <?php if (count($repairs) > 0): ?>
+                            <?php foreach($repairs as $r): 
+                                $statusMap = [
+                                    'Recibido'       => 'repair-status-recibido',
+                                    'En diagnóstico' => 'repair-status-diagnostico',
+                                    'En reparación'  => 'repair-status-reparacion',
+                                    'Listo'          => 'repair-status-listo',
+                                    'Entregado'      => 'repair-status-entregado',
+                                    'Cancelado'      => 'repair-status-cancelado',
+                                ];
+                                $statusClass = 'repair-status ' . ($statusMap[$r['estado']] ?? 'repair-status-default');
+                                $isHighlighted = ($new_intake_id > 0 && (int)$r['id_reparacion'] === $new_intake_id);
+                            ?>
+                                <tr class="hover:bg-surface-hover/30 transition-colors <?php echo $isHighlighted ? 'bg-[#c6e24a]/20' : (($r['estado'] === 'Recibido') ? 'bg-[#f6e8c8]/35' : ''); ?>">
+                                    <td class="p-4 font-display font-medium text-primary">
+                                        <div class="flex items-center gap-2">
+                                            <span>#<?php echo htmlspecialchars($r['codigo_orden']); ?></span>
+                                            <?php if ($r['estado'] === 'Recibido'): ?>
+                                                <span class="px-1.5 py-0.5 rounded-[2px] text-[9px] font-mono font-bold uppercase tracking-wider bg-[#c6e24a] text-[#15171a] border border-[#15171a]/20">NUEVO</span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="font-medium text-text-main"><?php echo htmlspecialchars($r['cliente_nombre']); ?></div>
+                                        <?php if (!empty($r['cliente_telefono'])): ?>
+                                            <div class="text-xs font-mono text-text-muted mt-0.5"><?php echo htmlspecialchars($r['cliente_telefono']); ?></div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="p-4">
+                                        <div class="text-text-main font-medium text-sm"><?php echo htmlspecialchars($r['equipo_marca'] . ' ' . $r['equipo_modelo']); ?></div>
+                                        <?php if (!empty($r['falla_declarada'])): ?>
+                                            <div class="text-xs text-text-muted truncate max-w-[220px]" title="<?php echo htmlspecialchars($r['falla_declarada']); ?>">
+                                                <?php echo htmlspecialchars($r['falla_declarada']); ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="p-4">
+                                        <span class="inline-block px-2.5 py-1 rounded text-[10px] uppercase font-bold tracking-widest <?php echo $statusClass; ?>">
+                                            <?php echo htmlspecialchars($r['estado']); ?>
+                                        </span>
+                                    </td>
+                                    <td class="p-4 text-text-muted text-sm">
+                                        <div><?php echo date('d/m/Y H:i', strtotime($r['fecha_ingreso'])); ?></div>
+                                        <?php if (!empty($r['operario_nombre'])): ?>
+                                            <div class="text-[11px] font-mono text-text-muted">Por: <?php echo htmlspecialchars($r['operario_nombre']); ?></div>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="p-4 text-text-main font-medium">
+                                        <?php 
+                                            $total_list = floatval($r['presupuesto']) + floatval($r['costo_total'] ?? 0);
+                                            echo $total_list > 0 ? '$' . number_format($total_list, 2) : '<span class="text-text-muted text-xs">Pte.</span>'; 
+                                        ?>
+                                    </td>
+                                    <td class="p-4 text-right">
+                                        <div class="flex items-center justify-end gap-2">
+                                            <a href="index.php?action=print_receipt&id=<?php echo (int)$r['id_reparacion']; ?>" target="_blank" class="px-3 py-1.5 rounded-[2px] flex items-center gap-1.5 bg-[#15181a] text-[#c6e24a] hover:bg-[#222729] font-mono text-xs font-bold transition-colors shadow-sm whitespace-nowrap" title="Imprimir Comprobante y QR de Seguimiento">
+                                                <span class="material-symbols-outlined text-[15px]">print</span>
+                                                <span>Imprimir Recibo</span>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="7" class="p-12 text-center text-text-muted">No se encontraron equipos registrados.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+
+            <?php
+            $query_args = ['action' => 'add'];
+            if (!empty($estado_filter)) $query_args['estado'] = $estado_filter;
+            if (!empty($search)) $query_args['search'] = $search;
+
+            echo Layout::renderPagination((int)$page, (int)$total_pages, (int)$total_items, 'equipo registrado', 'equipos registrados', $query_args);
+            ?>
+        </div>
+        <?php endif; ?>
     </div>
 </main>
 

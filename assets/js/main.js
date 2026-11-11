@@ -483,7 +483,8 @@ function initPageTransitions() {
             link.getAttribute('href')?.startsWith('#') ||
             link.hasAttribute('download') ||
             link.classList.contains('no-transition') ||
-            link.hasAttribute('data-confirm')) {
+            link.hasAttribute('data-confirm') ||
+            link.hasAttribute('data-nk-loader')) {
             return;
         }
 
@@ -550,6 +551,7 @@ function initReadyRepairsWatcher() {
     const baseUrl = window.BASE_URL || (window.location.origin + '/nokia1100');
     let lastKnownCount = null;
     let knownIds = new Set();
+    let knownReceivedIds = new Set();
     let isFirstCheck = true;
 
     function playGlobalChime() {
@@ -600,7 +602,10 @@ function initReadyRepairsWatcher() {
             const count = parseInt(data.count) || 0;
             const incomingIds = (data.repairs || []).map(r => r.id);
 
-            // Actualizar insignias de conteo en la barra lateral
+            const receivedCount = parseInt(data.received_count) || 0;
+            const incomingReceivedIds = (data.received_repairs || []).map(r => r.id);
+
+            // Actualizar insignias de conteo en la barra lateral (Cobrar Reparaciones)
             document.querySelectorAll('[data-badge="ready-repairs"]').forEach(badge => {
                 badge.textContent = count;
                 if (count > 0) {
@@ -610,14 +615,46 @@ function initReadyRepairsWatcher() {
                 }
             });
 
+            // Actualizar insignias de conteo en la barra lateral (Taller - Nuevos Ingresos)
+            document.querySelectorAll('[data-badge="received-repairs"]').forEach(badge => {
+                badge.textContent = receivedCount;
+                if (receivedCount > 0) {
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            });
+
+            // Emitir evento global para el PopUp en la Dashboard de Admin
+            window.dispatchEvent(new CustomEvent('nokia:received-repairs-updated', {
+                detail: {
+                    received_count: receivedCount,
+                    received_repairs: data.received_repairs || []
+                }
+            }));
+
             if (isFirstCheck) {
                 lastKnownCount = count;
                 knownIds = new Set(incomingIds);
+                knownReceivedIds = new Set(incomingReceivedIds);
                 isFirstCheck = false;
                 return;
             }
 
-            // Si hay órdenes nuevas que antes no estaban
+            // Si hay nuevos equipos ingresados al Taller
+            const newReceivedOrders = (data.received_repairs || []).filter(r => !knownReceivedIds.has(r.id));
+            if (newReceivedOrders.length > 0) {
+                newReceivedOrders.forEach(o => knownReceivedIds.add(o.id));
+                playGlobalChime();
+                const latestRec = newReceivedOrders[0];
+                if (typeof showToast === 'function') {
+                    showToast(`📥 Tienes un equipo que ha ingresado al Taller: Orden #${latestRec.codigo} (${latestRec.equipo})`, 'success');
+                }
+            } else {
+                knownReceivedIds = new Set(incomingReceivedIds);
+            }
+
+            // Si hay órdenes nuevas que antes no estaban (Listas para cobrar)
             const newOrders = (data.repairs || []).filter(r => !knownIds.has(r.id));
             if (newOrders.length > 0) {
                 newOrders.forEach(o => knownIds.add(o.id));

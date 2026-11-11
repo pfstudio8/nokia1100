@@ -389,19 +389,19 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
 
                         <div class="p-6 md:p-8 space-y-6">
                             <p class="text-sm md:text-base text-text-muted leading-relaxed">
-                                Controla cada orden con código único de seguimiento, asociando el cliente, modelo del teléfono, repuestos necesarios y presupuesto acordado.
+                                Controla el flujo integral de servicio técnico: registro en mostrador, derivación con notificación inmediata al taller, diagnóstico técnico, presupuesto, control de repuestos y <strong class="text-text-main">seguimiento en vivo para el cliente mediante boleta con código QR</strong>.
                             </p>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div class="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-colors">
                                     <div class="flex items-start gap-3">
                                         <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                                            <span class="material-symbols-outlined text-[20px]">assignment_turned_in</span>
+                                            <span class="material-symbols-outlined text-[20px]">add_to_home_screen</span>
                                         </div>
                                         <div>
-                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Boleta y Estados</h3>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Registro de Equipos</h3>
                                             <p class="text-xs text-text-muted leading-relaxed">
-                                                Emite el comprobante para el cliente y avanza el estado: <strong class="text-text-main">Recibido</strong>, <strong class="text-text-main">En reparación</strong> y <strong class="text-text-main">Listo</strong>.
+                                                Carga rápida en mostrador con datos del cliente, falla, presupuesto estimativo y fotos del estado físico de recepción.
                                             </p>
                                         </div>
                                     </div>
@@ -410,12 +410,166 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <div class="p-4 rounded-2xl bg-surface border border-border hover:border-[#9db82a] transition-colors">
                                     <div class="flex items-start gap-3">
                                         <div class="w-9 h-9 rounded-xl bg-[#eef6cf] border border-[#c6e24a] flex items-center justify-center text-[#4d5e0a] shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">qr_code_scanner</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Seguimiento en Vivo (QR)</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                Comprobante oficial con código QR y enlace a WhatsApp para que el cliente siga el avance en tiempo real desde su celular.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-[#d4b54a] transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-[#fcf3cf] border border-[#e6cf7a] flex items-center justify-center text-[#7a5600] shrink-0">
                                             <span class="material-symbols-outlined text-[20px]">extension</span>
                                         </div>
                                         <div>
-                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Asignación de Repuestos</h3>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Repuestos &amp; Diagnóstico</h3>
                                             <p class="text-xs text-text-muted leading-relaxed">
-                                                Descuenta del inventario los componentes utilizados (módulos, pines, baterías) sumándolos al costo del trabajo.
+                                                Asignación de repuestos con descuento automático de inventario, registro de notas técnicas y fotos de progreso.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <?php // ACORDEÓN 1: PASO A PASO PARA AGREGAR UN NUEVO EQUIPO ?>
+                            <div class="rounded-2xl border border-primary/30 bg-surface/80 overflow-hidden shadow-sm">
+                                <button onclick="toggleAccordion('acc-step-nuevo-equipo')" class="w-full p-4 md:p-5 flex items-center justify-between text-left hover:bg-card/50 transition-colors" type="button">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                                            <span class="material-symbols-outlined text-[20px]">add_to_home_screen</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-sm md:text-base font-display font-bold text-text-main">¿Cómo registrar un nuevo equipo paso a paso?</span>
+                                            <span class="block text-xs text-text-muted">Guía completa de ingreso en mostrador y derivación automática al taller</span>
+                                        </div>
+                                    </div>
+                                    <span id="acc-icon-acc-step-nuevo-equipo" class="material-symbols-outlined text-text-muted text-[22px] transition-transform duration-200" style="transform: rotate(180deg);">expand_more</span>
+                                </button>
+                                
+                                <div id="acc-step-nuevo-equipo" class="p-5 pt-3 border-t border-border space-y-4">
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-primary text-primary flex items-center justify-center text-xs font-bold shrink-0 z-10">1</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Acceder a "Registrar Nuevo Equipo"</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                • <strong>Empleado:</strong> Desde el menú lateral pulsa en <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[#15181a] text-[#c6e24a]">Registrar Nuevo Equipo</span> o desde el Centro de Operaciones pulsa en el botón <strong class="text-text-main">"Nueva Orden de Equipo"</strong>.<br>
+                                                • <strong>Administrador:</strong> Puedes ingresar desde el módulo <strong class="text-text-main">Taller</strong> con el botón <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-primary text-white">+ Nueva Orden</span> o desde la cabecera de la Dashboard de Administración.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-primary text-primary flex items-center justify-center text-xs font-bold shrink-0 z-10">2</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Completar Datos del Cliente</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                En la columna izquierda, elige <strong class="text-text-main">"Cliente Existente"</strong> del menú desplegable (autocompleta nombre y teléfono automáticamente) o deja seleccionada la opción <strong class="text-text-main">"-- Crear Nuevo Cliente --"</strong> e ingresa el Nombre Completo y su número de WhatsApp.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-primary text-primary flex items-center justify-center text-xs font-bold shrink-0 z-10">3</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Indicar Marca, Modelo, IMEI y Falla Declarada</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                Indica la <strong class="text-text-main">Marca</strong> (ej. Samsung, Apple, Motorola), el <strong class="text-text-main">Modelo</strong> (ej. A32, iPhone 11), el número de IMEI o Serie (opcional pero recomendado para garantías) y describe con precisión el motivo de ingreso o problema declarado por el cliente.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-primary text-primary flex items-center justify-center text-xs font-bold shrink-0 z-10">4</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Adjuntar Fotos del Equipo y Detalles Comerciales</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                • <strong>Fotos de Ingreso (Opcional):</strong> Arrastra o selecciona una o varias fotos del equipo para documentar su estado físico inicial (pantalla, bordes, tapa trasera). Incluye visor ampliado en pantalla completa.<br>
+                                                • <strong>Presupuesto Estimado ($):</strong> Ingresa un monto estimativo pactado previamente con el cliente, o déjalo en blanco si requiere evaluación técnica previa.<br>
+                                                • <strong>Observaciones:</strong> Anota detalles como rayones previos, tornillos faltantes, funda, chip SIM o tarjeta microSD que queda en custodia.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-start gap-3.5">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-success text-success flex items-center justify-center text-xs font-bold shrink-0">5</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Guardar y Derivación Automática al Taller</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                Presiona <span class="px-2.5 py-1 rounded text-xs font-bold bg-primary text-white">Registrar y Enviar al Taller</span>. El sistema genera un código de orden único (ej. <code class="font-mono text-primary font-bold">#26118134</code>), emite la notificación en tiempo real con contador en el menú lateral para los técnicos y habilita la impresión inmediata del recibo con código QR.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <?php // ACORDEÓN 2: SEGUIMIENTO EN VIVO Y CÓDIGO QR ?>
+                            <div class="rounded-2xl border border-[#9db82a]/50 bg-surface/80 overflow-hidden shadow-sm">
+                                <button onclick="toggleAccordion('acc-step-seguimiento-qr')" class="w-full p-4 md:p-5 flex items-center justify-between text-left hover:bg-card/50 transition-colors" type="button">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-[#eef6cf] border border-[#c6e24a] flex items-center justify-center text-[#4d5e0a]">
+                                            <span class="material-symbols-outlined text-[20px]">qr_code_2</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-sm md:text-base font-display font-bold text-text-main">¿Cómo funciona el Seguimiento en Vivo con Código QR?</span>
+                                            <span class="block text-xs text-text-muted">Consulta de estado en tiempo real para clientes sin usuario ni contraseña</span>
+                                        </div>
+                                    </div>
+                                    <span id="acc-icon-acc-step-seguimiento-qr" class="material-symbols-outlined text-text-muted text-[22px] transition-transform duration-200" style="transform: rotate(180deg);">expand_more</span>
+                                </button>
+                                
+                                <div id="acc-step-seguimiento-qr" class="p-5 pt-3 border-t border-border space-y-4">
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-[#9db82a] text-[#4d5e0a] flex items-center justify-center text-xs font-bold shrink-0 z-10">1</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Emisión de la Boleta con Código QR y Botón WhatsApp</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                Al registrar el equipo o en cualquier momento desde el <strong class="text-text-main">Historial de Equipos Registrados</strong> (botón <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[#15181a] text-[#c6e24a]">Imprimir Recibo</span>) o desde el módulo <strong class="text-text-main">Taller</strong> (botón <span class="px-2 py-0.5 rounded text-[11px] font-bold border border-border bg-surface text-text-main">Recibo / QR</span>), se abre el Comprobante Oficial de Ingreso.<br>
+                                                El comprobante cuenta con:
+                                                <br>• <strong>Código QR Vectorial:</strong> Escaneable con la cámara de cualquier teléfono.
+                                                <br>• <strong>Botón "Enviar por WhatsApp":</strong> Abre un chat con el cliente con el mensaje prearmado y su link directo.
+                                                <br>• <strong>Botón "Copiar Enlace":</strong> Para enviar el link de seguimiento por correo o mensaje de texto.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-[#9db82a] text-[#4d5e0a] flex items-center justify-center text-xs font-bold shrink-0 z-10">2</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Acceso Público y Seguro (Sin login)</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                El cliente ingresa al portal mediante la URL pública <code class="px-2 py-0.5 rounded bg-background text-[11px] font-mono text-primary border border-border">/modules/workshop/index.php?action=track&amp;code=CODIGO</code>. No requiere registrarse ni recordar contraseñas: el código único de la orden funciona como llave de consulta exclusiva para su equipo.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-[#9db82a] text-[#4d5e0a] flex items-center justify-center text-xs font-bold shrink-0 z-10">3</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Línea de Tiempo Interactiva (Tracking Line)</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                La pantalla de seguimiento muestra la línea de etapas del servicio técnico con animación secuencial estilo Nokia 1100:
+                                                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-2 font-mono text-[11px] text-center">
+                                                    <div class="p-2 rounded bg-surface border border-border"><span class="block text-primary font-bold">1. Recibido</span>Ingreso en mostrador</div>
+                                                    <div class="p-2 rounded bg-surface border border-border"><span class="block text-primary font-bold">2. En diagnóstico</span>Revisión técnica</div>
+                                                    <div class="p-2 rounded bg-surface border border-border"><span class="block text-primary font-bold">3. En reparación</span>Arreglo y repuestos</div>
+                                                    <div class="p-2 rounded bg-[#eef6cf] border border-[#c6e24a] text-[#4d5e0a] font-bold"><span class="block text-[#4d5e0a]">4. Listo</span>Listo para retirar</div>
+                                                    <div class="p-2 rounded bg-surface border border-border"><span class="block text-text-muted">5. Entregado</span>Retirado por cliente</div>
+                                                </div>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-start gap-3.5">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-success text-success flex items-center justify-center text-xs font-bold shrink-0">4</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Actualizaciones en Tiempo Real sin recargar</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                Si el técnico cambia el estado de la reparación en el taller, modifica el presupuesto estimado o añade una fotografía del progreso, la pantalla del cliente se actualiza automáticamente mediante consulta en segundo plano (Web Polling), reproduciendo una sutil animación de avance en la línea de tiempo.
                                             </p>
                                         </div>
                                     </div>
@@ -892,15 +1046,27 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                         <?php // FAQ 1 ?>
                         <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
                             <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
-                                <span>¿Cómo reimprimir una orden de taller?</span>
+                                <span>¿Cómo reimprimir la boleta con QR de un equipo?</span>
                                 <span class="material-symbols-outlined text-text-muted text-[18px] group-open:rotate-180 transition-transform">expand_more</span>
                             </summary>
                             <div class="p-3.5 pt-0 text-text-muted border-t border-border/40 mt-1 leading-relaxed">
-                                Ingresa al módulo <strong class="text-text-main">Taller</strong>, localiza el número de ticket o equipo del cliente y presiona el botón <span class="text-primary font-semibold">Imprimir Comprobante</span> para generar la orden en formato térmico o PDF.
+                                • <strong>Empleado:</strong> Ve a <strong class="text-text-main">Registrar Nuevo Equipo</strong> y en la tabla inferior <em>Historial de Equipos Registrados</em> pulsa en <span class="text-primary font-bold">Imprimir Recibo</span>.<br>
+                                • <strong>Taller / Admin:</strong> Desde la tabla principal del módulo <strong class="text-text-main">Taller</strong>, localiza la orden y haz clic en el botón <span class="text-text-main font-semibold">Recibo / QR</span> para abrir el comprobante con código QR y enlace directo a WhatsApp.
                             </div>
                         </details>
 
                         <?php // FAQ 2 ?>
+                        <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
+                            <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
+                                <span>¿Cómo accede el cliente al Seguimiento en Vivo?</span>
+                                <span class="material-symbols-outlined text-text-muted text-[18px] group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <div class="p-3.5 pt-0 text-text-muted border-t border-border/40 mt-1 leading-relaxed">
+                                El cliente solo debe <strong>escanear con la cámara de su celular el código QR</strong> impreso en su boleta o hacer clic en el link recibido por WhatsApp. Accede sin login a la línea de tiempo interactiva que se actualiza en tiempo real con cada diagnóstico y avance del taller.
+                            </div>
+                        </details>
+
+                        <?php // FAQ 3 ?>
                         <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
                             <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
                                 <span>¿Dónde se cobra una reparación finalizada?</span>
@@ -911,7 +1077,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             </div>
                         </details>
 
-                        <?php // FAQ 3 ?>
+                        <?php // FAQ 4 ?>
                         <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
                             <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
                                 <span>¿Qué hacer si un stock queda en nivel crítico?</span>
@@ -922,7 +1088,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             </div>
                         </details>
 
-                        <?php // FAQ 4 ?>
+                        <?php // FAQ 5 ?>
                         <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
                             <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
                                 <span>¿Cómo anular una venta y emitir nota de crédito?</span>

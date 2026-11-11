@@ -373,7 +373,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (data.success) {
                     if (data.redirect) {
+                        if (window.NKLoader && typeof window.NKLoader.show === 'function') {
+                            await window.NKLoader.show({ mode: 'login', redirect: data.redirect });
+                            return;
+                        }
                         window.location.href = data.redirect;
+                        return;
                     }
                 } else {
                     if (data.unverified) {

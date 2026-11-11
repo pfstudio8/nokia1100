@@ -39,7 +39,7 @@ if ($hora >= 5 && $hora < 12) {
                 </h1>
                 <p class="text-xs text-[#5c6165] dark:text-[#9ba19f] mt-1 font-medium">Supervisión integral de rendimiento, flujo comercial y auditoría de inventario</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex items-center gap-2 flex-wrap">
                 <a href="<?php echo BASE_URL; ?>/modules/inventory/index.php" class="btn btn-lcd text-xs">
                     <span class="material-symbols-outlined text-[16px]">inventory_2</span>
                     Gestionar Inventario

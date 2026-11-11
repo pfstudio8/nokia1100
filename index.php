@@ -56,6 +56,7 @@ if (isset($_SESSION['user_id'])) {
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/style.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/login.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/one-time-code.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="<?php echo BASE_URL; ?>/assets/css/nokia-loader.css?v=<?php echo time(); ?>">
 
     <script src="<?php echo BASE_URL; ?>/assets/js/tailwind_config.js?v=<?php echo time(); ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/theme.js?v=<?php echo time(); ?>"></script>
@@ -400,6 +401,7 @@ if (isset($_SESSION['user_id'])) {
     <?php // Cargar Scripts del Sistema ?>
     <script src="<?php echo BASE_URL; ?>/assets/js/framer-toaster.js?v=<?php echo time(); ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/one-time-code.js?v=<?php echo time(); ?>"></script>
+    <script src="<?php echo BASE_URL; ?>/assets/js/nokia-loader.js?v=<?php echo time(); ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/main.js?v=<?php echo time(); ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/login.js?v=<?php echo time(); ?>"></script>
     

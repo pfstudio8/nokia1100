@@ -1,15 +1,299 @@
-/* assets/css/pages/track.css */
+/* modules/workshop/track.css */
+/* Estética Oficial Nokia 1100 UI Kit · Line Tracking de Precisión */
+
 .material-symbols-outlined {
-    font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-body {
-    background-color: #181E26;
-    color: #FAFAFA;
+/* Contenedor Principal Estilo Ficha Técnica Nokia 1100 */
+.nk-track-card {
+    background-color: var(--surface);
+    color: var(--text-main);
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    box-shadow: var(--nk-shadow-pop);
+    transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
-.glass-card {
-    background: rgba(31, 41, 55, 0.75);
-    backdrop-filter: blur(16px);
-    border: 1px solid #374151;
+html.dark .nk-track-card,
+html[data-theme="dark"] .nk-track-card {
+    border-color: var(--line-2);
+}
+
+.nk-subcard {
+    background-color: var(--sunk);
+    border: 1px solid var(--border-dark);
+    border-radius: 3px;
+    color: var(--text-main);
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+/* Centrado de cabecera */
+.track-header-center,
+.track-header-center h1,
+.track-header-center h2,
+.track-header-center p {
+    text-align: center !important;
+}
+
+/* ========================================================
+   Rediseño de Line Tracking: Recorrido Secuencial Sutil
+   ======================================================== */
+
+.nk-stepper-wrapper {
+    position: relative;
+    padding: 20px 8px 10px;
+}
+
+/* Riel base entre estaciones (Escritorio) */
+.nk-rail-track {
+    position: absolute;
+    top: 41px;
+    left: 10%;
+    right: 10%;
+    height: 3px;
+    background-color: var(--sunk);
+    border-top: 1px solid var(--border-dark);
+    border-bottom: 1px solid var(--border-dark);
+    z-index: 1;
+    overflow: hidden;
+}
+
+/* Línea de recorrido activa que avanza suavemente */
+.nk-rail-fill {
+    position: absolute;
+    top: -1px;
+    bottom: -1px;
+    left: 0;
+    width: 0%;
+    background-color: var(--ink);
+    transition: width 0.85s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html.dark .nk-rail-fill,
+html[data-theme="dark"] .nk-rail-fill {
+    background-color: var(--lcd);
+}
+
+/* Pulso sutil de luz que viaja por la línea durante el recorrido */
+.nk-rail-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 36px;
+    background: linear-gradient(90deg, transparent, var(--lcd));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.nk-rail-fill.is-traveling::after {
+    opacity: 1;
+}
+
+/* Estación individual */
+.nk-step-item {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 20%;
+}
+
+/* Nodo de la estación */
+.nk-step-node {
+    width: 44px;
+    height: 44px;
+    border-radius: 4px;
+    background-color: var(--surface);
+    border: 1.5px solid var(--border-dark);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition:
+        background-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        border-color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        color 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Índice numérico superior (01, 02...) */
+.nk-step-index {
+    font-family: var(--f-mono);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+/* Etiqueta inferior del estado */
+.nk-step-label {
+    font-family: var(--f-body);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    margin-top: 10px;
+    text-align: center;
+    line-height: 1.25;
+    transition: color 0.35s ease, font-weight 0.2s ease, transform 0.35s ease;
+}
+
+/* 1. Estado Recorrido / Completado (Pasos previos) */
+.nk-step-item.is-passed .nk-step-node {
+    background-color: var(--ink);
+    border-color: var(--ink);
+    color: var(--surface);
+}
+
+html.dark .nk-step-item.is-passed .nk-step-node,
+html[data-theme="dark"] .nk-step-item.is-passed .nk-step-node {
+    background-color: #22272b;
+    border-color: var(--lcd);
+    color: var(--lcd);
+}
+
+.nk-step-item.is-passed .nk-step-index {
+    color: var(--text-main);
+}
+
+.nk-step-item.is-passed .nk-step-label {
+    color: var(--text-main);
+    font-weight: 600;
+}
+
+/* Micro-animación sutil cuando el recorrido pasa por una estación */
+.nk-step-item.passing-pulse .nk-step-node {
+    transform: translateY(-2px) scale(1.05);
+}
+
+/* 2. Estado Destino / Actual (Cuando llega al estado deseado) */
+.nk-step-item.is-target .nk-step-node {
+    background-color: var(--lcd);
+    border-color: #15171a;
+    border-width: 2px;
+    color: #15171a;
+    transform: translateY(-3px);
+    box-shadow: 0 4px 0 #15171a;
+}
+
+html.dark .nk-step-item.is-target .nk-step-node,
+html[data-theme="dark"] .nk-step-item.is-target .nk-step-node {
+    border-color: var(--lcd);
+    box-shadow: 0 4px 0 rgba(198, 226, 74, 0.35);
+}
+
+.nk-step-item.is-target .nk-step-index {
+    color: var(--text-main);
+}
+
+.nk-step-item.is-target .nk-step-label {
+    color: var(--text-main);
+    font-weight: 700;
+}
+
+/* Anillo sutil de llegada cuando alcanza el estado deseado */
+.nk-step-item.arrived-effect .nk-step-node::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 5px;
+    border: 1.5px solid var(--ink);
+    pointer-events: none;
+    animation: subtleArrivalRing 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+html.dark .nk-step-item.arrived-effect .nk-step-node::after,
+html[data-theme="dark"] .nk-step-item.arrived-effect .nk-step-node::after {
+    border-color: var(--lcd);
+}
+
+@keyframes subtleArrivalRing {
+    0% {
+        opacity: 0.85;
+        transform: scale(0.95);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.38);
+    }
+}
+
+/* Punto indicador en la etiqueta de estado actual */
+.nk-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #15171a;
+    display: inline-block;
+    position: relative;
+}
+
+/* Vista Móvil (Vertical) */
+@media (max-width: 639px) {
+    .nk-stepper-wrapper {
+        padding: 8px 4px;
+    }
+
+    .nk-step-item {
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        gap: 14px;
+        padding: 8px 0;
+    }
+
+    .nk-step-index {
+        margin-bottom: 0;
+        width: 22px;
+        text-align: right;
+    }
+
+    .nk-step-label {
+        margin-top: 0;
+        text-align: left;
+        font-size: 13px;
+    }
+
+    .nk-step-item.is-target .nk-step-node {
+        transform: translateX(2px);
+    }
+}
+
+/* Banner sutil de actualización en vivo */
+.nk-live-notice {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transform: translateY(-6px);
+    transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nk-live-notice.is-open {
+    max-height: 90px;
+    opacity: 1;
+    transform: translateY(0);
+    margin-bottom: 16px;
+}
+
+/* Animación suave para nuevas filas de historial */
+@keyframes historyReveal {
+    0% {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.history-item-new {
+    animation: historyReveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }

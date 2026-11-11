@@ -43,7 +43,8 @@ class Layout
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="' . BASE_URL . '/assets/css/style.css?v=' . self::getAssetVersion('/assets/css/style.css') . '">' . $extraLinks . '
+    <link rel="stylesheet" href="' . BASE_URL . '/assets/css/style.css?v=' . self::getAssetVersion('/assets/css/style.css') . '">
+    <link rel="stylesheet" href="' . BASE_URL . '/assets/css/nokia-loader.css?v=' . self::getAssetVersion('/assets/css/nokia-loader.css') . '">' . $extraLinks . '
     <script>window.BASE_URL = "' . BASE_URL . '";</script>
     <script src="' . BASE_URL . '/assets/js/tailwind_config.js?v=' . self::getAssetVersion('/assets/js/tailwind_config.js') . '"></script>
     <script src="' . BASE_URL . '/assets/js/theme.js?v=' . self::getAssetVersion('/assets/js/theme.js') . '"></script>
@@ -95,7 +96,7 @@ class Layout
                     return array_values(array_filter(array_map('trim', explode(',', $trimmed))));
                 }
                 // Fallback seguro: Si es un empleado y no tiene módulos explícitos (NULL), limitar a módulos estándar
-                return ['dashboard', 'venta', 'inventario', 'clientes', 'caja'];
+                return ['dashboard', 'venta', 'inventario', 'clientes', 'caja', 'registrar_equipo', 'taller'];
             }
             $stmt->close();
         }
@@ -119,6 +120,23 @@ class Layout
         return 0;
     }
 
+    public static function getReceivedRepairsCount(): int
+    {
+        try {
+            $modelPath = __DIR__ . '/../modules/workshop/Models/WorkshopModel.php';
+            if (!class_exists('WorkshopModel') && file_exists($modelPath)) {
+                require_once $modelPath;
+            }
+            if (class_exists('WorkshopModel')) {
+                $wm = new WorkshopModel();
+                return $wm->get_received_repairs_count();
+            }
+        } catch (\Throwable $e) {
+            // Silencioso para evitar romper layout en caso de error
+        }
+        return 0;
+    }
+
     // Versión sin redirección de checkAccess(): indica si la sesión actual puede usar el módulo.
     public static function hasAccess(string $moduleId): bool
     {
@@ -131,6 +149,9 @@ class Layout
         }
         if ($rol === 'guest') {
             return in_array($moduleId, ['dashboard', 'inventario'], true);
+        }
+        if ($moduleId === 'registrar_equipo') {
+            return true;
         }
         $allowed = self::getAllowedModules($_SESSION['user_id']);
         if ($allowed === null) {
@@ -201,6 +222,7 @@ class Layout
 
         if ($allowed !== null) {
             $hasPerm = in_array($moduleId, $allowed, true)
+                || ($moduleId === 'registrar_equipo')
                 || ($moduleId === 'ventas' && in_array('venta', $allowed, true))
                 || ($moduleId === 'venta' && in_array('ventas', $allowed, true))
                 || ($moduleId === 'cobrar_reparaciones' && (in_array('cobrar_reparaciones', $allowed, true) || in_array('venta', $allowed, true) || in_array('ventas', $allowed, true)));
@@ -220,6 +242,7 @@ class Layout
         $role = $_SESSION['role'] ?? 'admin';
         $map = [
             'dashboard'           => ($role === 'admin') ? 'DASHBOARD' : 'INICIO',
+            'registrar_equipo'    => 'REGISTRAR NUEVO EQUIPO',
             'inventario'          => 'INVENTARIO',
             'usuarios'            => 'USUARIOS',
             'taller'              => 'TALLER',
@@ -294,13 +317,14 @@ class Layout
         $allowed = $userId ? self::getAllowedModules($userId) : null;
 
         $readyRepairs = self::getReadyRepairsCount();
+        $receivedRepairs = self::getReceivedRepairsCount();
 
         $links = [
             ['id' => 'dashboard', 'url' => BASE_URL . '/modules/admin/index.php', 'icon' => 'dashboard', 'label' => 'Dashboard'],
             ['id' => 'inventario', 'url' => BASE_URL . '/modules/inventory/index.php', 'icon' => 'inventory_2', 'label' => 'Inventario'],
             ['id' => 'usuarios', 'url' => BASE_URL . '/modules/admin/index.php?action=users', 'icon' => 'group', 'label' => 'Usuarios'],
-            ['id' => 'taller', 'url' => BASE_URL . '/modules/workshop/index.php', 'icon' => 'home_repair_service', 'label' => 'Taller'],
-            ['id' => 'cobrar_reparaciones', 'url' => BASE_URL . '/modules/sales/index.php?action=repairs_to_charge', 'icon' => 'price_check', 'label' => 'Cobrar Reparaciones', 'badge' => $readyRepairs, 'badge_title' => 'Reparaciones listas para cobrar'],
+            ['id' => 'taller', 'url' => BASE_URL . '/modules/workshop/index.php', 'icon' => 'home_repair_service', 'label' => 'Taller', 'badge' => $receivedRepairs, 'badge_key' => 'received-repairs', 'badge_title' => 'Equipos recién ingresados pendientes en Taller'],
+            ['id' => 'cobrar_reparaciones', 'url' => BASE_URL . '/modules/sales/index.php?action=repairs_to_charge', 'icon' => 'price_check', 'label' => 'Cobrar Reparaciones', 'badge' => $readyRepairs, 'badge_key' => 'ready-repairs', 'badge_title' => 'Reparaciones listas para cobrar'],
             ['id' => 'ventas', 'url' => BASE_URL . '/modules/sales/index.php', 'icon' => 'payments', 'label' => 'Ventas'],
             ['id' => 'caja', 'url' => BASE_URL . '/modules/caja/index.php', 'icon' => 'point_of_sale', 'label' => 'Caja'],
             ['id' => 'clientes', 'url' => BASE_URL . '/modules/clients/index.php', 'icon' => 'contact_page', 'label' => 'Clientes'],
@@ -332,7 +356,8 @@ class Layout
             }
             $isActive = ($activePage === $l['id']);
             $badgeCount = (int)($l['badge'] ?? 0);
-            $badgeAttr = isset($l['badge']) ? ' data-badge="ready-repairs"' : '';
+            $badgeKey = $l['badge_key'] ?? 'ready-repairs';
+            $badgeAttr = isset($l['badge']) ? ' data-badge="' . htmlspecialchars($badgeKey, ENT_QUOTES, 'UTF-8') . '"' : '';
             $badgeHidden = ($badgeCount <= 0) ? ' hidden' : '';
             $badgeColors = $isActive ? 'bg-[#15171a] text-[#c6e24a]' : 'bg-[#c6e24a] text-[#15171a]';
             $badgeHtml = isset($l['badge'])
@@ -355,7 +380,7 @@ class Layout
             <span class="material-symbols-outlined">help</span>
             <span>Ayuda</span>
         </a>
-        <a href="' . BASE_URL . '/modules/auth/index.php?action=logout" class="sys-sidebar-logout">
+        <a href="' . BASE_URL . '/modules/auth/index.php?action=logout" data-nk-loader="logout" class="sys-sidebar-logout no-transition">
             <span class="material-symbols-outlined">logout</span>
             <span>Cerrar Sesión</span>
         </a>
@@ -380,13 +405,15 @@ class Layout
         $allowed = ($userId && is_numeric($userId)) ? self::getAllowedModules((int)$userId) : null;
         $role = $_SESSION['role'] ?? 'empleado';
         $readyRepairs = ($role !== 'guest') ? self::getReadyRepairsCount() : 0;
+        $receivedRepairs = ($role !== 'guest') ? self::getReceivedRepairsCount() : 0;
 
         $links = [
             ['id' => 'dashboard', 'url' => BASE_URL . '/modules/employee/index.php', 'icon' => 'home', 'label' => 'Inicio'],
+            ['id' => 'registrar_equipo', 'url' => BASE_URL . '/modules/workshop/index.php?action=add', 'icon' => 'add_to_home_screen', 'label' => 'Registrar Nuevo Equipo'],
             ['id' => 'venta', 'url' => BASE_URL . '/modules/sales/index.php', 'icon' => 'payments', 'label' => 'Ventas'],
             ['id' => 'caja', 'url' => BASE_URL . '/modules/caja/index.php', 'icon' => 'point_of_sale', 'label' => 'Caja'],
-            ['id' => 'cobrar_reparaciones', 'url' => BASE_URL . '/modules/sales/index.php?action=repairs_to_charge', 'icon' => 'price_check', 'label' => 'Cobrar Reparaciones', 'badge' => $readyRepairs, 'badge_title' => 'Reparaciones listas para cobrar'],
-            ['id' => 'taller', 'url' => BASE_URL . '/modules/workshop/index.php', 'icon' => 'home_repair_service', 'label' => 'Taller'],
+            ['id' => 'cobrar_reparaciones', 'url' => BASE_URL . '/modules/sales/index.php?action=repairs_to_charge', 'icon' => 'price_check', 'label' => 'Cobrar Reparaciones', 'badge' => $readyRepairs, 'badge_key' => 'ready-repairs', 'badge_title' => 'Reparaciones listas para cobrar'],
+            ['id' => 'taller', 'url' => BASE_URL . '/modules/workshop/index.php', 'icon' => 'home_repair_service', 'label' => 'Taller', 'badge' => $receivedRepairs, 'badge_key' => 'received-repairs', 'badge_title' => 'Equipos recién ingresados pendientes en Taller'],
             ['id' => 'inventario', 'url' => BASE_URL . '/modules/inventory/index.php', 'icon' => 'inventory_2', 'label' => 'Consultar Stock'],
             ['id' => 'clientes', 'url' => BASE_URL . '/modules/clients/index.php', 'icon' => 'contact_page', 'label' => 'Clientes'],
             ['id' => 'reportes', 'url' => BASE_URL . '/modules/reports/index.php', 'icon' => 'analytics', 'label' => 'Reportes'],
@@ -408,7 +435,7 @@ class Layout
     <div class="sys-sidebar-header flex items-center justify-between border-b border-[#222729]">
         <div>
             <h1 class="sys-sidebar-brand font-bold font-display tracking-tight text-[#e9e6db]">NOKIA<span class="text-[#c6e24a] font-mono ml-1">1100</span></h1>
-            <p class="sys-sidebar-role text-[#9ba19f] font-mono mt-0.5 uppercase">' . ($role === 'guest' ? 'Invitado' : 'Operario') . '</p>
+            <p class="sys-sidebar-role text-[#9ba19f] font-mono mt-0.5 uppercase">' . ($role === 'guest' ? 'Invitado' : 'Empleado') . '</p>
         </div>
         <button id="closeSidebarMobile" type="button" aria-label="Cerrar menú" class="md:hidden w-8 h-8 rounded-[2px] bg-[#222729] border border-[#30363a] flex items-center justify-center text-[#9ba19f] hover:text-[#e9e6db] transition-colors">
             <span class="material-symbols-outlined text-[19px]">close</span>
@@ -423,7 +450,8 @@ class Layout
             }
             $isActive = ($activePage === $l['id'] || ($activePage === 'ventas' && $l['id'] === 'venta') || ($activePage === 'venta' && $l['id'] === 'ventas'));
             $badgeCount = (int)($l['badge'] ?? 0);
-            $badgeAttr = isset($l['badge']) ? ' data-badge="ready-repairs"' : '';
+            $badgeKey = $l['badge_key'] ?? 'ready-repairs';
+            $badgeAttr = isset($l['badge']) ? ' data-badge="' . htmlspecialchars($badgeKey, ENT_QUOTES, 'UTF-8') . '"' : '';
             $badgeHidden = ($badgeCount <= 0) ? ' hidden' : '';
             $badgeColors = $isActive ? 'bg-[#15171a] text-[#c6e24a]' : 'bg-[#c6e24a] text-[#15171a]';
             $badgeHtml = isset($l['badge'])
@@ -445,7 +473,7 @@ class Layout
             <span class="material-symbols-outlined">help</span>
             <span>Ayuda</span>
         </a>
-        <a href="' . BASE_URL . '/modules/auth/index.php?action=logout" class="sys-sidebar-logout">
+        <a href="' . BASE_URL . '/modules/auth/index.php?action=logout" data-nk-loader="logout" class="sys-sidebar-logout no-transition">
             <span class="material-symbols-outlined">logout</span>
             <span>Cerrar Sesión</span>
         </a>
@@ -455,7 +483,7 @@ class Layout
             </div>
             <div class="min-w-0">
                 <p class="text-[13.5px] font-semibold text-[#e9e6db] truncate leading-tight">' . $username . '</p>
-                <p class="text-[10.5px] text-[#9ba19f] font-mono uppercase tracking-wider mt-0.5 leading-none">' . ($role === 'guest' ? 'Invitado' : 'Operario') . '</p>
+                <p class="text-[10.5px] text-[#9ba19f] font-mono uppercase tracking-wider mt-0.5 leading-none">' . ($role === 'guest' ? 'Invitado' : 'Empleado') . '</p>
             </div>
         </div>
     </div>
@@ -633,6 +661,7 @@ class Layout
 
 <script src="' . BASE_URL . '/assets/js/framer-toaster.js?v=' . self::getAssetVersion('/assets/js/framer-toaster.js') . '"></script>
 <script src="' . BASE_URL . '/assets/js/export-helper.js?v=' . self::getAssetVersion('/assets/js/export-helper.js') . '"></script>
+<script src="' . BASE_URL . '/assets/js/nokia-loader.js?v=' . self::getAssetVersion('/assets/js/nokia-loader.js') . '"></script>
 <script src="' . BASE_URL . '/assets/js/main.js?v=' . self::getAssetVersion('/assets/js/main.js') . '"></script>
 
 <script>

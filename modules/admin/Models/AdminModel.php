@@ -106,7 +106,7 @@ class AdminModel extends BaseModel
         $stmt->close();
         return $res;
     }
-
+        //verificar si existe el usuario
     public function check_username_exists($username, $exclude_id = null)
     {
         if ($exclude_id) {

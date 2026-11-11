@@ -26,9 +26,13 @@ class WorkshopModel extends BaseModel
 
         $where_clause = count($where_parts) > 0 ? " WHERE " . implode(" AND ", $where_parts) : "";
 
-        $sql = "SELECT r.id_reparacion, r.codigo_orden, c.nombre AS cliente_nombre, r.equipo_marca, r.equipo_modelo, r.estado, r.fecha_ingreso, r.presupuesto, r.costo_total 
+        $sql = "SELECT r.id_reparacion, r.codigo_orden, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
+                       r.equipo_marca, r.equipo_modelo, r.equipo_imei, r.falla_declarada,
+                       r.estado, r.fecha_ingreso, r.presupuesto, r.costo_total,
+                       COALESCE(u.nombre_usuario, 'Empleado') AS operario_nombre
                 FROM reparacion r
                 LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
+                LEFT JOIN usuario u ON r.id_usuario_recibe = u.id_usuario
                 $where_clause 
                 ORDER BY r.fecha_ingreso DESC
                 LIMIT ? OFFSET ?";
@@ -121,6 +125,37 @@ class WorkshopModel extends BaseModel
             return (int)$row['total'];
         }
         return 0;
+    }
+
+    public function get_received_repairs_count(): int
+    {
+        $sql = "SELECT COUNT(*) as total FROM reparacion WHERE estado = 'Recibido'";
+        $res = $this->conn->query($sql);
+        if ($res && $row = $res->fetch_assoc()) {
+            return (int)$row['total'];
+        }
+        return 0;
+    }
+
+    public function get_received_repairs(): array
+    {
+        $sql = "SELECT r.id_reparacion, r.codigo_orden, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
+                       r.equipo_marca, r.equipo_modelo, r.equipo_imei, r.falla_declarada, r.observaciones,
+                       r.presupuesto, r.fecha_ingreso, r.id_usuario_recibe,
+                       COALESCE(u.nombre_usuario, 'Empleado') AS operario_nombre
+                FROM reparacion r
+                LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
+                LEFT JOIN usuario u ON r.id_usuario_recibe = u.id_usuario
+                WHERE r.estado = 'Recibido'
+                ORDER BY r.fecha_ingreso DESC";
+        $result = $this->conn->query($sql);
+        $repairs = [];
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $repairs[] = $row;
+            }
+        }
+        return $repairs;
     }
 
     public function send_repair_to_cashier(int $id_reparacion, float $presupuesto, string $nota, int $id_usuario): bool
@@ -255,10 +290,15 @@ class WorkshopModel extends BaseModel
 
     public function find_repair_by_code(string $code)
     {
-        $sql = "SELECT codigo_orden, equipo_marca, equipo_modelo, estado FROM reparacion WHERE codigo_orden = ?";
+        $cleanCode = ltrim(trim($code), '#');
+        $sql = "SELECT id_reparacion, codigo_orden, equipo_marca, equipo_modelo, equipo_imei,
+                       falla_declarada, observaciones, presupuesto, costo_total, estado,
+                       fecha_ingreso, fecha_entrega
+                FROM reparacion
+                WHERE codigo_orden = ?";
         
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("s", $code);
+        $stmt->bind_param("s", $cleanCode);
         $stmt->execute();
         $result = $stmt->get_result();
         $data = ($result && $result->num_rows > 0) ? $result->fetch_assoc() : null;
