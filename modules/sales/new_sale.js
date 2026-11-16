@@ -117,27 +117,47 @@ function updateCartTable() {
 
 let currentTotal = 0;
 
+function formatArs(num) {
+    return Number(num || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function getEffectiveCashAmountToPay() {
+    const mode = document.getElementById('modal_modo_pago')?.value || 'unico';
+    if (mode === 'unico') {
+        const method = document.getElementById('modal_metodo_pago')?.value || 'Efectivo';
+        return method === 'Efectivo' ? currentTotal : 0;
+    }
+    const m1 = document.getElementById('combo_metodo_1')?.value || 'Efectivo';
+    const m2 = document.getElementById('combo_metodo_2')?.value || 'Transferencia';
+    const v1 = parseFloat(document.getElementById('combo_monto_1')?.value) || 0;
+    const v2 = parseFloat(document.getElementById('combo_monto_2')?.value) || 0;
+    let cash = 0;
+    if (m1 === 'Efectivo') cash += v1;
+    if (m2 === 'Efectivo') cash += v2;
+    return Math.round(cash * 100) / 100;
+}
+
 function openPaymentModal() {
     if (cart.length === 0) { showToast('El carrito está vacío', 'warning'); return; }
     
     // Update modal UI with cart details
-    const totalEl = document.getElementById('cart-total');
-    currentTotal = cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
+    currentTotal = Math.round(cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0) * 100) / 100;
     
     document.getElementById('modal-items-count').textContent = cart.length === 1 ? '1 artículo' : `${cart.length} artículos`;
-    document.getElementById('modal-total-amount').textContent = `$${currentTotal.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    document.getElementById('modal-total-amount').textContent = `$${formatArs(currentTotal)}`;
     
     const firstItem = cart[0];
     document.getElementById('modal-first-item-name').textContent = firstItem.nombre;
     const additionalText = cart.length > 1 ? ` (+${cart.length - 1} más)` : '';
-    document.getElementById('modal-first-item-desc').textContent = `${firstItem.cantidad} x $${firstItem.precio.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}${additionalText}`;
-    document.getElementById('modal-first-item-price').textContent = `$${(firstItem.precio * firstItem.cantidad).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    document.getElementById('modal-first-item-desc').textContent = `${firstItem.cantidad} x $${formatArs(firstItem.precio)}${additionalText}`;
+    document.getElementById('modal-first-item-price').textContent = `$${formatArs(firstItem.precio * firstItem.cantidad)}`;
     
-    // Reset state
+    // Reset state to single payment in Efectivo
+    setPaymentMode('unico');
     selectPaymentMethod('Efectivo');
-    document.getElementById('monto_recibido').value = '';
-    calculateChange();
+    document.getElementById('monto_recibido').value = currentTotal;
     generateQuickSuggestions(currentTotal);
+    calculateChange();
     
     const modal = document.getElementById('payment-modal');
     modal.classList.remove('hidden');
@@ -146,6 +166,43 @@ function openPaymentModal() {
 function closePaymentModal() {
     const modal = document.getElementById('payment-modal');
     modal.classList.add('hidden');
+}
+
+function setPaymentMode(mode) {
+    const modeInput = document.getElementById('modal_modo_pago');
+    if (modeInput) modeInput.value = mode;
+
+    const btnSingle = document.getElementById('btn-mode-single');
+    const btnCombined = document.getElementById('btn-mode-combined');
+    const singleBlock = document.getElementById('single-payment-block');
+    const combinedBlock = document.getElementById('combined-payment-block');
+
+    if (mode === 'combinado') {
+        btnCombined.className = 'px-3 py-1 rounded-md bg-primary text-background transition-all flex items-center gap-1';
+        btnSingle.className = 'px-3 py-1 rounded-md text-text-muted hover:text-text-main transition-all';
+        singleBlock.classList.add('hidden');
+        combinedBlock.classList.remove('hidden');
+
+        // Inicializar valores por defecto en pago combinado (50% y 50%)
+        const m1 = document.getElementById('combo_metodo_1');
+        const m2 = document.getElementById('combo_metodo_2');
+        if (m1 && m2 && m1.value === m2.value) {
+            m2.value = m1.value === 'Efectivo' ? 'Transferencia' : 'Efectivo';
+        }
+        const half1 = Math.round((currentTotal / 2) * 100) / 100;
+        const half2 = Math.round((currentTotal - half1) * 100) / 100;
+        document.getElementById('combo_monto_1').value = half1 > 0 ? half1.toFixed(2) : '';
+        document.getElementById('combo_monto_2').value = half2 > 0 ? half2.toFixed(2) : '';
+
+        validateCombinedPayment();
+    } else {
+        btnSingle.className = 'px-3 py-1 rounded-md bg-primary text-background transition-all';
+        btnCombined.className = 'px-3 py-1 rounded-md text-text-muted hover:text-text-main transition-all flex items-center gap-1';
+        singleBlock.classList.remove('hidden');
+        combinedBlock.classList.add('hidden');
+
+        selectPaymentMethod(document.getElementById('modal_metodo_pago').value || 'Efectivo');
+    }
 }
 
 function selectPaymentMethod(method) {
@@ -164,6 +221,15 @@ function selectPaymentMethod(method) {
         activeBtn.classList.remove('border-border/50', 'bg-background', 'text-text-muted');
         activeBtn.classList.add('border-primary', 'bg-primary/10', 'text-primary');
     }
+
+    const singleNote = document.getElementById('single-caja-note');
+    if (singleNote) {
+        if (method === 'Efectivo') {
+            singleNote.innerHTML = `<span class="material-symbols-outlined text-[13px] text-primary">point_of_sale</span><span>Ingresa al conteo/arqueo de caja en Efectivo: <strong>$${formatArs(currentTotal)}</strong></span>`;
+        } else {
+            singleNote.innerHTML = `<span class="material-symbols-outlined text-[13px] text-text-muted">info</span><span>Pago por <strong>${escapeHtml(method)}</strong>: se registra en la venta, pero <strong>no entra</strong> en el conteo físico de caja.</span>`;
+        }
+    }
     
     // Show/hide cash liquidation block
     const cashBlock = document.getElementById('cash-liquidation-block');
@@ -171,20 +237,143 @@ function selectPaymentMethod(method) {
     
     if (method === 'Efectivo') {
         cashBlock.style.display = 'block';
-        calculateChange(); // Will disable/enable confirm btn based on amount
+        const recInput = document.getElementById('monto_recibido');
+        if (!recInput.value || parseFloat(recInput.value) < currentTotal) {
+            recInput.value = currentTotal;
+        }
+        generateQuickSuggestions(currentTotal);
+        calculateChange();
     } else {
         cashBlock.style.display = 'none';
-        confirmBtn.disabled = false; // Always enable for non-cash
+        confirmBtn.disabled = false;
     }
+}
+
+function onCombinedMethodChange(which) {
+    const m1 = document.getElementById('combo_metodo_1');
+    const m2 = document.getElementById('combo_metodo_2');
+    if (m1 && m2 && m1.value === m2.value) {
+        const options = ['Efectivo', 'Transferencia', 'Tarjeta'];
+        const alt = options.find(o => o !== m1.value) || 'Transferencia';
+        if (which === 1) {
+            m2.value = alt;
+        } else {
+            m1.value = alt;
+        }
+    }
+    validateCombinedPayment();
+}
+
+function onCombinedAmountInput(which) {
+    const input1 = document.getElementById('combo_monto_1');
+    const input2 = document.getElementById('combo_monto_2');
+    const v1 = parseFloat(input1.value);
+    const v2 = parseFloat(input2.value);
+
+    // Autocompletar el monto restante en el otro medio si el monto ingresado es menor al total
+    if (which === 1 && !isNaN(v1) && v1 > 0 && v1 < currentTotal) {
+        const rem = Math.round((currentTotal - v1) * 100) / 100;
+        input2.value = rem.toFixed(2);
+    } else if (which === 2 && !isNaN(v2) && v2 > 0 && v2 < currentTotal) {
+        const rem = Math.round((currentTotal - v2) * 100) / 100;
+        input1.value = rem.toFixed(2);
+    }
+
+    validateCombinedPayment();
+}
+
+function validateCombinedPayment() {
+    const m1 = document.getElementById('combo_metodo_1')?.value || 'Efectivo';
+    const m2 = document.getElementById('combo_metodo_2')?.value || 'Transferencia';
+    const v1 = Math.round((parseFloat(document.getElementById('combo_monto_1')?.value) || 0) * 100) / 100;
+    const v2 = Math.round((parseFloat(document.getElementById('combo_monto_2')?.value) || 0) * 100) / 100;
+    const sum = Math.round((v1 + v2) * 100) / 100;
+    const diff = Math.round((sum - currentTotal) * 100) / 100;
+
+    const sumEl = document.getElementById('combo-sum-amount');
+    const badgeEl = document.getElementById('combo-status-badge');
+    const msgEl = document.getElementById('combo-validation-msg');
+    const cajaNoteEl = document.getElementById('combo-caja-note');
+    const confirmBtn = document.getElementById('btn-confirm-sale');
+    const cashBlock = document.getElementById('cash-liquidation-block');
+
+    if (sumEl) {
+        sumEl.textContent = `$${formatArs(sum)} / $${formatArs(currentTotal)}`;
+    }
+
+    let isValid = true;
+    let errorMsg = '';
+
+    if (m1 === m2) {
+        isValid = false;
+        errorMsg = 'Los 2 medios de pago deben ser diferentes.';
+    } else if (v1 <= 0 || v2 <= 0) {
+        isValid = false;
+        errorMsg = 'Cada medio de pago debe tener un monto mayor a $0.00.';
+    } else if (Math.abs(diff) > 0.01) {
+        isValid = false;
+        if (diff < 0) {
+            errorMsg = `Faltan $${formatArs(Math.abs(diff))} para alcanzar el total de la venta ($${formatArs(currentTotal)}).`;
+        } else {
+            errorMsg = `La suma excede el total de la venta por $${formatArs(diff)}.`;
+        }
+    }
+
+    const cashPortion = getEffectiveCashAmountToPay();
+    if (cajaNoteEl) {
+        if (cashPortion > 0) {
+            const nonCashPortion = Math.round((currentTotal - cashPortion) * 100) / 100;
+            const otherMethod = m1 === 'Efectivo' ? m2 : m1;
+            cajaNoteEl.innerHTML = `<span class="material-symbols-outlined text-[13px]">point_of_sale</span><span>Arqueo de caja: suma solo <strong>$${formatArs(cashPortion)}</strong> (Efectivo). <strong>$${formatArs(nonCashPortion)}</strong> (${escapeHtml(otherMethod)}) no entra en caja.</span>`;
+        } else {
+            cajaNoteEl.innerHTML = `<span class="material-symbols-outlined text-[13px]">info</span><span>Sin efectivo: ambos pagos se registran en la venta pero <strong>no suman</strong> al conteo físico de caja.</span>`;
+        }
+    }
+
+    if (!isValid) {
+        if (badgeEl) {
+            badgeEl.textContent = 'Monto inválido';
+            badgeEl.className = 'text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-red-500/10 border border-red-500/20 text-red-400';
+        }
+        if (msgEl) {
+            msgEl.textContent = errorMsg;
+            msgEl.className = 'text-[11px] text-red-400 font-medium';
+        }
+        cashBlock.style.display = 'none';
+        confirmBtn.disabled = true;
+        return false;
+    }
+
+    if (badgeEl) {
+        badgeEl.textContent = 'Suma exacta ✓';
+        badgeEl.className = 'text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-green-500/10 border border-green-500/20 text-green-400';
+    }
+    if (msgEl) {
+        msgEl.textContent = `${m1}: $${formatArs(v1)} + ${m2}: $${formatArs(v2)} = $${formatArs(currentTotal)}`;
+        msgEl.className = 'text-[11px] text-green-400 font-medium';
+    }
+
+    if (cashPortion > 0) {
+        cashBlock.style.display = 'block';
+        document.getElementById('monto_recibido').value = cashPortion;
+        generateQuickSuggestions(cashPortion);
+        calculateChange();
+    } else {
+        cashBlock.style.display = 'none';
+        confirmBtn.disabled = false;
+    }
+
+    return true;
 }
 
 function generateQuickSuggestions(total) {
     const container = document.getElementById('quick-suggestions');
+    if (!container) return;
     container.innerHTML = '';
+    if (total <= 0) return;
     
     const suggestions = [total];
     
-    // Add next round numbers (e.g. if 15500 -> 16000, 20000)
     let magnitude = Math.pow(10, Math.floor(Math.log10(total)));
     if (magnitude < 1000) magnitude = 1000;
     
@@ -196,7 +385,6 @@ function generateQuickSuggestions(total) {
     if (nextBigRound === total || nextBigRound <= nextRound) nextBigRound += magnitude;
     suggestions.push(nextBigRound);
     
-    // Ensure unique values
     const uniqueSuggestions = [...new Set(suggestions)];
     
     uniqueSuggestions.forEach((amount, index) => {
@@ -217,8 +405,8 @@ function setReceivedAmount(amount) {
 }
 
 function calculateChange() {
-    const method = document.getElementById('modal_metodo_pago').value;
-    if (method !== 'Efectivo') return;
+    const cashRequired = getEffectiveCashAmountToPay();
+    if (cashRequired <= 0) return;
     
     const received = parseFloat(document.getElementById('monto_recibido').value) || 0;
     const changeAmountEl = document.getElementById('modal-change-amount');
@@ -227,13 +415,13 @@ function calculateChange() {
     const confirmBtn = document.getElementById('btn-confirm-sale');
     const statusBadge = document.getElementById('cash-status-badge');
     
-    if (received < currentTotal) {
-        const remaining = currentTotal - received;
-        changeAmountEl.textContent = `$${remaining.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+    if (received + 0.005 < cashRequired) {
+        const remaining = cashRequired - received;
+        changeAmountEl.textContent = `$${formatArs(remaining)}`;
         changeAmountEl.classList.remove('text-green-400');
         changeAmountEl.classList.add('text-red-400');
         
-        changeHint.textContent = `Faltan $${remaining.toLocaleString('es-AR')}`;
+        changeHint.textContent = `Faltan $${formatArs(remaining)} en efectivo`;
         iconContainer.className = 'w-8 h-8 rounded-full bg-red-500/10 flex items-center justify-center text-red-400 transition-colors';
         iconContainer.innerHTML = '<span class="material-symbols-outlined text-[16px]">warning</span>';
         
@@ -241,12 +429,12 @@ function calculateChange() {
         statusBadge.className = 'text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wider bg-red-500/10 border border-red-500/20 text-red-400';
         confirmBtn.disabled = true;
     } else {
-        const change = received - currentTotal;
-        changeAmountEl.textContent = `$${change.toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+        const change = Math.max(0, received - cashRequired);
+        changeAmountEl.textContent = `$${formatArs(change)}`;
         changeAmountEl.classList.remove('text-red-400');
         changeAmountEl.classList.add('text-green-400');
         
-        changeHint.textContent = `¡Entregar cambio de $${change.toLocaleString('es-AR')}!`;
+        changeHint.textContent = `¡Entregar cambio de $${formatArs(change)}!`;
         iconContainer.className = 'w-8 h-8 rounded-full bg-green-500/10 flex items-center justify-center text-green-400 transition-colors';
         iconContainer.innerHTML = '<span class="material-symbols-outlined text-[16px]">trending_down</span>';
         
@@ -260,8 +448,30 @@ async function submitSaleFromModal() {
     const confirmBtn = document.getElementById('btn-confirm-sale');
     if (confirmBtn.disabled) return;
     
-    const metodoPago = document.getElementById('modal_metodo_pago').value;
+    const mode = document.getElementById('modal_modo_pago')?.value || 'unico';
     const descripcion = document.getElementById('venta_descripcion') ? document.getElementById('venta_descripcion').value : '';
+    let metodoPago = document.getElementById('modal_metodo_pago').value;
+    let pagos = [];
+
+    if (mode === 'combinado') {
+        if (!validateCombinedPayment()) {
+            showToast('Verifique los montos del pago combinado antes de confirmar.', 'error');
+            return;
+        }
+        const m1 = document.getElementById('combo_metodo_1').value;
+        const m2 = document.getElementById('combo_metodo_2').value;
+        const v1 = Math.round((parseFloat(document.getElementById('combo_monto_1').value) || 0) * 100) / 100;
+        const v2 = Math.round((parseFloat(document.getElementById('combo_monto_2').value) || 0) * 100) / 100;
+        pagos = [
+            { metodo: m1, monto: v1 },
+            { metodo: m2, monto: v2 }
+        ];
+        metodoPago = `${m1} + ${m2}`;
+    } else {
+        pagos = [
+            { metodo: metodoPago, monto: currentTotal }
+        ];
+    }
 
     confirmBtn.disabled = true;
     confirmBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span> Procesando...';
@@ -272,7 +482,8 @@ async function submitSaleFromModal() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 items: cart, 
-                metodo_pago: metodoPago, 
+                metodo_pago: metodoPago,
+                pagos: pagos,
                 descripcion: descripcion,
                 csrf_token: window.CSRF_TOKEN || ''
             })

@@ -6,11 +6,15 @@
  * @var array|null $open_caja
  * @var array|null $last_closed
  * @var array $cajas
+ * @var bool $can_supervise
+ * @var float $limite_retiro
  */
 
 $open_caja = $open_caja ?? null;
 $last_closed = $last_closed ?? null;
 $cajas = $cajas ?? [];
+$can_supervise = $can_supervise ?? (($_SESSION['role'] ?? '') === 'admin');
+$limite_retiro = $limite_retiro ?? 50000.00;
 
 Layout::renderHead('Caja - Nokia 1100', ['/modules/caja/caja.css']);
 
@@ -52,10 +56,9 @@ krsort($uniqueMonths);
   <div class="caja-wrapper">
     <!-- Encabezado del Módulo -->
     <header class="caja-head">
-      <p class="nk-eyebrow">Módulo · Operación</p>
+      <p class="nk-eyebrow">Módulo · Operación (Libro Inmutable · Cierre Ciego)</p>
       <h1 class="nk-title" id="pageTitle" tabindex="-1">Caja</h1>
-      <p class="nk-sub">Abrí la caja con el efectivo inicial, registrá lo que entra y sale durante el día y cerrala
-        contando lo que hay.</p>
+      <p class="nk-sub">Abrí la caja con el efectivo inicial, registrá los movimientos del día y realizá el arqueo ciego al cerrar contando el efectivo físico.</p>
     </header>
 
     <!-- Estado actual: Pantalla LCD + Acciones -->
@@ -68,12 +71,12 @@ krsort($uniqueMonths);
         </div>
         <div>
           <span class="lcd__label" id="lcdLabel">
-            <?php echo $open_caja ? 'Efectivo esperado en caja' : ($last_closed ? 'Último cierre' : 'Sin movimientos'); ?>
+            <?php echo $open_caja ? 'Apertura inicial en efectivo (Arqueo ciego al cerrar)' : ($last_closed ? 'Último cierre' : 'Sin movimientos'); ?>
           </span>
           <div class="lcd__amount" id="lcdAmount">
             <?php
             if ($open_caja) {
-              echo $money($open_caja['monto_esperado'] ?? $open_caja['monto_apertura']);
+              echo $money($open_caja['monto_apertura']);
             } elseif ($last_closed) {
               echo $money($last_closed['monto_cierre'] ?? 0);
             } else {
@@ -85,19 +88,12 @@ krsort($uniqueMonths);
         <div class="lcd__meta" id="lcdMeta">
           <?php if ($open_caja): ?>
             <div><span class="lcd__label">Fecha</span><strong><?php echo $fdate($open_caja['fecha']); ?></strong></div>
-            <div><span
-                class="lcd__label">Apertura</span><strong><?php echo $money($open_caja['monto_apertura']); ?></strong>
-            </div>
-            <div><span class="lcd__label">Ingresos</span><strong
-                class="mv-in"><?php echo ($open_caja['ingresos'] > 0 ? '+' : '') . $money($open_caja['ingresos']); ?></strong>
-            </div>
-            <div><span class="lcd__label">Egresos</span><strong
-                class="mv-out"><?php echo ($open_caja['egresos'] > 0 ? '−' : '') . $money($open_caja['egresos']); ?></strong>
-            </div>
+            <div><span class="lcd__label">Hora apertura</span><strong><?php echo htmlspecialchars($open_caja['hora_apertura']); ?> hs</strong></div>
+            <div><span class="lcd__label">Movimientos hoy</span><strong><?php echo count($open_caja['movs'] ?? []); ?> reg.</strong></div>
+            <div><span class="lcd__label">Modalidad</span><strong>Cierre ciego</strong></div>
           <?php elseif ($last_closed): ?>
             <div><span class="lcd__label">Fecha</span><strong><?php echo $fdate($last_closed['fecha']); ?></strong></div>
-            <div><span class="lcd__label">Apertura de ese
-                día</span><strong><?php echo $money($last_closed['monto_apertura']); ?></strong></div>
+            <div><span class="lcd__label">Apertura de ese día</span><strong><?php echo $money($last_closed['monto_apertura']); ?></strong></div>
           <?php else: ?>
             <div><span class="lcd__label">Fecha</span><strong><?php echo $fdate($todayISO); ?></strong></div>
           <?php endif; ?>
@@ -108,7 +104,7 @@ krsort($uniqueMonths);
       <form class="action" id="openForm" <?php if ($open_caja)
         echo 'hidden'; ?> novalidate>
         <h2 class="nk-h2" id="stTitle">Abrir caja</h2>
-        <p>Cargá el efectivo con el que arrancás. Solo puede haber una caja abierta a la vez en el sistema.</p>
+        <p>Cargá el efectivo con el que arrancás. Las ventas en efectivo requieren que exista una caja abierta.</p>
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 440px;">
           <div>
             <label class="nk-label" for="opDate">Fecha</label>
@@ -151,15 +147,20 @@ krsort($uniqueMonths);
             hoy.
           </div>
         <?php endif; ?>
-        <p>Anotá cada ingreso o egreso de efectivo y, al terminar, contá lo que hay y cerrá la caja. Una vez cerrada no
-          se modifica.</p>
+        <p>Toda operación queda asentada en el <strong>libro inmutable de movimientos</strong>. Al terminar la jornada, contá los billetes físicos y realizá el <strong>cierre ciego</strong> (el esperado y la diferencia se revelan al confirmar).</p>
         <div class="btn-row">
           <button type="button" class="nk-btn big" data-action="focus-mov">
             <span class="material-symbols-outlined text-[19px]">add</span> Registrar movimiento
           </button>
-          <button type="button" class="nk-btn nk-btn--primary big" data-action="close-caja" id="btnClose">
-            <span class="material-symbols-outlined text-[19px]">lock</span> Cerrar caja
-          </button>
+          <?php if ($can_supervise): ?>
+            <button type="button" class="nk-btn nk-btn--primary big" data-action="close-caja" id="btnClose">
+              <span class="material-symbols-outlined text-[19px]">lock</span> Cerrar caja (Arqueo ciego)
+            </button>
+          <?php else: ?>
+            <button type="button" class="nk-btn big" disabled title="Requiere rol Administrador o permiso de Supervisión de Caja" style="opacity:0.6; cursor:not-allowed;">
+              <span class="material-symbols-outlined text-[19px]">lock_person</span> Cierre reservado a Supervisor
+            </button>
+          <?php endif; ?>
         </div>
       </div>
     </section>
@@ -169,14 +170,14 @@ krsort($uniqueMonths);
       <section class="nk-panel" id="movPanel" aria-labelledby="mvTitle">
         <div class="nk-panel__bar">
           <div>
-            <h2 class="nk-h2" id="mvTitle">Movimientos de hoy</h2>
-            <p class="nk-panel__desc">Ventas en efectivo, cobros, pagos y retiros. Alimentan el monto esperado al cerrar.
+            <h2 class="nk-h2" id="mvTitle">Libro de movimientos de hoy</h2>
+            <p class="nk-panel__desc">Registro inmutable de ingresos, egresos y ajustes (contra-asientos). La caja física arquea exclusivamente los movimientos en <strong>Efectivo</strong>.
             </p>
           </div>
         </div>
 
         <!-- Formulario para agregar movimiento -->
-        <form class="mv-form" id="mvForm" novalidate>
+        <form class="mv-form" id="mvForm" novalidate style="grid-template-columns: auto minmax(150px, 1.1fr) minmax(120px, 0.8fr) minmax(180px, 1.4fr) minmax(120px, 0.9fr) auto;">
           <div>
             <span class="nk-label" id="mvTipoL">Tipo</span>
             <div class="nk-seg" id="mvTipo" role="group" aria-labelledby="mvTipoL">
@@ -189,9 +190,17 @@ krsort($uniqueMonths);
             <select class="nk-field" id="mvConcepto"></select>
           </div>
           <div>
-            <label class="nk-label" for="mvDetalle">Detalle (opcional)</label>
-            <input class="nk-field" id="mvDetalle" maxlength="100" autocomplete="off"
-              placeholder="Ej: reparación Samsung A15">
+            <label class="nk-label" for="mvMedio">Medio de pago</label>
+            <select class="nk-field" id="mvMedio">
+              <option value="Efectivo">Efectivo</option>
+              <option value="Transferencia">Transferencia</option>
+              <option value="Tarjeta">Tarjeta</option>
+            </select>
+          </div>
+          <div>
+            <label class="nk-label" for="mvDetalle">Detalle / Motivo (opcional)</label>
+            <input class="nk-field" id="mvDetalle" maxlength="140" autocomplete="off"
+              placeholder="Ej: pago proveedor / retiro parcial">
           </div>
           <div>
             <label class="nk-label" for="mvMonto">Monto</label>
@@ -209,14 +218,15 @@ krsort($uniqueMonths);
 
         <!-- Tabla de movimientos de la caja abierta -->
         <div class="nk-table-wrap">
-        <table class="nk-table">
+          <table class="nk-table">
             <thead>
               <tr>
                 <th scope="col" style="width:90px;">Hora</th>
                 <th scope="col" style="width:110px;">Tipo</th>
-                <th scope="col">Concepto</th>
+                <th scope="col" style="width:125px;">Medio</th>
+                <th scope="col">Concepto y Origen</th>
                 <th scope="col" class="is-r" style="width:140px;">Monto</th>
-                <th scope="col" class="is-r" style="width:60px;"><span class="sr-only">Acciones</span></th>
+                <th scope="col" class="is-r" style="width:130px;">Acción</th>
               </tr>
             </thead>
             <tbody id="mvTbody">
@@ -225,28 +235,67 @@ krsort($uniqueMonths);
               if (!empty($movs)):
                 foreach ($movs as $m):
                   $isIn = ($m['tipo'] === 'in');
+                  $medio = $m['medio_pago'] ?? 'Efectivo';
+                  $esEfectivo = (mb_strtolower(trim($medio), 'UTF-8') === 'efectivo');
+                  $idVenta = !empty($m['id_venta']) ? (int)$m['id_venta'] : null;
+                  $idRep = !empty($m['id_reparacion']) ? (int)$m['id_reparacion'] : null;
+                  $idOrigen = !empty($m['id_movimiento_origen']) ? (int)$m['id_movimiento_origen'] : null;
+                  $yaRevertido = !empty($m['ya_revertido']);
                   ?>
-                  <tr>
+                  <tr style="<?php echo $yaRevertido ? 'opacity: 0.65;' : ''; ?>">
                     <td><span class="nk-mono"><?php echo htmlspecialchars($m['hora']); ?></span></td>
-                    <td><span
-                        class="nk-tag nk-tag--<?php echo $isIn ? 'ok' : 'bad'; ?>"><?php echo $isIn ? 'Ingreso' : 'Egreso'; ?></span>
+                    <td>
+                      <span class="nk-tag nk-tag--<?php echo $isIn ? 'ok' : 'bad'; ?>">
+                        <?php echo $idOrigen ? ($isIn ? 'Ajuste (+)' : 'Contra-asiento') : ($isIn ? 'Ingreso' : 'Egreso'); ?>
+                      </span>
                     </td>
                     <td>
-                      <span class="nk-cell-main"><?php echo htmlspecialchars($m['concepto']); ?></span>
+                      <span class="nk-tag nk-tag--<?php echo $esEfectivo ? 'lcd' : 'neutral'; ?>" title="<?php echo $esEfectivo ? 'Suma en el arqueo físico de efectivo' : 'Medio electrónico (no suma al efectivo físico)'; ?>">
+                        <?php echo htmlspecialchars($medio); ?>
+                      </span>
+                    </td>
+                    <td>
+                      <span class="nk-cell-main">
+                        <?php echo htmlspecialchars($m['concepto']); ?>
+                        <?php if ($idVenta): ?>
+                          <span class="nk-origin-badge">
+                            Venta #TX-<?php echo str_pad((string)$idVenta, 5, '0', STR_PAD_LEFT); ?>
+                          </span>
+                        <?php endif; ?>
+                        <?php if ($idRep): ?>
+                          <span class="nk-origin-badge nk-origin-badge--rep">
+                            Rep. #<?php echo $idRep; ?>
+                          </span>
+                        <?php endif; ?>
+                      </span>
                       <?php if (!empty($m['detalle'])): ?>
                         <span class="nk-cell-meta"><?php echo htmlspecialchars($m['detalle']); ?></span>
+                      <?php endif; ?>
+                      <?php if (!empty($m['motivo'])): ?>
+                        <span class="nk-motivo-meta">Motivo: <?php echo htmlspecialchars($m['motivo']); ?></span>
                       <?php endif; ?>
                     </td>
                     <td class="nk-num <?php echo $isIn ? 'mv-in' : 'mv-out'; ?>">
                       <?php echo ($isIn ? '+' : '−') . $money($m['monto']); ?>
                     </td>
                     <td class="is-r">
-                      <button type="button" class="nk-btn nk-btn--sm nk-btn--danger" data-action="mv-remove"
-                        data-id="<?php echo $m['id_movimiento']; ?>"
-                        data-concepto="<?php echo htmlspecialchars($m['concepto'], ENT_QUOTES); ?>"
-                        data-monto="<?php echo (float) $m['monto']; ?>" title="Quitar movimiento">
-                        <span class="material-symbols-outlined text-[16px]">close</span>
-                      </button>
+                      <?php if ($yaRevertido): ?>
+                        <span class="nk-tag nk-tag--neutral" title="Este movimiento ya fue revertido mediante un contra-asiento">Revertido</span>
+                      <?php elseif ($idOrigen): ?>
+                        <span class="nk-cell-meta" title="Contra-asiento del movimiento #<?php echo $idOrigen; ?>">Ref. #<?php echo $idOrigen; ?></span>
+                      <?php elseif ($idVenta): ?>
+                        <span class="nk-cell-meta" title="Los movimientos de ventas se anulan desde el módulo de Ventas">Vía Ventas</span>
+                      <?php elseif ($can_supervise): ?>
+                        <button type="button" class="nk-btn nk-btn--sm nk-btn--danger" data-action="mv-reverse"
+                          data-id="<?php echo $m['id_movimiento']; ?>"
+                          data-concepto="<?php echo htmlspecialchars($m['concepto'], ENT_QUOTES); ?>"
+                          data-medio="<?php echo htmlspecialchars($medio, ENT_QUOTES); ?>"
+                          data-monto="<?php echo (float) $m['monto']; ?>" title="Registrar contra-asiento con motivo">
+                          <span class="material-symbols-outlined text-[15px]">undo</span> Contra-asiento
+                        </button>
+                      <?php else: ?>
+                        <span class="nk-cell-meta" title="Requiere permiso de Supervisión">—</span>
+                      <?php endif; ?>
                     </td>
                   </tr>
                 <?php
@@ -261,19 +310,22 @@ krsort($uniqueMonths);
         <div class="nk-empty" id="mvEmpty" <?php if (!empty($movs))
           echo 'hidden'; ?> style="padding:32px 20px;">
           <strong>Todavía no hay movimientos registrados hoy</strong>
-          Registrá el primero arriba. Si no hay movimientos, el efectivo esperado es igual a la apertura.
+          Registrá el primero arriba o cobrá una venta. Al cerrar se calculará el efectivo esperado desde este libro.
         </div>
 
-        <!-- Ticket con suma y desglose -->
-        <div class="nk-ticket">
-          <div>
-            <span class="nk-label" style="display:inline; margin:0;">Efectivo esperado</span>
-            <strong id="mvExpected"><?php echo $money($open_caja['monto_esperado']); ?></strong>
-          </div>
-          <span class="nk-cell-meta" id="mvTotals" style="margin:0;">
-            Apertura <?php echo $money($open_caja['monto_apertura']); ?> + ingresos
-            <?php echo $money($open_caja['ingresos']); ?> − egresos <?php echo $money($open_caja['egresos']); ?>
+        <!-- Nota informativa de libro inmutable y conteo exclusivo en efectivo -->
+        <div class="nk-info-strip">
+          <span>
+            <strong>Libro inmutable y cierre ciego:</strong> ningún movimiento se borra ni se edita; cualquier corrección genera un contra-asiento con motivo obligatorio. El arqueo físico de caja considera únicamente <strong>Efectivo</strong> (el monto esperado permanece oculto hasta confirmar el cierre).
           </span>
+          <?php
+          $otros = $open_caja['otros_medios'] ?? ['transferencia' => 0, 'tarjeta' => 0, 'total_no_efectivo' => 0];
+          if (($otros['total_no_efectivo'] ?? 0) > 0):
+          ?>
+            <span class="nk-other-means-pill">
+              Otros medios hoy (fuera de arqueo físico): Transf. <?php echo $money($otros['transferencia']); ?> · Tarjeta <?php echo $money($otros['tarjeta']); ?>
+            </span>
+          <?php endif; ?>
         </div>
       </section>
     <?php endif; ?>
@@ -284,7 +336,7 @@ krsort($uniqueMonths);
         <div>
           <h2 class="nk-h2" id="hTitle">Historial de cajas</h2>
           <p class="nk-panel__desc">Cada fila es una caja: con qué se abrió, con cuánto se cerró y la diferencia contra
-            lo esperado.</p>
+            lo esperado al momento del cierre.</p>
         </div>
         <div class="nk-tools">
           <div class="nk-seg" id="stSeg" role="group" aria-label="Filtrar por estado">
@@ -339,7 +391,7 @@ krsort($uniqueMonths);
                 </td>
                 <td class="nk-num">
                   <?php if ($isOpen): ?>
-                    <span class="nk-cell-meta">—</span>
+                    <span class="nk-cell-meta">Cierre ciego</span>
                   <?php elseif ($isCuadra): ?>
                     <span class="nk-tag nk-tag--ok">Cuadra</span>
                   <?php else: ?>
@@ -359,7 +411,7 @@ krsort($uniqueMonths);
                       data-id="<?php echo $c['id_caja']; ?>">
                       Ver detalle
                     </button>
-                    <?php if ($isOpen): ?>
+                    <?php if ($isOpen && $can_supervise): ?>
                       <button type="button" class="nk-btn nk-btn--sm nk-btn--primary" data-action="close-caja">
                         Cerrar caja
                       </button>
@@ -387,41 +439,31 @@ krsort($uniqueMonths);
   </div>
 </main>
 
-<!-- Modal: Cerrar caja -->
+<!-- Modal: Cerrar caja (Arqueo Ciego) -->
 <div class="caja-modal-backdrop" id="closeModal">
   <div class="caja-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="clTitle">
     <div class="caja-modal-head">
       <div>
-        <h3 id="clTitle">Cerrar caja</h3>
+        <h3 id="clTitle">Cerrar caja · Arqueo ciego</h3>
         <p id="clSub">
           <?php if ($open_caja)
             echo "Caja del " . $fdate($open_caja['fecha']) . " · abierta " . htmlspecialchars($open_caja['hora_apertura']) . " hs"; ?>
         </p>
       </div>
-      <button type="button" class="nk-btn nk-btn--sm" data-caja-close aria-label="Cerrar ventana">
+      <button type="button" class="nk-btn nk-btn--sm" data-caja-close aria-label="Cerrar ventana" id="clCloseX">
         <span class="material-symbols-outlined text-[17px]">close</span>
       </button>
     </div>
 
+    <!-- Paso 1: Formulario de conteo ciego (NO muestra monto esperado ni calcula diferencia en vivo) -->
     <form id="closeForm" novalidate>
-      <input type="hidden" id="closeExpectedAmount" value="<?php echo (float) ($open_caja['monto_esperado'] ?? 0); ?>">
-      <div class="caja-modal-body">
-        <dl class="sum" id="clSum">
-          <?php if ($open_caja): ?>
-            <dt>Monto de apertura</dt>
-            <dd><?php echo $money($open_caja['monto_apertura']); ?></dd>
-            <dt>Ingresos</dt>
-            <dd class="mv-in"><?php echo ($open_caja['ingresos'] > 0 ? '+' : '') . $money($open_caja['ingresos']); ?></dd>
-            <dt>Egresos</dt>
-            <dd class="mv-out"><?php echo ($open_caja['egresos'] > 0 ? '−' : '') . $money($open_caja['egresos']); ?></dd>
-            <span class="rule"></span>
-            <dt class="is-big">Efectivo esperado</dt>
-            <dd class="is-big"><?php echo $money($open_caja['monto_esperado']); ?></dd>
-          <?php endif; ?>
-        </dl>
+      <div class="caja-modal-body" id="clStepForm">
+        <div class="nk-callout">
+          <strong>Arqueo de cierre ciego:</strong> contá el dinero físico en efectivo que hay en el cajón e ingresá el total. El sistema calculará el efectivo esperado y mostrará si existe diferencia recién al confirmar.
+        </div>
 
         <div>
-          <label class="nk-label" for="clAmount">Monto de cierre (efectivo contado)</label>
+          <label class="nk-label" for="clAmount">Monto de cierre (efectivo físico contado)</label>
           <div class="nk-money">
             <span aria-hidden="true">$</span>
             <input class="nk-field nk-field--num" id="clAmount" type="number" min="0" step="0.01" inputmode="decimal"
@@ -430,19 +472,67 @@ krsort($uniqueMonths);
           <p class="nk-error" id="clAmountErr" hidden></p>
         </div>
 
-        <p class="nk-hint" id="clDiffMsg" role="status" style="margin:0; font-weight:600;"></p>
+        <!-- Panel que solo aparece después de enviar si el servidor detecta diferencia y exige observación -->
+        <div id="clBlindDiffBox" class="nk-callout--bad" hidden>
+          <dl class="sum" id="clRevealedSum" style="margin-bottom: 8px;"></dl>
+          <p class="nk-hint diff--neg" id="clDiffMsg" role="status" style="margin:0; font-weight:600;"></p>
+        </div>
 
         <div>
-          <label class="nk-label" for="clObs">Observación</label>
+          <label class="nk-label" for="clObs">Observación de arqueo</label>
           <textarea class="nk-field" id="clObs" maxlength="255"
-            placeholder="Opcional si cuadra con exactitud. Obligatoria si hay diferencia de efectivo."></textarea>
+            placeholder="Opcional al contar. Si al confirmar se detecta diferencia contra el esperado, será obligatoria."></textarea>
           <p class="nk-error" id="clObsErr" hidden></p>
         </div>
       </div>
 
-      <div class="caja-modal-foot">
-        <button type="button" class="nk-btn" data-caja-close>Volver</button>
+      <!-- Paso 2: Resultado final revelado tras confirmar el cierre -->
+      <div class="caja-modal-body" id="clStepResult" hidden>
+        <div class="nk-callout--ok" id="clResultBanner">
+          <strong>Caja cerrada correctamente.</strong> A continuación se muestra el resultado del arqueo de efectivo:
+        </div>
+        <dl class="sum" id="clResultSum"></dl>
+      </div>
+
+      <div class="caja-modal-foot" id="clFootForm">
+        <button type="button" class="nk-btn" data-caja-close id="btnCancelClose">Volver</button>
         <button type="submit" class="nk-btn nk-btn--primary" id="btnConfirmClose">Confirmar cierre</button>
+      </div>
+      <div class="caja-modal-foot" id="clFootResult" hidden>
+        <button type="button" class="nk-btn nk-btn--primary" id="btnFinishClose">Entendido · Actualizar caja</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Registrar Contra-asiento (Libro Inmutable) -->
+<div class="caja-modal-backdrop" id="reverseModal">
+  <div class="caja-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="rvTitle">
+    <div class="caja-modal-head">
+      <div>
+        <h3 id="rvTitle">Registrar contra-asiento</h3>
+        <p id="rvSub">El movimiento original no se borrará; se asentará un movimiento inverso.</p>
+      </div>
+      <button type="button" class="nk-btn nk-btn--sm" data-caja-close aria-label="Cerrar ventana">
+        <span class="material-symbols-outlined text-[17px]">close</span>
+      </button>
+    </div>
+    <form id="reverseForm" novalidate>
+      <input type="hidden" id="rvMovId" value="">
+      <div class="caja-modal-body">
+        <div class="nk-callout">
+          Movimiento a revertir: <strong id="rvMovDesc"></strong>
+        </div>
+        <div>
+          <label class="nk-label" for="rvMotivo">Motivo del contra-asiento (obligatorio)</label>
+          <textarea class="nk-field" id="rvMotivo" maxlength="255" required
+            placeholder="Ej: Error de carga en el monto / duplicado involuntario"></textarea>
+          <p class="nk-error" id="rvMotivoErr" hidden></p>
+        </div>
+      </div>
+      <div class="caja-modal-foot">
+        <button type="button" class="nk-btn" data-caja-close>Cancelar</button>
+        <button type="submit" class="nk-btn nk-btn--danger" id="btnConfirmReverse">Confirmar contra-asiento</button>
       </div>
     </form>
   </div>
@@ -467,10 +557,11 @@ krsort($uniqueMonths);
         <table class="nk-table">
           <thead>
             <tr>
-              <th scope="col" style="width:80px;">Hora</th>
-              <th scope="col">Concepto</th>
-              <th scope="col" class="is-r" style="width:110px;">Ingreso</th>
-              <th scope="col" class="is-r" style="width:110px;">Egreso</th>
+              <th scope="col" style="width:75px;">Hora</th>
+              <th scope="col" style="width:105px;">Medio</th>
+              <th scope="col">Concepto y Motivo</th>
+              <th scope="col" class="is-r" style="width:105px;">Ingreso</th>
+              <th scope="col" class="is-r" style="width:105px;">Egreso</th>
             </tr>
           </thead>
           <tbody id="dtTbody"></tbody>

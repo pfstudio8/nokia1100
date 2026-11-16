@@ -562,12 +562,25 @@ class Layout
 
     /**
      * Renderiza la insignia HTML con colores sutiles para diferenciar medios de pago en tablas.
+     * Soporta pagos combinados separados por '+'.
      */
     public static function renderPaymentBadge(?string $method): string
     {
         $raw = trim((string)($method ?? ''));
         if ($raw === '') {
             $raw = 'N/A';
+        }
+        if (str_contains($raw, '+')) {
+            $parts = array_values(array_filter(array_map('trim', explode('+', $raw)), fn($p) => $p !== ''));
+            if (count($parts) > 1) {
+                $badges = array_map(function (string $part): string {
+                    $cls = self::getPaymentBadgeClass($part);
+                    return '<span class="' . $cls . '">' . htmlspecialchars($part, ENT_QUOTES, 'UTF-8') . '</span>';
+                }, $parts);
+                return '<span class="badge-payment-combo" style="display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center;">'
+                    . implode('<span style="color:#6b7075;font-weight:700;font-size:11px;">+</span>', $badges)
+                    . '</span>';
+            }
         }
         $cls = self::getPaymentBadgeClass($raw);
         return '<span class="' . $cls . '">' . htmlspecialchars($raw, ENT_QUOTES, 'UTF-8') . '</span>';

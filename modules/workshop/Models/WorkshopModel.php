@@ -618,8 +618,11 @@ public function get_active_products_in_stock()
         }
     }
 
-    public function charge_and_deliver_repair(int $id_reparacion, string $metodo_pago, int $id_usuario): int
+    public function charge_and_deliver_repair(int $id_reparacion, string|array $metodo_o_pagos, int $id_usuario): int
     {
+        require_once __DIR__ . '/../../sales/Models/SalesModel.php';
+        require_once __DIR__ . '/../../caja/Models/CajaModel.php';
+
         $id_reparacion = intval($id_reparacion);
         $id_usuario = intval($id_usuario);
 
@@ -643,8 +646,16 @@ public function get_active_products_in_stock()
 
             $presupuesto_base = floatval($repair['presupuesto']);
             $costo_repuestos = floatval($repair['costo_total'] ?? 0);
-            $monto_total = $presupuesto_base + $costo_repuestos;
+            $monto_total = round($presupuesto_base + $costo_repuestos, 2);
             $old_state = $repair['estado'];
+
+            $pagos_raw = is_array($metodo_o_pagos) ? $metodo_o_pagos : [];
+            $metodo_fallback = is_string($metodo_o_pagos) ? $metodo_o_pagos : '';
+            $pago_info = SalesModel::validate_and_normalize_payments($pagos_raw, $metodo_fallback, $monto_total);
+            $metodo_pago_resumen = $pago_info['metodo_resumen'];
+            $pagos_validados = $pago_info['pagos'];
+            $monto_efectivo = $pago_info['monto_efectivo'];
+            $es_combinado = $pago_info['es_combinado'];
 
             // 2. Actualizar estado a Entregado con fecha de entrega
             $stmt_upd = $this->conn->prepare("UPDATE reparacion SET estado = 'Entregado', fecha_entrega = CURRENT_TIMESTAMP WHERE id_reparacion = ?");
@@ -655,7 +666,7 @@ public function get_active_products_in_stock()
             $stmt_upd->close();
 
             // 3. Registrar en historial
-            $nota = 'Cobrado y entregado desde Ventas';
+            $nota = 'Cobrado y entregado desde Ventas (' . $metodo_pago_resumen . ')';
             $estado_nuevo = 'Entregado';
             $stmt_hist = $this->conn->prepare("INSERT INTO reparacion_historial (id_reparacion, estado_anterior, estado_nuevo, nota, id_usuario) VALUES (?, ?, ?, ?, ?)");
             $stmt_hist->bind_param("isssi", $id_reparacion, $old_state, $estado_nuevo, $nota, $id_usuario);
@@ -666,20 +677,47 @@ public function get_active_products_in_stock()
             $descripcion = "Cobro de Reparación #" . $repair['codigo_orden'] . " - " . $repair['equipo_marca'] . " " . $repair['equipo_modelo'];
             $fecha = date('Y-m-d H:i:s');
             $stmt_vta = $this->conn->prepare("INSERT INTO venta (fecha, total, metodo_de_pago, id_usuario, descripcion) VALUES (?, ?, ?, ?, ?)");
-            $stmt_vta->bind_param("sdsis", $fecha, $monto_total, $metodo_pago, $id_usuario, $descripcion);
+            $stmt_vta->bind_param("sdsis", $fecha, $monto_total, $metodo_pago_resumen, $id_usuario, $descripcion);
             if (!$stmt_vta->execute()) {
                 throw new Exception("Error al registrar la venta del cobro.");
             }
             $id_venta = $stmt_vta->insert_id;
             $stmt_vta->close();
 
-            // 5. Crear Detalle de Venta (Servicio Técnico Taller)
+            // 5. Guardar cada pago por separado (medio y monto) en venta_pago
+            $stmtPago = $this->conn->prepare("INSERT INTO venta_pago (id_venta, metodo_pago, monto) VALUES (?, ?, ?)");
+            foreach ($pagos_validados as $pItem) {
+                $mNombre = $pItem['metodo'];
+                $mMonto = (float)$pItem['monto'];
+                $stmtPago->bind_param("isd", $id_venta, $mNombre, $mMonto);
+                if (!$stmtPago->execute()) {
+                    throw new Exception("Error al registrar el desglose de pago de la reparación.");
+                }
+            }
+            $stmtPago->close();
+
+            // 6. Crear Detalle de Venta (Servicio Técnico Taller)
             $id_producto_servicio = $this->get_or_ensure_service_product();
             $nombre_prod = "Servicio Técnico Taller";
             $stmt_det = $this->conn->prepare("INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, nombre_producto, precio_copiado) VALUES (?, ?, 1, ?, ?, ?)");
             $stmt_det->bind_param("iidsd", $id_venta, $id_producto_servicio, $monto_total, $nombre_prod, $monto_total);
             $stmt_det->execute();
             $stmt_det->close();
+
+            // 7. Libro de Caja inmutable dentro de la misma transacción (con id_venta e id_reparacion):
+            // - Bloquea el cobro si hay efectivo ($monto_efectivo > 0) y no existe caja abierta.
+            CajaModel::recordSaleMovementsInTransaction(
+                $this->conn,
+                (int)$id_venta,
+                $id_reparacion,
+                $pagos_validados,
+                $monto_efectivo,
+                $monto_total,
+                $es_combinado,
+                'Cobro de reparación',
+                "Orden #" . $repair['codigo_orden'] . " (" . $repair['equipo_marca'] . " " . $repair['equipo_modelo'] . ")",
+                $id_usuario > 0 ? $id_usuario : null
+            );
 
             $this->conn->commit();
             return $id_venta;

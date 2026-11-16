@@ -121,7 +121,8 @@ if (editPasswordInput) {
 const allSystemModules = [
     { id: 'dashboard', label: 'Inicio', icon: 'home', desc: 'Panel principal de operaciones' },
     { id: 'venta', label: 'Generar Venta / Ventas', icon: 'payments', desc: 'Punto de venta y registro de transacciones' },
-    { id: 'caja', label: 'Caja', icon: 'point_of_sale', desc: 'Apertura, arqueo, movimientos de efectivo y cierre de caja' },
+    { id: 'caja', label: 'Caja', icon: 'point_of_sale', desc: 'Apertura, arqueo, movimientos de efectivo y consulta de caja' },
+    { id: 'cierre_caja', label: 'Supervisión y Cierre de Caja', icon: 'lock_person', desc: 'Autoriza cerrar caja, registrar contra-asientos y retiros mayores a $50.000' },
     { id: 'cobrar_reparaciones', label: 'Cobrar Reparaciones', icon: 'price_check', desc: 'Caja para entrega de reparaciones terminadas' },
     { id: 'taller', label: 'Taller', icon: 'home_repair_service', desc: 'Gestión y servicio técnico de reparaciones' },
     { id: 'inventario', label: 'Consultar Stock / Inventario', icon: 'inventory_2', desc: 'Catálogo de productos, existencias y precios' },

@@ -1,5 +1,10 @@
 *.sql
-database/
+database/*
+!database/migration_caja.sql
+!database/migration_pago_combinado.sql
+!database/run_migrations.php
+*.lock
+GUIA_PRUEBAS_*.md
 *.bak
 *.dump
 *.log

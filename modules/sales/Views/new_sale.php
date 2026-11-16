@@ -26,6 +26,18 @@ else Layout::renderEmployeeSidebar('venta');
 
         <div id="alert-box" style="display:none;"></div>
 
+        <?php if (isset($has_open_caja) && !$has_open_caja): ?>
+            <div class="mb-6 p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 text-sm flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5 text-text-main">
+                    <span class="material-symbols-outlined text-amber-500">warning</span>
+                    <span><strong>Caja cerrada:</strong> las ventas que incluyan <strong>Efectivo</strong> (total o combinado) están bloqueadas hasta abrir la caja del día.</span>
+                </div>
+                <a href="<?php echo BASE_URL; ?>/modules/caja/index.php" class="px-3.5 py-1.5 rounded-lg bg-primary text-background text-xs font-bold hover:opacity-90 transition-opacity">
+                    Ir a Abrir Caja
+                </a>
+            </div>
+        <?php endif; ?>
+
         <?php // Selector de producto ?>
         <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-8 bg-surface/30 p-6 rounded-2xl border border-border/30">
             <div class="md:col-span-8">
@@ -95,7 +107,7 @@ else Layout::renderEmployeeSidebar('venta');
 <div id="payment-modal" class="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
     <div class="bg-surface border border-border/50 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <?php // Header ?>
-        <div class="p-6 border-b border-border/30 flex justify-between items-center bg-surface-hover/30">
+        <div class="p-6 border-b border-border/30 flex justify-between items-center bg-surface-hover/30 shrink-0">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
                     <span class="material-symbols-outlined">payments</span>
@@ -113,7 +125,7 @@ else Layout::renderEmployeeSidebar('venta');
         </div>
 
         <?php // Body ?>
-        <div class="p-4 md:p-6 overflow-y-auto space-y-4 md:space-y-5">
+        <div class="p-4 md:p-6 overflow-y-auto flex-1 min-h-0 space-y-4 md:space-y-5">
             <?php // Detalle de Compra ?>
             <div>
                 <div class="flex justify-between items-center mb-1">
@@ -143,24 +155,96 @@ else Layout::renderEmployeeSidebar('venta');
                 </div>
             </div>
 
-            <?php // Método de Pago ?>
+            <?php // Método de Pago (Único o Combinado hasta 2 medios) ?>
             <div>
-                <h4 class="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-2">Seleccione Método de Pago</h4>
-                <div class="grid grid-cols-3 gap-2">
-                    <button type="button" onclick="selectPaymentMethod('Efectivo')" id="btn-pay-efectivo" class="payment-method-btn flex flex-col items-center justify-center py-3 px-2 rounded-lg border border-primary bg-primary/10 text-primary transition-all">
-                        <span class="material-symbols-outlined mb-1 text-[20px]">payments</span>
-                        <span class="text-[11px] font-semibold">Efectivo</span>
-                    </button>
-                    <button type="button" onclick="selectPaymentMethod('Transferencia')" id="btn-pay-transferencia" class="payment-method-btn flex flex-col items-center justify-center py-3 px-2 rounded-lg border border-border/50 bg-background hover:bg-surface-hover text-text-muted transition-all">
-                        <span class="material-symbols-outlined mb-1 text-[20px]">qr_code_scanner</span>
-                        <span class="text-[11px] font-semibold text-center leading-tight">Transferencia<br>/ QR</span>
-                    </button>
-                    <button type="button" onclick="selectPaymentMethod('Tarjeta')" id="btn-pay-tarjeta" class="payment-method-btn flex flex-col items-center justify-center py-3 px-2 rounded-lg border border-border/50 bg-background hover:bg-surface-hover text-text-muted transition-all">
-                        <span class="material-symbols-outlined mb-1 text-[20px]">credit_card</span>
-                        <span class="text-[11px] font-semibold">Tarjeta Crédito</span>
-                    </button>
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-2.5">
+                    <h4 class="text-[10px] font-bold text-text-muted uppercase tracking-widest">Modalidad y Medio de Pago</h4>
+                    <div class="inline-flex rounded-lg border border-border/60 bg-background p-0.5 text-[11px] font-semibold">
+                        <button type="button" id="btn-mode-single" onclick="setPaymentMode('unico')" class="px-3 py-1 rounded-md bg-primary text-background transition-all">
+                            1 Medio (Único)
+                        </button>
+                        <button type="button" id="btn-mode-combined" onclick="setPaymentMode('combinado')" class="px-3 py-1 rounded-md text-text-muted hover:text-text-main transition-all flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[14px]">call_split</span> Combinar 2 Medios
+                        </button>
+                    </div>
                 </div>
-                <input type="hidden" id="modal_metodo_pago" value="Efectivo">
+                <input type="hidden" id="modal_modo_pago" value="unico">
+
+                <?php // Bloque Pago Único ?>
+                <div id="single-payment-block">
+                    <div class="grid grid-cols-3 gap-2">
+                        <button type="button" onclick="selectPaymentMethod('Efectivo')" id="btn-pay-efectivo" class="payment-method-btn flex flex-col items-center justify-center py-3 px-2 rounded-lg border border-primary bg-primary/10 text-primary transition-all">
+                            <span class="material-symbols-outlined mb-1 text-[20px]">payments</span>
+                            <span class="text-[11px] font-semibold">Efectivo</span>
+                        </button>
+                        <button type="button" onclick="selectPaymentMethod('Transferencia')" id="btn-pay-transferencia" class="payment-method-btn flex flex-col items-center justify-center py-3 px-2 rounded-lg border border-border/50 bg-background hover:bg-surface-hover text-text-muted transition-all">
+                            <span class="material-symbols-outlined mb-1 text-[20px]">qr_code_scanner</span>
+                            <span class="text-[11px] font-semibold text-center leading-tight">Transferencia<br>/ QR</span>
+                        </button>
+                        <button type="button" onclick="selectPaymentMethod('Tarjeta')" id="btn-pay-tarjeta" class="payment-method-btn flex flex-col items-center justify-center py-3 px-2 rounded-lg border border-border/50 bg-background hover:bg-surface-hover text-text-muted transition-all">
+                            <span class="material-symbols-outlined mb-1 text-[20px]">credit_card</span>
+                            <span class="text-[11px] font-semibold">Tarjeta</span>
+                        </button>
+                    </div>
+                    <input type="hidden" id="modal_metodo_pago" value="Efectivo">
+                    <p id="single-caja-note" class="text-[10px] text-text-muted mt-2 flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[13px] text-primary">info</span>
+                        <span>Este pago en efectivo ingresará al conteo/arqueo de caja.</span>
+                    </p>
+                </div>
+
+                <?php // Bloque Pago Combinado (hasta 2 medios) ?>
+                <div id="combined-payment-block" class="hidden space-y-3 bg-background/40 border border-border/40 rounded-xl p-3.5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <?php // Medio 1 ?>
+                        <div class="bg-surface border border-border/50 rounded-lg p-3">
+                            <span class="block text-[10px] font-bold uppercase tracking-wider text-primary mb-2">Medio de Pago 1</span>
+                            <label class="block text-[10px] text-text-muted mb-1">Medio</label>
+                            <select id="combo_metodo_1" onchange="onCombinedMethodChange(1)" class="w-full bg-background border border-border/60 rounded-lg py-1.5 px-2.5 text-xs font-semibold text-text-main focus:outline-none focus:border-primary mb-2.5">
+                                <option value="Efectivo" selected>Efectivo</option>
+                                <option value="Transferencia">Transferencia / QR</option>
+                                <option value="Tarjeta">Tarjeta</option>
+                            </select>
+                            <label class="block text-[10px] text-text-muted mb-1">Monto Medio 1</label>
+                            <div class="relative">
+                                <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-main font-bold text-xs">$</span>
+                                <input type="number" id="combo_monto_1" min="0.01" step="0.01" oninput="onCombinedAmountInput(1)" class="w-full bg-background border border-border/60 rounded-lg py-1.5 pl-6 pr-3 text-sm font-mono font-bold text-text-main focus:outline-none focus:border-primary" placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <?php // Medio 2 ?>
+                        <div class="bg-surface border border-border/50 rounded-lg p-3">
+                            <span class="block text-[10px] font-bold uppercase tracking-wider text-primary mb-2">Medio de Pago 2</span>
+                            <label class="block text-[10px] text-text-muted mb-1">Medio</label>
+                            <select id="combo_metodo_2" onchange="onCombinedMethodChange(2)" class="w-full bg-background border border-border/60 rounded-lg py-1.5 px-2.5 text-xs font-semibold text-text-main focus:outline-none focus:border-primary mb-2.5">
+                                <option value="Efectivo">Efectivo</option>
+                                <option value="Transferencia" selected>Transferencia / QR</option>
+                                <option value="Tarjeta">Tarjeta</option>
+                            </select>
+                            <label class="block text-[10px] text-text-muted mb-1">Monto Medio 2</label>
+                            <div class="relative">
+                                <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-main font-bold text-xs">$</span>
+                                <input type="number" id="combo_monto_2" min="0.01" step="0.01" oninput="onCombinedAmountInput(2)" class="w-full bg-background border border-border/60 rounded-lg py-1.5 pl-6 pr-3 text-sm font-mono font-bold text-text-main focus:outline-none focus:border-primary" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <?php // Barra de validación de suma y aviso de arqueo de caja ?>
+                    <div id="combo-validation-box" class="bg-surface border border-border/50 rounded-lg p-3 flex flex-col gap-1.5">
+                        <div class="flex justify-between items-center">
+                            <span class="text-[11px] font-semibold text-text-muted">Suma de ambos pagos:</span>
+                            <div class="flex items-center gap-2">
+                                <span id="combo-sum-amount" class="text-sm font-mono font-bold text-text-main">$0.00</span>
+                                <span id="combo-status-badge" class="text-[10px] px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-surface border border-border text-text-muted">Pendiente</span>
+                            </div>
+                        </div>
+                        <p id="combo-validation-msg" class="text-[11px] text-text-muted">Ingrese los montos de cada medio de pago.</p>
+                        <p id="combo-caja-note" class="text-[10px] text-primary font-medium pt-1 border-t border-border/30 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-[13px]">point_of_sale</span>
+                            <span>Solo la parte en Efectivo se sumará al conteo de caja.</span>
+                        </p>
+                    </div>
+                </div>
             </div>
 
             <?php // Liquidación Efectivo (Condicional) ?>
@@ -210,7 +294,7 @@ else Layout::renderEmployeeSidebar('venta');
         </div>
 
         <?php // Footer ?>
-        <div class="p-4 border-t border-border/30 bg-surface-hover/50 flex justify-end gap-3 items-center">
+        <div class="p-4 border-t border-border/30 bg-surface-hover/50 flex justify-end gap-3 items-center shrink-0">
             <button type="button" onclick="closePaymentModal()" class="px-4 py-2 rounded-lg text-xs font-medium text-text-muted hover:text-text-main transition-colors">
                 Cancelar
             </button>

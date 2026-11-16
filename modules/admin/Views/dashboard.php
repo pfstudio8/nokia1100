@@ -176,8 +176,8 @@ function escapeHtml(value) {
     }[ch]));
 }
 
-function getPaymentBadge(method) {
-    const raw = String(method || '').trim() || 'N/A';
+function getSinglePaymentBadge(part) {
+    const raw = String(part || '').trim() || 'N/A';
     const m = raw.toLowerCase();
     let badgeClass = 'badge-payment badge-payment-default';
     if (m.includes('efectivo') || m.includes('contado')) {
@@ -190,6 +190,17 @@ function getPaymentBadge(method) {
         badgeClass = 'badge-payment badge-payment-mp';
     }
     return `<span class="${badgeClass}">${escapeHtml(raw)}</span>`;
+}
+
+function getPaymentBadge(method) {
+    const raw = String(method || '').trim() || 'N/A';
+    if (raw.includes('+')) {
+        const parts = raw.split('+').map(p => p.trim()).filter(Boolean);
+        if (parts.length > 1) {
+            return `<span style="display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center;">${parts.map(getSinglePaymentBadge).join('<span style="color:#6b7075;font-weight:700;font-size:11px;">+</span>')}</span>`;
+        }
+    }
+    return getSinglePaymentBadge(raw);
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -1,16 +1,17 @@
 /**
  * Nokia 1100 · Módulo Caja (caja.js)
- * Interactividad para apertura, movimientos, arqueo y cierre de caja
+ * Libro de movimientos inmutable y arqueo de cierre ciego
  */
 (function() {
     'use strict';
 
     const CONCEPTOS = {
-        in: ['Venta en efectivo', 'Cobro de reparación', 'Seña', 'Otro ingreso'],
+        in: ['Venta en efectivo', 'Cobro de reparación', 'Seña', 'Aporte de cambio', 'Otro ingreso'],
         out: ['Pago a proveedor', 'Retiro de efectivo', 'Gasto menor', 'Otro egreso']
     };
 
     let currentTipo = 'in';
+    let closeCompleted = false;
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
     // Utilidades de formato
@@ -46,7 +47,7 @@
         if (modal) {
             modal.classList.add('is-open');
             document.body.classList.add('is-locked');
-            const autoFocus = modal.querySelector('[data-autofocus]') || modal.querySelector('input:not([type="hidden"]), button.nk-btn--primary');
+            const autoFocus = modal.querySelector('[data-autofocus]') || modal.querySelector('input:not([type="hidden"]):not([readonly]), textarea, button.nk-btn--primary');
             if (autoFocus) autoFocus.focus();
         }
     }
@@ -58,6 +59,9 @@
             if (!document.querySelector('.caja-modal-backdrop.is-open')) {
                 document.body.classList.remove('is-locked');
             }
+            if (closeCompleted && modal.id === 'closeModal') {
+                window.location.reload();
+            }
         }
     }
 
@@ -66,35 +70,6 @@
         const select = document.getElementById('mvConcepto');
         if (!select) return;
         select.innerHTML = CONCEPTOS[currentTipo].map(c => `<option value="${c}">${c}</option>`).join('');
-    }
-
-    // Cálculo y aviso de diferencia al cerrar
-    function updateDiff() {
-        const clAmount = document.getElementById('clAmount');
-        const diffMsg = document.getElementById('clDiffMsg');
-        const expEl = document.getElementById('closeExpectedAmount');
-        if (!clAmount || !diffMsg || !expEl) return;
-
-        const val = parseFloat(clAmount.value);
-        const expected = parseFloat(expEl.value || 0);
-
-        if (isNaN(val)) {
-            diffMsg.textContent = '';
-            diffMsg.className = 'nk-hint';
-            return;
-        }
-
-        const diff = val - expected;
-        if (near0(diff)) {
-            diffMsg.textContent = 'La caja cuadra con exactitud.';
-            diffMsg.className = 'nk-hint diff--pos';
-        } else if (diff > 0) {
-            diffMsg.textContent = `Sobran ${money(diff)} respecto de lo esperado. Dejá una observación obligatoria.`;
-            diffMsg.className = 'nk-hint diff--pos';
-        } else {
-            diffMsg.textContent = `Faltan ${money(Math.abs(diff))} respecto de lo esperado. Dejá una observación obligatoria.`;
-            diffMsg.className = 'nk-hint diff--neg';
-        }
     }
 
     // Filtrar tabla historial por estado y mes
@@ -139,42 +114,6 @@
             footDiff.textContent = closedCount ? `Diferencia acumulada: ${near0(sumDiff) ? '$0' : smoney(sumDiff)}` : '';
         }
     }
-
-    // Eventos iniciales
-    document.addEventListener('DOMContentLoaded', () => {
-        fillConceptos();
-        filterHistory();
-
-        // Control segmentado para Tipo de Movimiento (Ingreso / Egreso)
-        const mvTipo = document.getElementById('mvTipo');
-        if (mvTipo) {
-            mvTipo.addEventListener('click', e => {
-                const btn = e.target.closest('button');
-                if (!btn) return;
-                mvTipo.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', 'false'));
-                btn.setAttribute('aria-pressed', 'true');
-                currentTipo = btn.dataset.v;
-                fillConceptos();
-            });
-        }
-
-        // Control segmentado para Filtro de Historial
-        const stSeg = document.getElementById('stSeg');
-        if (stSeg) {
-            stSeg.addEventListener('click', e => {
-                const btn = e.target.closest('button');
-                if (!btn) return;
-                stSeg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', 'false'));
-                btn.setAttribute('aria-pressed', 'true');
-                filterHistory();
-            });
-        }
-
-        // Selector de mes
-        const monthSel = document.getElementById('monthSel');
-        if (monthSel) {
-            monthSel.addEventListener('change', filterHistory);
-        }
 
     // Pantallita LCD Nokia Loader (N-O-K-I-A en Cascada Elástica)
     function showNokiaLcdLoader(statusText = 'ESPERE...') {
@@ -221,6 +160,42 @@
         }
     }
 
+    // Eventos iniciales
+    document.addEventListener('DOMContentLoaded', () => {
+        fillConceptos();
+        filterHistory();
+
+        // Control segmentado para Tipo de Movimiento (Ingreso / Egreso)
+        const mvTipo = document.getElementById('mvTipo');
+        if (mvTipo) {
+            mvTipo.addEventListener('click', e => {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                mvTipo.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', 'false'));
+                btn.setAttribute('aria-pressed', 'true');
+                currentTipo = btn.dataset.v;
+                fillConceptos();
+            });
+        }
+
+        // Control segmentado para Filtro de Historial
+        const stSeg = document.getElementById('stSeg');
+        if (stSeg) {
+            stSeg.addEventListener('click', e => {
+                const btn = e.target.closest('button');
+                if (!btn) return;
+                stSeg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', 'false'));
+                btn.setAttribute('aria-pressed', 'true');
+                filterHistory();
+            });
+        }
+
+        // Selector de mes
+        const monthSel = document.getElementById('monthSel');
+        if (monthSel) {
+            monthSel.addEventListener('change', filterHistory);
+        }
+
         // Abrir Caja Form
         const openForm = document.getElementById('openForm');
         if (openForm) {
@@ -241,7 +216,6 @@
                 btn.disabled = true;
                 btn.textContent = 'Abriendo...';
 
-                // Mostrar pantallita LCD retro Nokia con letras en cascada elástica
                 const startTime = Date.now();
                 showNokiaLcdLoader('ABRIENDO CAJA...');
 
@@ -258,7 +232,6 @@
                     });
                     const json = await res.json();
 
-                    // Garantizar que la animación se aprecie durante aprox 1 segundo
                     const elapsed = Date.now() - startTime;
                     const minWait = Math.max(0, 1000 - elapsed);
 
@@ -288,6 +261,7 @@
                 e.preventDefault();
                 const montoInput = document.getElementById('mvMonto');
                 const conceptoInput = document.getElementById('mvConcepto');
+                const medioInput = document.getElementById('mvMedio');
                 const detalleInput = document.getElementById('mvDetalle');
                 const err = document.getElementById('mvMontoErr');
 
@@ -303,6 +277,7 @@
                     const fd = new FormData();
                     fd.append('tipo', currentTipo);
                     fd.append('concepto', conceptoInput.value);
+                    fd.append('medio_pago', medioInput ? medioInput.value : 'Efectivo');
                     fd.append('detalle', detalleInput.value);
                     fd.append('monto', val);
                     fd.append('csrf_token', csrfToken);
@@ -326,13 +301,75 @@
             });
         }
 
-        // Diferencia al escribir en monto de cierre
-        const clAmount = document.getElementById('clAmount');
-        if (clAmount) {
-            clAmount.addEventListener('input', updateDiff);
+        // Formulario de Contra-asiento (Reversión inmutable con motivo obligatorio)
+        const reverseForm = document.getElementById('reverseForm');
+        if (reverseForm) {
+            reverseForm.addEventListener('submit', async e => {
+                e.preventDefault();
+                const idMov = document.getElementById('rvMovId')?.value;
+                const motivoInput = document.getElementById('rvMotivo');
+                const err = document.getElementById('rvMotivoErr');
+                const motivo = (motivoInput?.value || '').trim();
+
+                if (!motivo) {
+                    if (err) {
+                        err.textContent = 'Debe ingresar el motivo obligatorio del contra-asiento.';
+                        err.hidden = false;
+                    }
+                    motivoInput?.focus();
+                    return;
+                }
+                if (err) err.hidden = true;
+
+                const btn = document.getElementById('btnConfirmReverse');
+                if (btn) {
+                    btn.disabled = true;
+                    btn.textContent = 'Registrando...';
+                }
+
+                try {
+                    const fd = new FormData();
+                    fd.append('id_movimiento', idMov);
+                    fd.append('motivo', motivo);
+                    fd.append('csrf_token', csrfToken);
+                    fd.append('ajax', '1');
+
+                    const res = await fetch('index.php?action=reverse_movement', {
+                        method: 'POST',
+                        body: fd,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const json = await res.json();
+                    if (json.success) {
+                        closeModal('reverseModal');
+                        showToast(json.message || 'Contra-asiento registrado.');
+                        setTimeout(() => window.location.reload(), 300);
+                    } else {
+                        showToast(json.error || 'No se pudo registrar el contra-asiento.', 'err');
+                        if (btn) {
+                            btn.disabled = false;
+                            btn.textContent = 'Confirmar contra-asiento';
+                        }
+                    }
+                } catch (ex) {
+                    showToast('Error de conexión al registrar contra-asiento.', 'err');
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.textContent = 'Confirmar contra-asiento';
+                    }
+                }
+            });
         }
 
-        // Formulario Cerrar Caja
+        // Botón finalizar tras ver resultado de cierre ciego
+        const btnFinishClose = document.getElementById('btnFinishClose');
+        if (btnFinishClose) {
+            btnFinishClose.addEventListener('click', () => {
+                window.location.reload();
+            });
+        }
+
+        // Formulario Cerrar Caja (Cierre Ciego: el esperado y la diferencia se revelan recién al confirmar)
         const closeForm = document.getElementById('closeForm');
         if (closeForm) {
             closeForm.addEventListener('submit', async e => {
@@ -341,10 +378,8 @@
                 const clObsInput = document.getElementById('clObs');
                 const errAmt = document.getElementById('clAmountErr');
                 const errObs = document.getElementById('clObsErr');
-                const expEl = document.getElementById('closeExpectedAmount');
 
                 const val = parseFloat(clAmountInput.value);
-                const expected = parseFloat(expEl?.value || 0);
 
                 if (isNaN(val) || val < 0) {
                     if (errAmt) { errAmt.textContent = 'Ingrese el monto de cierre en efectivo.'; errAmt.hidden = false; }
@@ -352,20 +387,12 @@
                     return;
                 }
                 if (errAmt) errAmt.hidden = true;
-
-                const diff = val - expected;
-                if (!near0(diff) && !clObsInput.value.trim()) {
-                    if (errObs) { errObs.textContent = 'Explique la diferencia para poder cerrar la caja.'; errObs.hidden = false; }
-                    clObsInput.focus();
-                    return;
-                }
                 if (errObs) errObs.hidden = true;
 
                 const btn = document.getElementById('btnConfirmClose');
                 btn.disabled = true;
-                btn.textContent = 'Cerrando...';
+                btn.textContent = 'Verificando arqueo...';
 
-                // Mostrar pantallita LCD retro Nokia con letras en cascada elástica al cerrar
                 const startTime = Date.now();
                 showNokiaLcdLoader('CERRANDO CAJA...');
                 closeModal('closeModal');
@@ -384,20 +411,98 @@
                     });
                     const json = await res.json();
 
-                    // Garantizar que la animación se aprecie durante aprox 1 segundo
                     const elapsed = Date.now() - startTime;
-                    const minWait = Math.max(0, 1000 - elapsed);
+                    const minWait = Math.max(0, 900 - elapsed);
 
                     setTimeout(() => {
+                        hideNokiaLcdLoader();
+
                         if (json.success) {
-                            window.location.reload();
-                        } else {
-                            hideNokiaLcdLoader();
+                            closeCompleted = true;
+                            const stepForm = document.getElementById('clStepForm');
+                            const footForm = document.getElementById('clFootForm');
+                            const stepResult = document.getElementById('clStepResult');
+                            const footResult = document.getElementById('clFootResult');
+                            const resultSum = document.getElementById('clResultSum');
+                            const resultBanner = document.getElementById('clResultBanner');
+
+                            if (stepForm) stepForm.hidden = true;
+                            if (footForm) footForm.hidden = true;
+                            if (stepResult) stepResult.hidden = false;
+                            if (footResult) footResult.hidden = false;
+
+                            const d = parseFloat(json.diferencia || 0);
+                            const cuadra = near0(d);
+                            const diffClass = cuadra ? 'diff--pos' : (d > 0 ? 'diff--pos' : 'diff--neg');
+                            const diffLabel = cuadra
+                                ? 'Cuadra con exactitud ($0,00)'
+                                : (d > 0 ? `Sobrante ${smoney(d)}` : `Faltante ${smoney(d)}`);
+
+                            if (resultBanner) {
+                                resultBanner.className = cuadra ? 'nk-callout--ok' : 'nk-callout--bad';
+                                resultBanner.innerHTML = cuadra
+                                    ? '<strong>Caja cerrada correctamente · El arqueo cuadra.</strong> Resultado del cierre ciego:'
+                                    : '<strong>Caja cerrada con diferencia asentada.</strong> Resultado del cierre ciego:';
+                            }
+
+                            if (resultSum) {
+                                resultSum.innerHTML = `
+                                    <dt>Monto de apertura (efectivo)</dt><dd>${money(json.monto_apertura)}</dd>
+                                    <dt>Ingresos en efectivo</dt><dd class="mv-in">+${money(json.ingresos)}</dd>
+                                    <dt>Egresos en efectivo</dt><dd class="mv-out">−${money(json.egresos)}</dd>
+                                    <span class="rule"></span>
+                                    <dt class="is-big">Efectivo esperado</dt><dd class="is-big">${money(json.monto_esperado)}</dd>
+                                    <dt class="is-big">Efectivo físico contado</dt><dd class="is-big">${money(json.monto_cierre)}</dd>
+                                    <dt class="is-big">Diferencia</dt><dd class="is-big ${diffClass}">${diffLabel}</dd>
+                                `;
+                            }
+
                             openModal('closeModal');
-                            showToast(json.error || 'No se pudo cerrar la caja.', 'err');
-                            btn.disabled = false;
-                            btn.textContent = 'Confirmar cierre';
+                            return;
                         }
+
+                        // Si el servidor detectó diferencia en el conteo ciego y exige observación obligatoria:
+                        // Bloqueamos el campo de monto contado y revelamos la diferencia para que justifique sin poder alterar el conteo.
+                        if (json.require_obs) {
+                            clAmountInput.value = Number(json.monto_cierre).toFixed(2);
+                            clAmountInput.readOnly = true;
+                            clAmountInput.style.opacity = '0.75';
+                            clAmountInput.style.cursor = 'not-allowed';
+
+                            const diffBox = document.getElementById('clBlindDiffBox');
+                            const revSum = document.getElementById('clRevealedSum');
+                            const diffMsg = document.getElementById('clDiffMsg');
+                            const d = parseFloat(json.diferencia || 0);
+
+                            if (revSum) {
+                                revSum.innerHTML = `
+                                    <dt>Efectivo esperado (sistema)</dt><dd>${money(json.monto_esperado)}</dd>
+                                    <dt>Efectivo contado (fijado)</dt><dd>${money(json.monto_cierre)}</dd>
+                                    <dt class="is-big">Diferencia detectada</dt><dd class="is-big ${d > 0 ? 'diff--pos' : 'diff--neg'}">${smoney(d)}</dd>
+                                `;
+                            }
+                            if (diffMsg) {
+                                diffMsg.textContent = d > 0
+                                    ? `Sobran ${money(d)} respecto al efectivo esperado. El monto contado quedó fijado; ingresá una observación obligatoria para cerrar.`
+                                    : `Faltan ${money(Math.abs(d))} respecto al efectivo esperado. El monto contado quedó fijado; ingresá una observación obligatoria para cerrar.`;
+                            }
+                            if (diffBox) diffBox.hidden = false;
+                            if (errObs) {
+                                errObs.textContent = 'Explique el motivo de la diferencia para confirmar el cierre.';
+                                errObs.hidden = false;
+                            }
+
+                            openModal('closeModal');
+                            btn.disabled = false;
+                            btn.textContent = 'Confirmar cierre con diferencia';
+                            clObsInput.focus();
+                            return;
+                        }
+
+                        openModal('closeModal');
+                        showToast(json.error || 'No se pudo cerrar la caja.', 'err');
+                        btn.disabled = false;
+                        btn.textContent = 'Confirmar cierre';
                     }, minWait);
                 } catch (ex) {
                     hideNokiaLcdLoader();
@@ -444,54 +549,31 @@
                 return;
             }
 
-            // Abrir modal de cierre
+            // Abrir modal de cierre ciego
             if (e.target.closest('[data-action="close-caja"]')) {
                 openModal('closeModal');
-                updateDiff();
                 return;
             }
 
-            // Quitar movimiento
-            const rmBtn = e.target.closest('[data-action="mv-remove"]');
-            if (rmBtn) {
-                const idMov = rmBtn.dataset.id;
-                const concepto = rmBtn.dataset.concepto;
-                const monto = rmBtn.dataset.monto;
-                const confirmed = (typeof window.showConfirmModal === 'function')
-                    ? await window.showConfirmModal(
-                        'Quitar Movimiento',
-                        `¿Desea quitar el movimiento "${concepto}" por ${money(monto)}?\n\nEl efectivo esperado se recalculará automáticamente.`,
-                        'Sí, quitar',
-                        'Cancelar',
-                        true
-                    )
-                    : confirm(`¿Desea quitar el movimiento "${concepto}" por ${money(monto)}? El efectivo esperado se recalculará automáticamente.`);
+            // Abrir modal de contra-asiento (reversión inmutable con motivo)
+            const revBtn = e.target.closest('[data-action="mv-reverse"]');
+            if (revBtn) {
+                const idMov = revBtn.dataset.id;
+                const concepto = revBtn.dataset.concepto;
+                const medio = revBtn.dataset.medio || 'Efectivo';
+                const monto = revBtn.dataset.monto;
 
-                if (!confirmed) {
-                    return;
-                }
+                const rvMovId = document.getElementById('rvMovId');
+                const rvMovDesc = document.getElementById('rvMovDesc');
+                const rvMotivo = document.getElementById('rvMotivo');
+                const rvMotivoErr = document.getElementById('rvMotivoErr');
 
-                try {
-                    const fd = new FormData();
-                    fd.append('id_movimiento', idMov);
-                    fd.append('csrf_token', csrfToken);
-                    fd.append('ajax', '1');
+                if (rvMovId) rvMovId.value = idMov;
+                if (rvMovDesc) rvMovDesc.textContent = `${concepto} (${medio}) por ${money(monto)}`;
+                if (rvMotivo) rvMotivo.value = '';
+                if (rvMotivoErr) rvMotivoErr.hidden = true;
 
-                    const res = await fetch('index.php?action=remove_movement', {
-                        method: 'POST',
-                        body: fd,
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    const json = await res.json();
-                    if (json.success) {
-                        showToast(json.message);
-                        setTimeout(() => window.location.reload(), 300);
-                    } else {
-                        showToast(json.error || 'Error al eliminar movimiento.', 'err');
-                    }
-                } catch (ex) {
-                    showToast('Error de conexión al eliminar movimiento.', 'err');
-                }
+                openModal('reverseModal');
                 return;
             }
 
@@ -506,42 +588,57 @@
                         const c = json.caja;
                         document.getElementById('dtTitle').textContent = `Caja del ${fdate(c.fecha)}`;
                         document.getElementById('dtSub').textContent = c.estado === 'abierta'
-                            ? `Abierta ${c.hora_apertura} hs · En curso`
+                            ? `Abierta ${c.hora_apertura} hs · En curso (Cierre ciego)`
                             : `${c.hora_apertura} → ${c.hora_cierre || ''} hs`;
 
                         const d = c.diferencia !== null ? parseFloat(c.diferencia) : null;
                         const diffText = (d === null) ? '—' : near0(d) ? 'Cuadra' : smoney(d);
                         const diffClass = (d === null) ? '' : near0(d) ? 'diff--pos' : d > 0 ? 'diff--pos' : 'diff--neg';
 
-                        document.getElementById('dtSum').innerHTML = `
-                            <dt>Monto de apertura</dt><dd>${money(c.monto_apertura)}</dd>
-                            <dt>Ingresos</dt><dd class="mv-in">${c.ingresos ? '+' : ''}${money(c.ingresos)}</dd>
-                            <dt>Egresos</dt><dd class="mv-out">${c.egresos ? '−' : ''}${money(c.egresos)}</dd>
-                            <span class="rule"></span>
-                            <dt class="is-big">Efectivo esperado</dt><dd class="is-big">${money(c.monto_esperado)}</dd>
-                            ${c.estado === 'cerrada' && c.monto_cierre !== null ? `
-                            <dt class="is-big">Monto de cierre</dt><dd class="is-big">${money(c.monto_cierre)}</dd>
-                            <dt>Diferencia</dt><dd class="${diffClass}">${diffText}</dd>
-                            ` : ''}
-                        `;
+                        if (c.estado === 'abierta') {
+                            document.getElementById('dtSum').innerHTML = `
+                                <dt>Monto de apertura (efectivo)</dt><dd>${money(c.monto_apertura)}</dd>
+                                <dt>Movimientos registrados</dt><dd>${(c.movs || []).length}</dd>
+                                <span class="rule"></span>
+                                <dt class="is-big">Efectivo esperado</dt><dd class="is-big">Oculto (Cierre ciego)</dd>
+                            `;
+                        } else {
+                            document.getElementById('dtSum').innerHTML = `
+                                <dt>Monto de apertura (efectivo)</dt><dd>${money(c.monto_apertura)}</dd>
+                                <dt>Ingresos en efectivo</dt><dd class="mv-in">${c.ingresos ? '+' : ''}${money(c.ingresos)}</dd>
+                                <dt>Egresos en efectivo</dt><dd class="mv-out">${c.egresos ? '−' : ''}${money(c.egresos)}</dd>
+                                <span class="rule"></span>
+                                <dt class="is-big">Efectivo esperado</dt><dd class="is-big">${money(c.monto_esperado)}</dd>
+                                ${c.monto_cierre !== null ? `
+                                <dt class="is-big">Monto de cierre</dt><dd class="is-big">${money(c.monto_cierre)}</dd>
+                                <dt>Diferencia</dt><dd class="${diffClass}">${diffText}</dd>
+                                ` : ''}
+                            `;
+                        }
 
                         document.getElementById('dtObs').textContent = c.observaciones ? `Observación: ${c.observaciones}` : '';
 
                         const tbody = document.getElementById('dtTbody');
                         if (c.movs && c.movs.length > 0) {
-                            tbody.innerHTML = c.movs.map(m => `
-                                <tr>
-                                    <td><span class="nk-mono">${m.hora}</span></td>
-                                    <td>
-                                        <span class="nk-cell-main">${escapeHtml(m.concepto)}</span>
-                                        ${m.detalle ? `<span class="nk-cell-meta">${escapeHtml(m.detalle)}</span>` : ''}
-                                    </td>
-                                    <td class="nk-num mv-in">${m.tipo === 'in' ? money(m.monto) : '—'}</td>
-                                    <td class="nk-num mv-out">${m.tipo === 'out' ? money(m.monto) : '—'}</td>
-                                </tr>
-                            `).join('');
+                            tbody.innerHTML = c.movs.map(m => {
+                                const medio = m.medio_pago || 'Efectivo';
+                                const esEfectivo = medio.toLowerCase() === 'efectivo';
+                                return `
+                                    <tr style="${m.ya_revertido ? 'opacity:0.6;' : ''}">
+                                        <td><span class="nk-mono">${escapeHtml(m.hora)}</span></td>
+                                        <td><span class="nk-tag nk-tag--${esEfectivo ? 'lcd' : 'neutral'}">${escapeHtml(medio)}</span></td>
+                                        <td>
+                                            <span class="nk-cell-main">${escapeHtml(m.concepto)}</span>
+                                            ${m.detalle ? `<span class="nk-cell-meta">${escapeHtml(m.detalle)}</span>` : ''}
+                                            ${m.motivo ? `<span class="nk-motivo-meta">Motivo: ${escapeHtml(m.motivo)}</span>` : ''}
+                                        </td>
+                                        <td class="nk-num mv-in">${m.tipo === 'in' ? money(m.monto) : '—'}</td>
+                                        <td class="nk-num mv-out">${m.tipo === 'out' ? money(m.monto) : '—'}</td>
+                                    </tr>
+                                `;
+                            }).join('');
                         } else {
-                            tbody.innerHTML = `<tr><td colspan="4" class="is-c" style="padding:22px;color:var(--nk-ink-2);">Esta caja no tuvo movimientos registrados.</td></tr>`;
+                            tbody.innerHTML = `<tr><td colspan="5" class="is-c" style="padding:22px;color:var(--nk-ink-2);">Esta caja no tuvo movimientos registrados.</td></tr>`;
                         }
 
                         openModal('detailModal');
@@ -554,14 +651,12 @@
                 return;
             }
 
-
             // Imprimir detalle específico
             if (e.target.closest('[data-action="print-detail"]')) {
                 document.body.classList.add('print-detail');
                 window.print();
                 return;
             }
-
         });
 
         // Limpiar clase de impresión tras imprimir

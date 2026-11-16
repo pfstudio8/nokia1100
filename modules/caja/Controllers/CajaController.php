@@ -2,6 +2,7 @@
 // modules/caja/Controllers/CajaController.php
 
 require_once __DIR__ . '/../../../classes/BaseController.php';
+require_once __DIR__ . '/../../../classes/Layout.php';
 require_once __DIR__ . '/../Models/CajaModel.php';
 
 class CajaController extends BaseController
@@ -12,6 +13,17 @@ class CajaController extends BaseController
     {
         parent::__construct();
         $this->caja_model = new CajaModel();
+    }
+
+    /**
+     * Verifica si el usuario actual posee rol de Administrador o permiso explícito de supervisión/cierre de caja.
+     */
+    private function has_supervisor_permission(): bool
+    {
+        if (($_SESSION['role'] ?? '') === 'admin') {
+            return true;
+        }
+        return Layout::hasAccess('cierre_caja') || Layout::hasAccess('caja_admin');
     }
 
     /**
@@ -26,9 +38,11 @@ class CajaController extends BaseController
         $cajas = $this->caja_model->get_cajas('all', 'all');
 
         $this->render_view(__DIR__ . '/../Views/index.php', [
-            'open_caja'   => $open_caja,
-            'last_closed' => $last_closed,
-            'cajas'       => $cajas
+            'open_caja'     => $open_caja,
+            'last_closed'   => $last_closed,
+            'cajas'         => $cajas,
+            'can_supervise' => $this->has_supervisor_permission(),
+            'limite_retiro' => CajaModel::LIMITE_RETIRO_EMPLEADO
         ]);
     }
 
@@ -56,7 +70,7 @@ class CajaController extends BaseController
             return;
         }
 
-        $monto_apertura = (float)$rawAmount;
+        $monto_apertura = round((float)$rawAmount, 2);
         $userId = (int)($_SESSION['user_id'] ?? 0);
 
         $newId = $this->caja_model->open_caja($monto_apertura, $userId);
@@ -66,7 +80,7 @@ class CajaController extends BaseController
         }
 
         require_once __DIR__ . '/../../../config/audit.php';
-        audit_log($this->conn, 'CAJA_OPEN', $userId, 'caja', $newId, "Caja #$newId abierta con monto: $" . number_format($monto_apertura, 2));
+        audit_log($this->conn, 'CAJA_OPEN', $userId, 'caja', $newId, "Caja #$newId abierta con monto inicial en efectivo: $" . number_format($monto_apertura, 2));
 
         if ($this->is_ajax()) {
             $caja = $this->caja_model->get_open_caja();
@@ -79,7 +93,7 @@ class CajaController extends BaseController
     }
 
     /**
-     * Registra un movimiento de ingreso o egreso en la caja abierta.
+     * Registra un movimiento de ingreso o egreso en el libro inmutable de la caja abierta.
      */
     public function add_movement()
     {
@@ -105,11 +119,17 @@ class CajaController extends BaseController
         $tipo = trim($_POST['tipo'] ?? 'in');
         $concepto = trim($_POST['concepto'] ?? '');
         $detalle = trim($_POST['detalle'] ?? '');
+        $medio_pago = trim($_POST['medio_pago'] ?? 'Efectivo');
+        $motivo = trim($_POST['motivo'] ?? '');
         $rawAmount = str_replace(',', '.', trim($_POST['monto'] ?? ''));
 
         if (!in_array($tipo, ['in', 'out'], true)) {
             $this->respond_error('Tipo de movimiento inválido.');
             return;
+        }
+
+        if (!in_array($medio_pago, CajaModel::MEDIOS_PAGO, true)) {
+            $medio_pago = 'Efectivo';
         }
 
         if (empty($concepto)) {
@@ -122,25 +142,49 @@ class CajaController extends BaseController
             return;
         }
 
-        $monto = (float)$rawAmount;
+        $monto = round((float)$rawAmount, 2);
         $userId = (int)($_SESSION['user_id'] ?? 0);
 
-        $id_mov = $this->caja_model->add_movement((int)$open_caja['id_caja'], $tipo, $concepto, $detalle, $monto, $userId);
+        // Control de rol/permiso para retiros o egresos grandes
+        if ($tipo === 'out' && $monto >= CajaModel::LIMITE_RETIRO_EMPLEADO && !$this->has_supervisor_permission()) {
+            $limiteFmt = number_format(CajaModel::LIMITE_RETIRO_EMPLEADO, 2, ',', '.');
+            $this->respond_error("Los retiros o egresos mayores o iguales a \$$limiteFmt requieren rol de Administrador o permiso de Supervisión de Caja.", 403);
+            return;
+        }
+
+        $id_mov = $this->caja_model->add_movement(
+            (int)$open_caja['id_caja'],
+            $tipo,
+            $concepto,
+            $detalle,
+            $monto,
+            $userId,
+            $medio_pago,
+            $motivo !== '' ? $motivo : null
+        );
         if (!$id_mov) {
-            $this->respond_error('Error al registrar el movimiento.');
+            $this->respond_error('Error al registrar el movimiento en la caja.');
             return;
         }
 
         require_once __DIR__ . '/../../../config/audit.php';
         $tipoLabel = ($tipo === 'in') ? 'Ingreso' : 'Egreso';
-        audit_log($this->conn, 'CAJA_MOV_ADD', $userId, 'caja_movimiento', $id_mov, "$tipoLabel en caja #{$open_caja['id_caja']}: $concepto (\$$monto)");
+        $motivoLog = $motivo !== '' ? " | Motivo: $motivo" : '';
+        audit_log(
+            $this->conn,
+            'CAJA_MOV_ADD',
+            $userId,
+            'caja_movimiento',
+            $id_mov,
+            "$tipoLabel en caja #{$open_caja['id_caja']} ($medio_pago): $concepto (\$$monto)$motivoLog"
+        );
 
         if ($this->is_ajax()) {
             $updatedCaja = $this->caja_model->get_open_caja();
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'success' => true,
-                'message' => "$tipoLabel de $" . number_format($monto, 2) . " registrado.",
+                'message' => "$tipoLabel de $" . number_format($monto, 2) . " ($medio_pago) registrado.",
                 'caja'    => $updatedCaja
             ]);
             exit;
@@ -150,7 +194,7 @@ class CajaController extends BaseController
     }
 
     /**
-     * Elimina un movimiento de la caja abierta.
+     * Registra un contra-asiento (movimiento inverso con motivo obligatorio) en lugar de borrar filas.
      */
     public function remove_movement()
     {
@@ -167,6 +211,11 @@ class CajaController extends BaseController
             return;
         }
 
+        if (!$this->has_supervisor_permission()) {
+            $this->respond_error('Solo un Administrador o usuario con permiso de Supervisión de Caja puede registrar contra-asientos.', 403);
+            return;
+        }
+
         $open_caja = $this->caja_model->get_open_caja();
         if (!$open_caja) {
             $this->respond_error('No hay caja abierta.');
@@ -179,32 +228,49 @@ class CajaController extends BaseController
             return;
         }
 
-        $ok = $this->caja_model->delete_movement($id_mov, (int)$open_caja['id_caja']);
-        if (!$ok) {
-            $this->respond_error('No se pudo eliminar el movimiento.');
+        $motivo = trim($_POST['motivo'] ?? '');
+        if ($motivo === '') {
+            $this->respond_error('Debe ingresar un motivo obligatorio para registrar el contra-asiento.');
+            return;
+        }
+
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+
+        try {
+            $rev = $this->caja_model->reverse_movement($id_mov, (int)$open_caja['id_caja'], $motivo, $userId);
+        } catch (Exception $e) {
+            $this->respond_error($e->getMessage());
             return;
         }
 
         require_once __DIR__ . '/../../../config/audit.php';
-        $userId = (int)($_SESSION['user_id'] ?? 0);
-        audit_log($this->conn, 'CAJA_MOV_DEL', $userId, 'caja_movimiento', $id_mov, "Movimiento eliminado en caja #{$open_caja['id_caja']}");
+        $orig = $rev['original'];
+        $idContra = $rev['id_contra_asiento'];
+        audit_log(
+            $this->conn,
+            'CAJA_MOV_REVERSE',
+            $userId,
+            'caja_movimiento',
+            $idContra,
+            "Contra-asiento #$idContra de mov. #$id_mov en caja #{$open_caja['id_caja']} | Concepto orig.: {$orig['concepto']} | Medio: {$orig['medio_pago']} | Monto: \${$orig['monto']} | Motivo: $motivo"
+        );
 
         if ($this->is_ajax()) {
             $updatedCaja = $this->caja_model->get_open_caja();
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
                 'success' => true,
-                'message' => 'Movimiento eliminado correctamente.',
+                'message' => 'Contra-asiento registrado correctamente en el libro de caja.',
                 'caja'    => $updatedCaja
             ]);
             exit;
         }
 
-        $this->redirect('index.php?success=' . urlencode("Movimiento eliminado."));
+        $this->redirect('index.php?success=' . urlencode("Contra-asiento registrado."));
     }
 
     /**
-     * Cierra la caja abierta.
+     * Cierra la caja abierta bajo modalidad de Cierre Ciego (el esperado y la diferencia se revelan al confirmar).
      */
     public function close()
     {
@@ -221,45 +287,98 @@ class CajaController extends BaseController
             return;
         }
 
+        if (!$this->has_supervisor_permission()) {
+            $this->respond_error('Solo un Administrador o usuario con permiso de Supervisión de Caja puede realizar el cierre de caja.', 403);
+            return;
+        }
+
         $open_caja = $this->caja_model->get_open_caja();
         if (!$open_caja) {
             $this->respond_error('No hay ninguna caja abierta para cerrar.');
             return;
         }
 
+        $id_caja = (int)$open_caja['id_caja'];
+        $lockKey = 'blind_close_locked_amount_' . $id_caja;
+
         $rawAmount = str_replace(',', '.', trim($_POST['monto_cierre'] ?? ''));
         if (!is_numeric($rawAmount) || (float)$rawAmount < 0) {
-            $this->respond_error('Ingrese un monto de cierre válido (efectivo contado).');
+            $this->respond_error('Ingrese un monto de cierre válido (efectivo físico contado).');
             return;
         }
 
-        $monto_cierre = (float)$rawAmount;
-        $obs = trim($_POST['observaciones'] ?? '');
-        $esperado = (float)$open_caja['monto_esperado'];
-        $diff = $monto_cierre - $esperado;
+        // Si el monto ya fue bloqueado en el primer conteo ciego de esta sesión, impedir que se altere tras conocer la diferencia
+        if (isset($_SESSION[$lockKey]) && is_numeric($_SESSION[$lockKey])) {
+            $monto_cierre = round((float)$_SESSION[$lockKey], 2);
+        } else {
+            $monto_cierre = round((float)$rawAmount, 2);
+        }
 
-        if (abs($diff) >= 0.01 && empty($obs)) {
-            $this->respond_error('Debe ingresar una observación explicando la diferencia para poder cerrar.');
+        $obs = trim($_POST['observaciones'] ?? '');
+        $esperado = round((float)$open_caja['monto_esperado'], 2);
+        $diff = round($monto_cierre - $esperado, 2);
+
+        // Si hay diferencia y aún no se ingresó observación: bloquear el monto contado y revelar la diferencia exigiendo observación
+        if (abs($diff) >= 0.01 && $obs === '') {
+            $_SESSION[$lockKey] = $monto_cierre;
+            if ($this->is_ajax()) {
+                http_response_code(422);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'success'        => false,
+                    'require_obs'    => true,
+                    'monto_apertura' => (float)$open_caja['monto_apertura'],
+                    'ingresos'       => (float)$open_caja['ingresos'],
+                    'egresos'        => (float)$open_caja['egresos'],
+                    'monto_esperado' => $esperado,
+                    'monto_cierre'   => $monto_cierre,
+                    'diferencia'     => $diff,
+                    'error'          => 'Se detectó una diferencia en el conteo ciego. El monto contado quedó fijado; ingrese una observación obligatoria para confirmar el cierre.'
+                ]);
+                exit;
+            }
+            $this->respond_error('Existe una diferencia de $' . number_format($diff, 2) . ' respecto al esperado ($' . number_format($esperado, 2) . '). Debe ingresar una observación explicando la diferencia.');
             return;
         }
 
         $userId = (int)($_SESSION['user_id'] ?? 0);
-        $ok = $this->caja_model->close_caja((int)$open_caja['id_caja'], $monto_cierre, $obs, $userId);
+        $result = $this->caja_model->close_caja($id_caja, $monto_cierre, $obs, $userId);
 
-        if (!$ok) {
+        if ($result === false) {
             $this->respond_error('Error al cerrar la caja en la base de datos.');
             return;
         }
 
+        unset($_SESSION[$lockKey]);
+
         require_once __DIR__ . '/../../../config/audit.php';
-        audit_log($this->conn, 'CAJA_CLOSE', $userId, 'caja', $open_caja['id_caja'], "Caja #{$open_caja['id_caja']} cerrada con: $" . number_format($monto_cierre, 2) . " (Dif: $" . number_format($diff, 2) . ")");
+        $esperadoFinal = $result['monto_esperado'];
+        $diffFinal = $result['diferencia'];
+        $obsLog = $obs !== '' ? " | Obs: $obs" : '';
+        audit_log(
+            $this->conn,
+            'CAJA_CLOSE',
+            $userId,
+            'caja',
+            $id_caja,
+            "Caja #$id_caja cerrada (cierre ciego) | Esperado: $" . number_format($esperadoFinal, 2) . " | Contado: $" . number_format($monto_cierre, 2) . " | Dif: $" . number_format($diffFinal, 2) . $obsLog
+        );
 
         if ($this->is_ajax()) {
             header('Content-Type: application/json; charset=utf-8');
+            $cuadra = abs($diffFinal) < 0.01;
             echo json_encode([
-                'success' => true,
-                'message' => abs($diff) < 0.01 ? "Caja cerrada con $" . number_format($monto_cierre, 2) . ". Cuadra." : "Caja cerrada con $" . number_format($monto_cierre, 2) . ". Diferencia: $" . number_format($diff, 2),
-                'diferencia' => $diff
+                'success'        => true,
+                'message'        => $cuadra
+                    ? "Caja cerrada con $" . number_format($monto_cierre, 2) . ". El arqueo cuadra con exactitud."
+                    : "Caja cerrada con $" . number_format($monto_cierre, 2) . ". Diferencia registrada: $" . number_format($diffFinal, 2),
+                'monto_apertura' => $result['monto_apertura'],
+                'ingresos'       => $result['ingresos'],
+                'egresos'        => $result['egresos'],
+                'monto_esperado' => $esperadoFinal,
+                'monto_cierre'   => $monto_cierre,
+                'diferencia'     => $diffFinal,
+                'cuadra'         => $cuadra
             ]);
             exit;
         }
@@ -284,6 +403,13 @@ class CajaController extends BaseController
         if (!$caja) {
             $this->respond_error('Caja no encontrada', 404);
             return;
+        }
+
+        // En una caja abierta, ocultar el efectivo esperado del payload para preservar el cierre ciego
+        if (($caja['estado'] ?? '') === 'abierta') {
+            $caja['monto_esperado'] = null;
+            $caja['ingresos'] = null;
+            $caja['egresos'] = null;
         }
 
         header('Content-Type: application/json; charset=utf-8');
@@ -316,9 +442,9 @@ class CajaController extends BaseController
             'Hora apertura',
             'Hora cierre',
             'Monto de apertura',
-            'Ingresos',
-            'Egresos',
-            'Esperado',
+            'Ingresos (Efectivo)',
+            'Egresos (Efectivo)',
+            'Esperado (Efectivo)',
             'Monto de cierre',
             'Diferencia',
             'Estado',
@@ -362,7 +488,6 @@ class CajaController extends BaseController
         fclose($output);
         exit;
     }
-
 
     private function is_ajax(): bool
     {

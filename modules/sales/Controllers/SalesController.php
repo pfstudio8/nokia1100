@@ -65,22 +65,24 @@ class SalesController extends BaseController
                 }
 
                 $items = $input['items'] ?? [];
-                $metodo_pago = $input['metodo_pago'] ?? '';
+                $metodo_pago = isset($input['metodo_pago']) && is_string($input['metodo_pago']) ? trim($input['metodo_pago']) : '';
+                $pagos = isset($input['pagos']) && is_array($input['pagos']) ? $input['pagos'] : [];
                 $descripcion = $input['descripcion'] ?? '';
 
-                if (empty($items) || empty($metodo_pago)) {
+                if (empty($items) || (empty($pagos) && $metodo_pago === '')) {
                     echo json_encode(['success' => false, 'message' => 'Datos incompletos']);
                     exit;
                 }
 
-                if (!is_string($metodo_pago) || !in_array($metodo_pago, self::METODOS_PAGO, true)) {
+                if (empty($pagos) && !in_array($metodo_pago, self::METODOS_PAGO, true)) {
                     echo json_encode(['success' => false, 'message' => 'Método de pago no válido']);
                     exit;
                 }
                 $descripcion = mb_substr((string) $descripcion, 0, 255);
 
                 try {
-                    $id_venta = $this->sales_model->create_sale_transaction($items, $metodo_pago, $_SESSION['user_id'], $descripcion);
+                    $pagoPayload = !empty($pagos) ? $pagos : $metodo_pago;
+                    $id_venta = $this->sales_model->create_sale_transaction($items, $pagoPayload, $_SESSION['user_id'], $descripcion);
                     echo json_encode(['success' => true, 'message' => 'Venta registrada con éxito', 'id_venta' => $id_venta]);
                 } catch (Exception $e) {
                     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
@@ -90,9 +92,12 @@ class SalesController extends BaseController
         }
 
         $products = $this->sales_model->get_active_products_in_stock();
+        $caja_model = new CajaModel();
+        $has_open_caja = ($caja_model->get_open_caja() !== null);
 
         $this->render_view(__DIR__ . '/../Views/new_sale.php', [
-            'products' => $products
+            'products'      => $products,
+            'has_open_caja' => $has_open_caja
         ]);
     }
 
@@ -137,13 +142,27 @@ class SalesController extends BaseController
                 }
 
                 $id_reparacion = (int)($_POST['id_reparacion'] ?? 0);
-                $metodo = trim($_POST['metodo_pago'] ?? 'Efectivo');
-                if (!in_array($metodo, self::METODOS_PAGO, true)) {
-                    throw new Exception("Método de pago no válido.");
+                $modo_pago = trim((string)($_POST['modo_pago'] ?? 'unico'));
+
+                if ($modo_pago === 'combinado') {
+                    $metodo1 = trim((string)($_POST['metodo_pago_1'] ?? ''));
+                    $metodo2 = trim((string)($_POST['metodo_pago_2'] ?? ''));
+                    $monto1 = (float)str_replace(',', '.', (string)($_POST['monto_pago_1'] ?? 0));
+                    $monto2 = (float)str_replace(',', '.', (string)($_POST['monto_pago_2'] ?? 0));
+                    $pagoPayload = [
+                        ['metodo' => $metodo1, 'monto' => $monto1],
+                        ['metodo' => $metodo2, 'monto' => $monto2]
+                    ];
+                } else {
+                    $metodo = trim((string)($_POST['metodo_pago'] ?? 'Efectivo'));
+                    if (!in_array($metodo, self::METODOS_PAGO, true)) {
+                        throw new Exception("Método de pago no válido.");
+                    }
+                    $pagoPayload = $metodo;
                 }
 
                 // Ejecuta verificación de estado, bloqueo por concurrencia y registro de cobro en una transacción atómica
-                $id_venta = $workshop_model->charge_and_deliver_repair($id_reparacion, $metodo, (int)$_SESSION['user_id']);
+                $id_venta = $workshop_model->charge_and_deliver_repair($id_reparacion, $pagoPayload, (int)$_SESSION['user_id']);
 
                 $this->redirect("index.php?action=repairs_to_charge&success=" . urlencode("Reparación cobrada y entregada correctamente.") . "&charged_id=" . $id_reparacion . "&id_venta=" . $id_venta);
             } catch (Exception $e) {
@@ -160,9 +179,13 @@ class SalesController extends BaseController
             $repairs_parts[$r['id_reparacion']] = $workshop_model->get_repair_repuestos($r['id_reparacion']);
         }
 
+        $caja_model = new CajaModel();
+        $has_open_caja = ($caja_model->get_open_caja() !== null);
+
         $this->render_view(__DIR__ . '/../Views/repairs_to_charge.php', [
-            'repairs' => $repairs,
-            'repairs_parts' => $repairs_parts
+            'repairs'       => $repairs,
+            'repairs_parts' => $repairs_parts,
+            'has_open_caja' => $has_open_caja
         ]);
     }
 

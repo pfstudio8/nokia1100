@@ -1,7 +1,15 @@
 /* =====================================================================
    NOKIA 1100 · MÓDULO CAJA (caja.css)
-   Estilos específicos del arqueo, pantalla LCD y movimientos de caja
+   Estilos específicos del arqueo, pantalla LCD, modales y modo oscuro
    ===================================================================== */
+
+/* Utilidad crítica: garantizar que el atributo HTML [hidden] oculte contenedores flex/grid */
+.caja-wrapper [hidden],
+.caja-modal-backdrop [hidden],
+.caja-modal-body[hidden],
+.caja-modal-foot[hidden] {
+  display: none !important;
+}
 
 /* Contenedor y Encabezados */
 .caja-wrapper {
@@ -230,15 +238,113 @@
   color: var(--nk-focus, #1f4e8c);
 }
 
+/* Avisos / Callouts dentro de modales y paneles (compatibles con modo claro y oscuro) */
+.nk-callout {
+  padding: 11px 14px;
+  background: var(--nk-sunk, #e5e1d6);
+  border: 1px solid var(--nk-line-2, #b5af9c);
+  border-left: 3px solid var(--nk-ink, #15171a);
+  border-radius: var(--nk-r, 2px);
+  font-size: .82rem;
+  line-height: 1.45;
+  color: var(--nk-ink, #15171a);
+}
+
+.nk-callout strong {
+  color: var(--nk-ink, #15171a);
+  font-weight: 700;
+}
+
+.nk-callout--bad {
+  padding: 12px 14px;
+  background: var(--nk-bad-bg, #f6dcd7);
+  border: 1px solid var(--nk-bad, #a82a1d);
+  border-left: 3px solid var(--nk-bad, #a82a1d);
+  border-radius: var(--nk-r, 2px);
+  color: var(--nk-ink, #15171a);
+}
+
+.nk-callout--ok {
+  padding: 12px 14px;
+  background: var(--nk-ok-bg, #dfeee3);
+  border: 1px solid var(--nk-ok, #1d6a38);
+  border-left: 3px solid var(--nk-ok, #1d6a38);
+  border-radius: var(--nk-r, 2px);
+  font-size: .85rem;
+  line-height: 1.45;
+  color: var(--nk-ink, #15171a);
+}
+
+/* Cinta informativa al pie de movimientos */
+.nk-info-strip {
+  margin: 12px 20px 18px;
+  padding: 10px 14px;
+  background: var(--nk-sunk, #e5e1d6);
+  border: 1px dashed var(--nk-line-2, #b5af9c);
+  border-radius: var(--nk-r, 2px);
+  font-size: .78rem;
+  line-height: 1.45;
+  color: var(--nk-ink-2, #464b4f);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: center;
+}
+
+.nk-info-strip strong {
+  color: var(--nk-ink, #15171a);
+}
+
+.nk-other-means-pill {
+  font-family: var(--nk-f-mono, 'IBM Plex Mono', monospace);
+  font-size: .72rem;
+  background: var(--nk-surface, #f8f6f0);
+  border: 1px solid var(--nk-line-2, #b5af9c);
+  padding: 3px 9px;
+  border-radius: var(--nk-r, 2px);
+  color: var(--nk-ink, #15171a);
+  font-weight: 600;
+}
+
+/* Badges de origen (Venta / Reparación) y motivo en tabla de movimientos */
+.nk-origin-badge {
+  display: inline-block;
+  font-family: var(--nk-f-mono, 'IBM Plex Mono', monospace);
+  font-size: .70rem;
+  font-weight: 600;
+  background: var(--nk-sunk, #e5e1d6);
+  border: 1px solid var(--nk-line-2, #b5af9c);
+  color: var(--nk-ink, #15171a);
+  padding: 1px 6px;
+  border-radius: 2px;
+  margin-left: 5px;
+  vertical-align: middle;
+}
+
+.nk-origin-badge--rep {
+  background: rgba(31, 95, 168, 0.12);
+  border-color: var(--nk-focus, #1f4e8c);
+  color: var(--nk-focus, #1f4e8c);
+}
+
+.nk-motivo-meta {
+  display: block;
+  font-size: .78rem;
+  color: var(--nk-warn, #8a5200);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
 /* Resumen financiero (DL) */
 .sum {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 6px 16px;
-  margin: 0 0 16px;
+  margin: 0;
   padding: 12px 14px;
   background: var(--nk-sunk, #e5e1d6);
-  border: 1px dashed var(--nk-ink, #15171a);
+  border: 1px dashed var(--nk-line-2, #b5af9c);
   border-radius: var(--nk-r, 2px);
 }
 
@@ -258,13 +364,14 @@
 }
 
 .sum .is-big {
-  font-size: 1.15rem;
+  font-size: 1.12rem;
   font-weight: 700;
+  color: var(--nk-ink, #15171a);
 }
 
 .sum .rule {
   grid-column: 1 / -1;
-  border-top: 1px solid var(--nk-ink, #15171a);
+  border-top: 1px solid var(--nk-line-2, #b5af9c);
   margin: 4px 0;
 }
 
@@ -281,7 +388,7 @@
 /* Formulario de movimientos */
 .mv-form {
   display: grid;
-  grid-template-columns: auto minmax(170px, 1fr) minmax(160px, 1.3fr) minmax(130px, .7fr) auto;
+  grid-template-columns: auto minmax(150px, 1.1fr) minmax(120px, 0.8fr) minmax(180px, 1.4fr) minmax(120px, 0.9fr) auto;
   gap: 12px;
   align-items: end;
   padding: 18px 20px;
@@ -302,9 +409,9 @@
 /* Control segmentado */
 .nk-seg {
   display: inline-flex;
-  border: 1px solid var(--nk-ink, #15171a);
+  border: 1px solid var(--nk-line-2, #b5af9c);
   border-radius: var(--nk-r, 2px);
-  background: #ffffff;
+  background: var(--nk-field, #ffffff);
   overflow: hidden;
 }
 
@@ -326,7 +433,7 @@
 
 .nk-seg button[aria-pressed="true"] {
   background: var(--nk-ink, #15171a);
-  color: #ffffff;
+  color: var(--nk-surface, #ffffff);
   font-weight: 700;
 }
 
@@ -342,9 +449,9 @@
 
 .nk-field {
   width: 100%;
-  border: 1px solid var(--nk-line, #d3cebf);
+  border: 1px solid var(--nk-line-2, #b5af9c);
   border-radius: var(--nk-r, 2px);
-  background: #ffffff;
+  background: var(--nk-field, #ffffff);
   padding: 8px 12px;
   font: inherit;
   font-size: .88rem;
@@ -359,8 +466,8 @@
 }
 
 .nk-field[readonly] {
-  background: var(--nk-sunk, #e5e1d6);
-  color: var(--nk-ink-2, #464b4f);
+  background: var(--nk-sunk, #e5e1d6) !important;
+  color: var(--nk-ink-2, #464b4f) !important;
   cursor: default;
 }
 
@@ -377,7 +484,7 @@
 
 textarea.nk-field {
   resize: vertical;
-  min-height: 76px;
+  min-height: 68px;
 }
 
 .nk-money {
@@ -422,10 +529,11 @@ textarea.nk-field {
   font: 600 .86rem var(--nk-f-mono, 'IBM Plex Mono', monospace);
   cursor: pointer;
   transition: all .15s ease;
-  border: 1px solid var(--nk-ink, #15171a);
+  border: 1px solid var(--nk-line-2, #15171a);
   background: var(--nk-surface, #f8f6f0);
   color: var(--nk-ink, #15171a);
   box-sizing: border-box;
+  width: auto;
 }
 
 .nk-btn:hover {
@@ -444,8 +552,8 @@ textarea.nk-field {
 
 .nk-btn--lcd {
   background: var(--nk-lcd, #c6e24a);
-  color: var(--nk-ink, #15171a);
-  border-color: var(--nk-ink, #15171a);
+  color: #15171a !important;
+  border-color: #15171a;
   font-weight: 700;
 }
 
@@ -454,13 +562,13 @@ textarea.nk-field {
 }
 
 .nk-btn--danger {
-  background: var(--nk-bad-bg, #f6dcd7);
-  color: var(--nk-bad, #a82a1d);
-  border-color: var(--nk-bad, #a82a1d);
+  background: var(--nk-bad-bg, #f6dcd7) !important;
+  color: var(--nk-bad, #a82a1d) !important;
+  border-color: var(--nk-bad, #a82a1d) !important;
 }
 
 .nk-btn--danger:hover {
-  background: #f1cac3;
+  filter: brightness(0.95);
 }
 
 .nk-btn--sm {
@@ -494,8 +602,8 @@ textarea.nk-field {
 
 .nk-tag--lcd {
   background: var(--nk-lcd, #c6e24a);
-  color: var(--nk-ink, #15171a);
-  border: 1px solid var(--nk-ink, #15171a);
+  color: #15171a;
+  border: 1px solid #15171a;
 }
 
 .nk-tag--neutral {
@@ -624,11 +732,13 @@ textarea.nk-field {
   flex-wrap: wrap;
 }
 
-/* Modales */
+/* =====================================================================
+   MODALES (Estructura Flex con cabecera y pie siempre visibles)
+   ===================================================================== */
 .caja-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(21, 24, 26, 0.7);
+  background: rgba(15, 18, 20, 0.75);
   backdrop-filter: blur(4px);
   z-index: 100;
   display: flex;
@@ -647,13 +757,13 @@ textarea.nk-field {
 
 .caja-modal-dialog {
   background: var(--nk-surface, #f8f6f0);
-  border: 1px solid var(--nk-line, #d3cebf);
+  border: 1px solid var(--nk-line-2, #d3cebf);
   border-top: 4px solid var(--nk-ink, #15171a);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.35);
   border-radius: var(--nk-r, 2px);
   width: 100%;
-  max-width: 580px;
-  max-height: 90vh;
+  max-width: 560px;
+  max-height: calc(100vh - 32px);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -665,33 +775,46 @@ textarea.nk-field {
   transform: translateY(0);
 }
 
+/* El <form> dentro del modal debe actuar como contenedor flex para que el body haga scroll y el foot nunca se corte */
+.caja-modal-dialog > form {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  margin: 0;
+}
+
 .caja-modal-head {
-  padding: 18px 22px;
+  padding: 16px 22px;
   border-bottom: 1px solid var(--nk-line, #d3cebf);
   display: flex;
   justify-content: space-between;
   align-items: center;
   background: var(--nk-surface, #f8f6f0);
+  flex-shrink: 0;
 }
 
 .caja-modal-head h3 {
   margin: 0;
-  font: 700 1.2rem var(--nk-f-head, 'Bricolage Grotesque', sans-serif);
+  font: 700 1.18rem var(--nk-f-head, 'Bricolage Grotesque', sans-serif);
   color: var(--nk-ink, #15171a);
 }
 
 .caja-modal-head p {
   margin: 2px 0 0;
-  font-size: .82rem;
+  font-size: .80rem;
   color: var(--nk-ink-2, #464b4f);
 }
 
 .caja-modal-body {
-  padding: 22px;
+  padding: 18px 22px;
   overflow-y: auto;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .caja-modal-foot {
@@ -700,7 +823,207 @@ textarea.nk-field {
   background: var(--nk-sunk, #e5e1d6);
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 10px;
+  flex-shrink: 0;
+}
+
+.caja-modal-foot .nk-btn {
+  width: auto !important;
+  min-height: 38px;
+}
+
+/* =====================================================================
+   MODO OSCURO (Dark Mode Overrides para máximo contraste y legibilidad)
+   ===================================================================== */
+html.dark .caja-modal-dialog,
+body.dark .caja-modal-dialog {
+  background: var(--nk-surface, #181c1f) !important;
+  border-color: var(--nk-line-2, #3a4248) !important;
+  border-top: 4px solid var(--nk-lcd, #c6e24a) !important;
+}
+
+html.dark .caja-modal-head,
+body.dark .caja-modal-head {
+  background: var(--nk-surface, #181c1f) !important;
+  border-bottom-color: var(--nk-line, #293035) !important;
+}
+
+html.dark .caja-modal-head h3,
+body.dark .caja-modal-head h3 {
+  color: var(--nk-ink, #f1ede6) !important;
+}
+
+html.dark .caja-modal-head p,
+body.dark .caja-modal-head p {
+  color: var(--nk-ink-2, #a4aaad) !important;
+}
+
+html.dark .caja-modal-foot,
+body.dark .caja-modal-foot {
+  background: var(--nk-sunk, #22272b) !important;
+  border-top-color: var(--nk-line, #293035) !important;
+}
+
+html.dark .nk-callout,
+body.dark .nk-callout {
+  background: var(--nk-sunk, #22272b) !important;
+  border-color: var(--nk-line-2, #3a4248) !important;
+  border-left: 3px solid var(--nk-lcd, #c6e24a) !important;
+  color: var(--nk-ink, #f1ede6) !important;
+}
+
+html.dark .nk-callout strong,
+body.dark .nk-callout strong {
+  color: var(--nk-lcd, #c6e24a) !important;
+}
+
+html.dark .nk-callout--bad,
+body.dark .nk-callout--bad {
+  background: rgba(248, 113, 113, 0.10) !important;
+  border-color: rgba(248, 113, 113, 0.55) !important;
+  border-left: 3px solid #f87171 !important;
+  color: var(--nk-ink, #f1ede6) !important;
+}
+
+html.dark .nk-callout--ok,
+body.dark .nk-callout--ok {
+  background: rgba(52, 211, 153, 0.12) !important;
+  border-color: rgba(52, 211, 153, 0.55) !important;
+  border-left: 3px solid #34d399 !important;
+  color: var(--nk-ink, #f1ede6) !important;
+}
+
+html.dark .sum,
+body.dark .sum {
+  background: var(--nk-field, #131618) !important;
+  border-color: var(--nk-line-2, #3a4248) !important;
+}
+
+html.dark .sum dt,
+body.dark .sum dt {
+  color: var(--nk-ink-2, #a4aaad) !important;
+}
+
+html.dark .sum dd,
+html.dark .sum .is-big,
+body.dark .sum dd,
+body.dark .sum .is-big {
+  color: var(--nk-ink, #f1ede6) !important;
+}
+
+html.dark .sum .rule,
+body.dark .sum .rule {
+  border-top-color: var(--nk-line-2, #3a4248) !important;
+}
+
+html.dark .nk-seg,
+body.dark .nk-seg {
+  background: var(--nk-field, #131618) !important;
+  border-color: var(--nk-line-2, #3a4248) !important;
+}
+
+html.dark .nk-seg button,
+body.dark .nk-seg button {
+  color: var(--nk-ink-2, #a4aaad) !important;
+  border-right-color: var(--nk-line, #293035) !important;
+}
+
+html.dark .nk-seg button[aria-pressed="true"],
+body.dark .nk-seg button[aria-pressed="true"] {
+  background: var(--nk-lcd, #c6e24a) !important;
+  color: #111417 !important;
+  font-weight: 700 !important;
+}
+
+html.dark .nk-field[readonly],
+body.dark .nk-field[readonly] {
+  background-color: var(--nk-sunk, #22272b) !important;
+  color: var(--nk-ink, #f1ede6) !important;
+  border-color: var(--nk-line-2, #3a4248) !important;
+}
+
+html.dark .nk-btn,
+body.dark .nk-btn {
+  background: var(--nk-surface, #181c1f) !important;
+  color: var(--nk-ink, #f1ede6) !important;
+  border-color: var(--nk-line-2, #3a4248) !important;
+}
+
+html.dark .nk-btn:hover:not(:disabled),
+body.dark .nk-btn:hover:not(:disabled) {
+  background: var(--nk-sunk, #22272b) !important;
+  border-color: var(--nk-ink-2, #a4aaad) !important;
+}
+
+html.dark .nk-btn--primary,
+html.dark .nk-btn--lcd,
+body.dark .nk-btn--primary,
+body.dark .nk-btn--lcd {
+  background: var(--nk-lcd, #c6e24a) !important;
+  color: #111417 !important;
+  border-color: var(--nk-lcd, #c6e24a) !important;
+  font-weight: 700 !important;
+}
+
+html.dark .nk-btn--primary:hover:not(:disabled),
+html.dark .nk-btn--lcd:hover:not(:disabled),
+body.dark .nk-btn--primary:hover:not(:disabled),
+body.dark .nk-btn--lcd:hover:not(:disabled) {
+  background: var(--nk-lcd-hi, #d5ee66) !important;
+  border-color: var(--nk-lcd-hi, #d5ee66) !important;
+  color: #111417 !important;
+}
+
+html.dark .nk-btn--danger,
+body.dark .nk-btn--danger {
+  background: #381515 !important;
+  color: #f87171 !important;
+  border-color: #f87171 !important;
+}
+
+html.dark .nk-btn--danger:hover:not(:disabled),
+body.dark .nk-btn--danger:hover:not(:disabled) {
+  background: #4c1d1d !important;
+  color: #fca5a5 !important;
+}
+
+html.dark .nk-info-strip,
+body.dark .nk-info-strip {
+  background: var(--nk-sunk, #22272b) !important;
+  border-color: var(--nk-line-2, #3a4248) !important;
+  color: var(--nk-ink-2, #a4aaad) !important;
+}
+
+html.dark .nk-info-strip strong,
+body.dark .nk-info-strip strong {
+  color: var(--nk-ink, #f1ede6) !important;
+}
+
+html.dark .nk-other-means-pill,
+body.dark .nk-other-means-pill {
+  background: var(--nk-field, #131618) !important;
+  border-color: var(--nk-line-2, #3a4248) !important;
+  color: var(--nk-lcd, #c6e24a) !important;
+}
+
+html.dark .nk-origin-badge,
+body.dark .nk-origin-badge {
+  background: var(--nk-sunk, #22272b) !important;
+  border-color: var(--nk-line-2, #3a4248) !important;
+  color: var(--nk-ink, #f1ede6) !important;
+}
+
+html.dark .nk-origin-badge--rep,
+body.dark .nk-origin-badge--rep {
+  background: rgba(96, 165, 250, 0.16) !important;
+  border-color: #60a5fa !important;
+  color: #93c5fd !important;
+}
+
+html.dark .nk-motivo-meta,
+body.dark .nk-motivo-meta {
+  color: #fbbf24 !important;
 }
 
 /* Responsive */
@@ -767,8 +1090,6 @@ textarea.nk-field {
     display: none !important;
   }
 }
-
-
 
 /* ==========================================================================
    NOKIA 1100 · PANTALLITA LCD LOADER RETRO ("N-O-K-I-A" EN CASCADA ELÁSTICA)

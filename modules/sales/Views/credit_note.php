@@ -53,7 +53,7 @@
                     <h3>Detalles de Emisión</h3>
                     <p><strong>Fecha Venta Orig.:</strong> <?php echo date('d/m/Y', strtotime($venta['fecha'])); ?></p>
                     <p><strong>Hora:</strong> <?php echo date('H:i', strtotime($venta['fecha'])); ?></p>
-                    <p><strong>Método de Reintegro:</strong> <span style="text-transform: uppercase;"><?php echo htmlspecialchars($venta['metodo_de_pago']); ?></span></p>
+                    <p><strong>Método de Reintegro:</strong> <span style="text-transform: uppercase;"><?php echo htmlspecialchars($venta['metodo_de_pago_detalle'] ?? $venta['metodo_de_pago']); ?></span></p>
                 </div>
             </div>
 
@@ -90,6 +90,18 @@
                     </div>
                 </div>
             </div>
+
+            <?php if (!empty($venta['pagos']) && count($venta['pagos']) > 1): ?>
+            <div class="description-section" style="margin-top: 16px; padding: 12px 15px; background: #fef2f2; border-radius: 8px; border-left: 4px solid #dc2626;">
+                <h4 style="margin: 0 0 6px 0; font-size: 11px; color: #991b1b; text-transform: uppercase;">Desglose de Reintegro por Medio de Pago</h4>
+                <?php foreach ($venta['pagos'] as $pItem): ?>
+                <p style="margin: 2px 0; font-size: 13px; color: #7f1d1d; display: flex; justify-content: space-between;">
+                    <span><strong><?php echo htmlspecialchars($pItem['metodo_pago']); ?>:</strong></span>
+                    <span>-$<?php echo number_format((float)$pItem['monto'], 2); ?></span>
+                </p>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
 
             <div class="description-section" style="margin-top: 20px; padding: 15px; background: #fff1f2; border-radius: 8px; border-left: 4px solid #dc2626;">
                 <h4 style="margin: 0 0 5px 0; font-size: 12px; color: #991b1b; text-transform: uppercase;">Aclaración</h4>

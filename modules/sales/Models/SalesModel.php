@@ -3,9 +3,168 @@
 
 require_once __DIR__ . '/../../../classes/BaseModel.php';
 require_once __DIR__ . '/../../../classes/ServiceProduct.php';
+require_once __DIR__ . '/../../caja/Models/CajaModel.php';
 
 class SalesModel extends BaseModel
 {
+    public const METODOS_PAGO = ['Efectivo', 'Transferencia', 'Tarjeta'];
+
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Delegado de compatibilidad hacia el migrador SQL centralizado (`database/run_migrations.php`).
+     */
+    public static function ensure_payment_schema(mysqli $conn): void
+    {
+        $migFile = __DIR__ . '/../../../database/run_migrations.php';
+        if (file_exists($migFile)) {
+            require_once $migFile;
+            apply_system_migrations($conn);
+        }
+    }
+
+    /**
+     * Valida y normaliza hasta 2 medios de pago combinados contra el total exacto de la venta.
+     *
+     * @param array  $pagos_raw       Lista de pagos [['metodo' => string, 'monto' => float], ...]
+     * @param string $metodo_fallback Método único si no se envía arreglo de pagos
+     * @param float  $total_esperado  Monto total exacto de la venta
+     * @return array{pagos: array<int, array{metodo: string, monto: float}>, metodo_resumen: string, monto_efectivo: float, es_combinado: bool}
+     */
+    public static function validate_and_normalize_payments(array $pagos_raw, string $metodo_fallback, float $total_esperado): array
+    {
+        $total_esperado = round($total_esperado, 2);
+        if ($total_esperado <= 0) {
+            throw new Exception("El total de la venta debe ser mayor a cero.");
+        }
+
+        $pagos_limpios = [];
+        if (!empty($pagos_raw)) {
+            foreach ($pagos_raw as $p) {
+                if (!is_array($p)) {
+                    continue;
+                }
+                $metodo = trim((string)($p['metodo'] ?? $p['metodo_pago'] ?? ''));
+                $monto_raw = isset($p['monto']) ? str_replace(',', '.', (string)$p['monto']) : '';
+                $monto = is_numeric($monto_raw) ? round((float)$monto_raw, 2) : 0.0;
+                $pagos_limpios[] = [
+                    'metodo' => $metodo,
+                    'monto'  => $monto
+                ];
+            }
+        } elseif ($metodo_fallback !== '') {
+            $pagos_limpios[] = [
+                'metodo' => trim($metodo_fallback),
+                'monto'  => $total_esperado
+            ];
+        }
+
+        if (empty($pagos_limpios)) {
+            throw new Exception("Debe especificar al menos un medio de pago.");
+        }
+
+        if (count($pagos_limpios) > 2) {
+            throw new Exception("Solo se permiten hasta 2 medios de pago combinados por venta.");
+        }
+
+        // Si es pago único y no se especificó monto explícito, asume el total de la venta
+        if (count($pagos_limpios) === 1 && $pagos_limpios[0]['monto'] <= 0) {
+            $pagos_limpios[0]['monto'] = $total_esperado;
+        }
+
+        $metodos_vistos = [];
+        $suma_pagos = 0.0;
+        $monto_efectivo = 0.0;
+
+        foreach ($pagos_limpios as $idx => $pago) {
+            $num = $idx + 1;
+            if (!in_array($pago['metodo'], self::METODOS_PAGO, true)) {
+                throw new Exception("El medio de pago #$num ('{$pago['metodo']}') no es válido.");
+            }
+            if ($pago['monto'] <= 0) {
+                throw new Exception("El monto del medio de pago '{$pago['metodo']}' debe ser mayor a cero.");
+            }
+            if (in_array($pago['metodo'], $metodos_vistos, true)) {
+                throw new Exception("No puede seleccionar dos veces el mismo medio de pago ('{$pago['metodo']}') en un pago combinado.");
+            }
+            $metodos_vistos[] = $pago['metodo'];
+            $suma_pagos = round($suma_pagos + $pago['monto'], 2);
+
+            if ($pago['metodo'] === 'Efectivo') {
+                $monto_efectivo = round($monto_efectivo + $pago['monto'], 2);
+            }
+        }
+
+        if (abs($suma_pagos - $total_esperado) > 0.01) {
+            throw new Exception(
+                "La suma de los pagos ($" . number_format($suma_pagos, 2, '.', '') .
+                ") debe ser exactamente igual al total de la venta ($" . number_format($total_esperado, 2, '.', '') . ")."
+            );
+        }
+
+        // Ajuste de centavo por redondeo flotante si está dentro de 0.01
+        $diff = round($total_esperado - $suma_pagos, 2);
+        if ($diff !== 0.0) {
+            $lastIdx = count($pagos_limpios) - 1;
+            $pagos_limpios[$lastIdx]['monto'] = round($pagos_limpios[$lastIdx]['monto'] + $diff, 2);
+            if ($pagos_limpios[$lastIdx]['metodo'] === 'Efectivo') {
+                $monto_efectivo = round($monto_efectivo + $diff, 2);
+            }
+        }
+
+        $es_combinado = count($pagos_limpios) === 2;
+        $metodo_resumen = $es_combinado
+            ? ($pagos_limpios[0]['metodo'] . ' + ' . $pagos_limpios[1]['metodo'])
+            : $pagos_limpios[0]['metodo'];
+
+        return [
+            'pagos'          => $pagos_limpios,
+            'metodo_resumen' => $metodo_resumen,
+            'monto_efectivo' => $monto_efectivo,
+            'es_combinado'   => $es_combinado
+        ];
+    }
+
+    /**
+     * Obtiene los pagos individuales asociados a una venta.
+     */
+    public function get_sale_payments(int $id_venta): array
+    {
+        $stmt = $this->conn->prepare("SELECT id_pago, metodo_pago, monto FROM venta_pago WHERE id_venta = ? ORDER BY id_pago ASC");
+        $stmt->bind_param("i", $id_venta);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $pagos = [];
+        while ($row = $res->fetch_assoc()) {
+            $pagos[] = [
+                'id_pago'     => (int)$row['id_pago'],
+                'metodo_pago' => $row['metodo_pago'],
+                'monto'       => (float)$row['monto']
+            ];
+        }
+        $stmt->close();
+
+        if (empty($pagos)) {
+            $stmtV = $this->conn->prepare("SELECT metodo_de_pago, total FROM venta WHERE id_venta = ? LIMIT 1");
+            $stmtV->bind_param("i", $id_venta);
+            $stmtV->execute();
+            $v = $stmtV->get_result()->fetch_assoc();
+            $stmtV->close();
+            if ($v) {
+                $pagos[] = [
+                    'id_pago'     => 0,
+                    'metodo_pago' => trim((string)($v['metodo_de_pago'] ?? '')) ?: 'Efectivo',
+                    'monto'       => (float)($v['total'] ?? 0)
+                ];
+            }
+        }
+
+        return $pagos;
+    }
+
     public function get_sales($limit = 50, $offset = 0)
     {
         $limit = (int)$limit;
@@ -14,7 +173,16 @@ class SalesModel extends BaseModel
                     v.id_venta, 
                     v.fecha, 
                     v.total, 
-                    COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), 'N/A') AS metodo_de_pago,
+                    COALESCE(
+                        (SELECT CASE 
+                            WHEN COUNT(*) > 1 THEN GROUP_CONCAT(CONCAT(vp.metodo_pago, ' ($', FORMAT(vp.monto, 2), ')') ORDER BY vp.id_pago ASC SEPARATOR ' + ')
+                            WHEN COUNT(*) = 1 THEN MAX(vp.metodo_pago)
+                            ELSE NULL
+                         END
+                         FROM venta_pago vp WHERE vp.id_venta = v.id_venta),
+                        NULLIF(TRIM(v.metodo_de_pago), ''), 
+                        'N/A'
+                    ) AS metodo_de_pago,
                     v.estado,
                     COALESCE(dv.nombre_producto, p.nombre, NULLIF(TRIM(v.descripcion), ''), 'Venta directa') AS producto,
                     COALESCE(dv.cantidad, 1) AS cantidad
@@ -57,6 +225,19 @@ class SalesModel extends BaseModel
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
+
+        if ($row) {
+            $pagos = $this->get_sale_payments($id);
+            $row['pagos'] = $pagos;
+            if (count($pagos) > 1) {
+                $partes = array_map(fn($p) => $p['metodo_pago'] . ' ($' . number_format((float)$p['monto'], 2) . ')', $pagos);
+                $row['metodo_de_pago_detalle'] = implode(' + ', $partes);
+            } elseif (count($pagos) === 1) {
+                $row['metodo_de_pago_detalle'] = $pagos[0]['metodo_pago'];
+            } else {
+                $row['metodo_de_pago_detalle'] = $row['metodo_de_pago'];
+            }
+        }
 
         if ($row && !empty($row['descripcion']) && preg_match('/Cobro de Reparaci[oó]n #([^\s-]+)/iu', $row['descripcion'], $matches)) {
             $codigo_orden = trim($matches[1]);
@@ -134,17 +315,20 @@ class SalesModel extends BaseModel
 
     public function get_sales_by_payment_methods()
     {
-        $sql = "SELECT metodo_de_pago, SUM(total) as amount 
-                FROM venta 
-                WHERE estado != 'anulada'
-                GROUP BY metodo_de_pago";
+        $sql = "SELECT 
+                    COALESCE(NULLIF(TRIM(vp.metodo_pago), ''), NULLIF(TRIM(v.metodo_de_pago), ''), 'Otro') AS metodo_de_pago,
+                    SUM(COALESCE(vp.monto, v.total)) AS amount
+                FROM venta v
+                LEFT JOIN venta_pago vp ON v.id_venta = vp.id_venta
+                WHERE v.estado != 'anulada'
+                GROUP BY COALESCE(NULLIF(TRIM(vp.metodo_pago), ''), NULLIF(TRIM(v.metodo_de_pago), ''), 'Otro')";
         $result = $this->conn->query($sql);
         $methods = [];
         $amounts = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $methods[] = empty($row['metodo_de_pago']) ? 'Otro' : $row['metodo_de_pago'];
-                $amounts[] = $row['amount'];
+                $amounts[] = (float)$row['amount'];
             }
         }
         return ['methods' => $methods, 'amounts' => $amounts];
@@ -260,7 +444,16 @@ class SalesModel extends BaseModel
                     v.id_venta, 
                     v.fecha, 
                     v.total, 
-                    COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), 'N/A') AS metodo_de_pago,
+                    COALESCE(
+                        (SELECT CASE 
+                            WHEN COUNT(*) > 1 THEN GROUP_CONCAT(CONCAT(vp.metodo_pago, ' ($', FORMAT(vp.monto, 2), ')') ORDER BY vp.id_pago ASC SEPARATOR ' + ')
+                            WHEN COUNT(*) = 1 THEN MAX(vp.metodo_pago)
+                            ELSE NULL
+                         END
+                         FROM venta_pago vp WHERE vp.id_venta = v.id_venta),
+                        NULLIF(TRIM(v.metodo_de_pago), ''), 
+                        'N/A'
+                    ) AS metodo_de_pago,
                     v.estado,
                     COALESCE(dv.nombre_producto, p.nombre, NULLIF(TRIM(v.descripcion), ''), 'Venta directa') AS producto,
                     COALESCE(dv.cantidad, 1) AS cantidad
@@ -279,7 +472,7 @@ class SalesModel extends BaseModel
         return $data;
     }
 
-    public function create_sale_transaction(array $items, string $metodo_pago, int|string $user_id, string $descripcion = '')
+    public function create_sale_transaction(array $items, string|array $metodo_o_pagos, int|string $user_id, string $descripcion = '')
     {
         require_once __DIR__ . '/../../../config/audit.php';
         
@@ -353,11 +546,34 @@ class SalesModel extends BaseModel
                 $total_venta += $prod['precio'] * $item['cantidad'];
             }
 
+            $total_venta = round((float)$total_venta, 2);
+
+            // Validar y normalizar el pago (único o combinado de hasta 2 medios) contra el total exacto de la venta
+            $pagos_raw = is_array($metodo_o_pagos) ? $metodo_o_pagos : [];
+            $metodo_fallback = is_string($metodo_o_pagos) ? $metodo_o_pagos : '';
+            $pago_info = self::validate_and_normalize_payments($pagos_raw, $metodo_fallback, $total_venta);
+            $metodo_pago_resumen = $pago_info['metodo_resumen'];
+            $pagos_validados = $pago_info['pagos'];
+            $monto_efectivo = $pago_info['monto_efectivo'];
+            $es_combinado = $pago_info['es_combinado'];
+
             $stmt = $this->conn->prepare("INSERT INTO venta (fecha, total, metodo_de_pago, id_usuario, descripcion) VALUES (?, ?, ?, ?, ?)");
-            $stmt->bind_param("sdsis", $fecha, $total_venta, $metodo_pago, $user_id, $descripcion);
+            $stmt->bind_param("sdsis", $fecha, $total_venta, $metodo_pago_resumen, $user_id, $descripcion);
             if (!$stmt->execute()) throw new Exception("Error al crear venta");
             $id_venta = $this->conn->insert_id;
             $stmt->close();
+
+            // Guardar cada pago por separado (medio y monto) asociado a la venta
+            $stmtPago = $this->conn->prepare("INSERT INTO venta_pago (id_venta, metodo_pago, monto) VALUES (?, ?, ?)");
+            foreach ($pagos_validados as $pItem) {
+                $mNombre = $pItem['metodo'];
+                $mMonto = (float)$pItem['monto'];
+                $stmtPago->bind_param("isd", $id_venta, $mNombre, $mMonto);
+                if (!$stmtPago->execute()) {
+                    throw new Exception("Error al registrar el desglose de pago de la venta.");
+                }
+            }
+            $stmtPago->close();
 
             $nombres_vendidos = [];
             foreach ($items as $item) {
@@ -394,12 +610,32 @@ class SalesModel extends BaseModel
                     "Stock de '$nombre_producto' reducido en {$item['cantidad']} unidades por venta (Usuario: $username_audit)");
             }
 
-            $this->conn->commit();
-
             $productos_str = implode(", ", $nombres_vendidos);
 
+            // Libro de Caja inmutable dentro de la misma transacción:
+            // - Bloquea la venta si hay efectivo ($monto_efectivo > 0) y no existe caja abierta.
+            // - Registra los pagos con su `medio_pago` e `id_venta` (el arqueo físico filtra medio_pago = 'efectivo').
+            $uid_int = is_numeric($user_id) && (int)$user_id > 0 ? (int)$user_id : null;
+            CajaModel::recordSaleMovementsInTransaction(
+                $this->conn,
+                (int)$id_venta,
+                null,
+                $pagos_validados,
+                $monto_efectivo,
+                $total_venta,
+                $es_combinado,
+                'Venta',
+                $productos_str,
+                $uid_int
+            );
+
+            $this->conn->commit();
+
+            $pagos_log_parts = array_map(fn($p) => "{$p['metodo']}: \$" . number_format((float)$p['monto'], 2, '.', ''), $pagos_validados);
+            $pagos_log_str = implode(" + ", $pagos_log_parts);
+
             audit_log($this->conn, 'SALE_CREATE', $user_id, 'venta', $id_venta,
-                "Usuario $username_audit registró venta. Total: \$$total_venta. Método: $metodo_pago. Productos: $productos_str");
+                "Usuario $username_audit registró venta. Total: \$$total_venta. Pagos: $pagos_log_str. Productos: $productos_str");
 
             return $id_venta;
         } catch (Exception $e) {
@@ -413,7 +649,7 @@ class SalesModel extends BaseModel
         $this->conn->begin_transaction();
         try {
             // Verificar estado actual
-            $stmt = $this->conn->prepare("SELECT estado, descripcion FROM venta WHERE id_venta = ? FOR UPDATE");
+            $stmt = $this->conn->prepare("SELECT estado, descripcion, total, metodo_de_pago FROM venta WHERE id_venta = ? FOR UPDATE");
             $stmt->bind_param("i", $id_venta);
             $stmt->execute();
             $res = $stmt->get_result();
@@ -475,6 +711,29 @@ class SalesModel extends BaseModel
                 $items_revertidos++;
             }
             $stmt->close();
+
+            // Revertir en Caja ÚNICAMENTE la parte que fue abonada en Efectivo
+            $stmtPagos = $this->conn->prepare("SELECT metodo_pago, monto FROM venta_pago WHERE id_venta = ?");
+            $stmtPagos->bind_param("i", $id_venta);
+            $stmtPagos->execute();
+            $resPagos = $stmtPagos->get_result();
+            $monto_efectivo_revertir = 0.0;
+            $tiene_pagos_tabla = false;
+            while ($pRow = $resPagos->fetch_assoc()) {
+                $tiene_pagos_tabla = true;
+                if (mb_strtolower(trim((string)$pRow['metodo_pago']), 'UTF-8') === 'efectivo') {
+                    $monto_efectivo_revertir += (float)$pRow['monto'];
+                }
+            }
+            $stmtPagos->close();
+
+            if (!$tiene_pagos_tabla && mb_strtolower(trim((string)($venta['metodo_de_pago'] ?? '')), 'UTF-8') === 'efectivo') {
+                $monto_efectivo_revertir = (float)($venta['total'] ?? 0);
+            }
+
+            // Registrar contra-asiento inmutable en Caja dentro de la misma transacción (vinculado por id_venta)
+            $uid_int = is_numeric($audit_user) && (int)$audit_user > 0 ? (int)$audit_user : null;
+            CajaModel::reverseSaleMovementsInTransaction($this->conn, $id_venta, $monto_efectivo_revertir, $uid_int);
 
             // Si la venta corresponde al cobro de una reparación, registrar nota en historial sin devolver a la cola de cobro
             $reparacion_afectada = null;
@@ -544,11 +803,13 @@ class SalesModel extends BaseModel
 
     public function get_sales_methods()
     {
-        $sql = "SELECT COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), 'Otro') as metodo, SUM(v.total) as total_ventas 
+        $sql = "SELECT 
+                    COALESCE(NULLIF(TRIM(vp.metodo_pago), ''), NULLIF(TRIM(v.metodo_de_pago), ''), 'Otro') AS metodo,
+                    SUM(COALESCE(vp.monto, v.total)) AS total_ventas
                 FROM venta v
-
+                LEFT JOIN venta_pago vp ON v.id_venta = vp.id_venta
                 WHERE v.estado != 'anulada' AND v.fecha >= DATE(NOW()) - INTERVAL 30 DAY
-                GROUP BY metodo";
+                GROUP BY COALESCE(NULLIF(TRIM(vp.metodo_pago), ''), NULLIF(TRIM(v.metodo_de_pago), ''), 'Otro')";
         $result = $this->conn->query($sql);
         
         $labels = [];
@@ -556,7 +817,7 @@ class SalesModel extends BaseModel
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $labels[] = $row['metodo'];
-                $data[] = $row['total_ventas'];
+                $data[] = (float)$row['total_ventas'];
             }
         }
         return ['labels' => $labels, 'data' => $data];

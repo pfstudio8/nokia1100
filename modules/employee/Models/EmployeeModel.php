@@ -8,7 +8,7 @@ class EmployeeModel extends BaseModel
 {
     public function get_daily_sales_stats(string $date): array
     {
-        $stmt = $this->conn->prepare("SELECT SUM(total) as total_hoy, COUNT(*) as transacciones FROM venta WHERE DATE(fecha) = ?");
+        $stmt = $this->conn->prepare("SELECT SUM(total) as total_hoy, COUNT(*) as transacciones FROM venta WHERE DATE(fecha) = ? AND estado != 'anulada'");
         $stmt->bind_param("s", $date);
         $stmt->execute();
         $res = $stmt->get_result();
@@ -23,7 +23,22 @@ class EmployeeModel extends BaseModel
     public function get_recent_sales(int $limit = 5): array
     {
         $limit = (int) $limit;
-        $stmt = $this->conn->prepare("SELECT v.id_venta, v.fecha, v.total, COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), 'N/A') AS metodo_de_pago FROM venta v WHERE v.estado != 'anulada' ORDER BY v.fecha DESC, v.id_venta DESC LIMIT ?");
+        $sql = "SELECT v.id_venta, v.fecha, v.total,
+                       COALESCE(
+                           (SELECT CASE 
+                               WHEN COUNT(*) > 1 THEN GROUP_CONCAT(CONCAT(vp.metodo_pago, ' ($', FORMAT(vp.monto, 2), ')') ORDER BY vp.id_pago ASC SEPARATOR ' + ')
+                               WHEN COUNT(*) = 1 THEN MAX(vp.metodo_pago)
+                               ELSE NULL
+                            END
+                            FROM venta_pago vp WHERE vp.id_venta = v.id_venta),
+                           NULLIF(TRIM(v.metodo_de_pago), ''), 
+                           'N/A'
+                       ) AS metodo_de_pago
+                FROM venta v
+                WHERE v.estado != 'anulada'
+                ORDER BY v.fecha DESC, v.id_venta DESC
+                LIMIT ?";
+        $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $limit);
         $stmt->execute();
         $result = $stmt->get_result();

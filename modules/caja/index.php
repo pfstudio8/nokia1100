@@ -15,6 +15,7 @@ switch ($action) {
         $controller->add_movement();
         break;
     case 'remove_movement':
+    case 'reverse_movement':
         $controller->remove_movement();
         break;
     case 'close':
