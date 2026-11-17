@@ -4,7 +4,7 @@
 
 function apply_system_migrations(mysqli $conn): void
 {
-    $lockFile = __DIR__ . '/.schema_v3_immutable_caja.lock';
+    $lockFile = __DIR__ . '/.schema_v4_immutable_caja.lock';
     if (file_exists($lockFile)) {
         return;
     }
@@ -106,6 +106,15 @@ function apply_system_migrations(mysqli $conn): void
             }
         }
 
+        // 5. Asegurar que los usuarios con rol 'empleado' que tenían el set por defecto anterior incluyan el módulo 'caja'
+        try {
+            $conn->query("UPDATE `usuario`
+                          SET `modulos_permitidos` = 'dashboard,venta,caja,inventario,clientes'
+                          WHERE `rol` = 'empleado'
+                            AND (`modulos_permitidos` IS NULL OR TRIM(`modulos_permitidos`) = 'dashboard,venta,inventario,clientes')");
+        } catch (Throwable $e) {}
+
+        @unlink(__DIR__ . '/.schema_v3_immutable_caja.lock');
         @file_put_contents($lockFile, date('c'));
     } catch (Throwable $e) {
         error_log("Migration warning: " . $e->getMessage());

@@ -87,7 +87,7 @@ class AuthModel extends BaseModel
             $token = isset($user_data['token_verificacion']) ? $user_data['token_verificacion'] : null;
             $expira = isset($user_data['token_expira']) ? $user_data['token_expira'] : null;
             
-            $modulos_permitidos = ($rol === 'admin') ? null : 'dashboard,venta,inventario,clientes';
+            $modulos_permitidos = ($rol === 'admin') ? null : 'dashboard,venta,caja,inventario,clientes';
 
             // Insertar datos de usuario
             $stmt = $this->conn->prepare(

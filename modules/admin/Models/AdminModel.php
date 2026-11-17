@@ -238,7 +238,7 @@ class AdminModel extends BaseModel
             }
             $stmt->close();
 
-            $default_modulos = 'dashboard,venta,inventario,clientes';
+            $default_modulos = 'dashboard,venta,caja,inventario,clientes';
             if (!empty($user_data['hashed_password'])) {
                 if ($user_data['rol'] === 'admin') {
                     $stmt = $this->conn->prepare("UPDATE usuario SET nombre_usuario = ?, email = ?, rol = ?, contrasena = ?, modulos_permitidos = NULL WHERE id_usuario = ?");
@@ -301,7 +301,7 @@ class AdminModel extends BaseModel
             $stmt = $this->conn->prepare("UPDATE usuario SET rol = ?, modulos_permitidos = NULL WHERE id_usuario = ?");
             $stmt->bind_param("si", $rol, $id_usuario);
         } else {
-            $default_modules = 'dashboard,venta,inventario,clientes';
+            $default_modules = 'dashboard,venta,caja,inventario,clientes';
             $stmt = $this->conn->prepare("UPDATE usuario SET rol = ?, modulos_permitidos = COALESCE(modulos_permitidos, ?) WHERE id_usuario = ?");
             $stmt->bind_param("ssi", $rol, $default_modules, $id_usuario);
         }

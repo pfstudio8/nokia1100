@@ -203,14 +203,14 @@ body.lock {
 .modal .btn-lcd {
   background: var(--lcd) !important;
   border-color: var(--lcd) !important;
-  color: var(--ink) !important;
+  color: #15171a !important;
 }
 
 .inv-page .btn-lcd:hover,
 .modal .btn-lcd:hover {
   background: #d5ee66 !important;
   border-color: #d5ee66 !important;
-  color: var(--ink) !important;
+  color: #15171a !important;
 }
 
 .inv-page .btn-sm,
@@ -1576,9 +1576,19 @@ html.dark .kpi-v.bad {
 html.dark .field,
 html.dark input.field,
 html.dark select.field {
-  background: #131618 !important;
+  background-color: #131618 !important;
   border-color: #3a4248 !important;
   color: #f1ede6 !important;
+}
+
+html.dark select.field,
+html.dark .tool-select select,
+html.dark .d-body select.field,
+html.dark .modal select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f1ede6' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 10px center !important;
+  background-size: 14px 14px !important;
 }
 
 html.dark .field::placeholder {
@@ -1664,6 +1674,20 @@ html.dark .modal .btn.btn-primary:hover {
   color: #111417 !important;
 }
 
+html.dark .inv-page .btn.btn-lcd,
+html.dark .modal .btn.btn-lcd {
+  background: #c6e24a !important;
+  border-color: #c6e24a !important;
+  color: #15171a !important;
+}
+
+html.dark .inv-page .btn.btn-lcd:hover,
+html.dark .modal .btn.btn-lcd:hover {
+  background: #d5ee66 !important;
+  border-color: #d5ee66 !important;
+  color: #15171a !important;
+}
+
 /* Stock meter & tags */
 html.dark .stock-wrap .meter {
   background: #22272b !important;
@@ -1694,18 +1718,83 @@ html.dark .tag-off {
   color: #f87171 !important;
 }
 
+html.dark .modal {
+  background: rgba(8, 10, 11, 0.78) !important;
+}
+
+html.dark .modal .dialog,
 html.dark .modal .sheet {
   background: #181c1f !important;
-  border-color: #3a4248 !important;
+  border: 1px solid #293035 !important;
+  color: #f1ede6 !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.06) !important;
+}
+
+html.dark .d-head,
+html.dark .modal-head {
+  background: #131618 !important;
+  border-bottom: 1px solid #293035 !important;
+}
+
+html.dark .d-head h3 {
   color: #f1ede6 !important;
 }
 
-html.dark .modal-head {
-  border-bottom-color: #293035 !important;
+html.dark .d-head p {
+  color: #9ba19f !important;
 }
 
+html.dark .d-head .icon-btn {
+  background: #22272b !important;
+  color: #9ba19f !important;
+}
+
+html.dark .d-head .icon-btn:hover {
+  background: #2f363c !important;
+  color: #f1ede6 !important;
+}
+
+html.dark .d-body {
+  background: #181c1f !important;
+  color: #f1ede6 !important;
+}
+
+html.dark .d-body .lbl {
+  color: #a4aaad !important;
+}
+
+html.dark .d-body .hint {
+  color: #757c82 !important;
+}
+
+html.dark .d-body .money span {
+  color: #9ba19f !important;
+}
+
+html.dark #fEstado.seg {
+  background: #131618 !important;
+  border-color: #3a4248 !important;
+}
+
+html.dark #fEstado.seg button {
+  background: transparent !important;
+  color: #9ba19f !important;
+}
+
+html.dark #fEstado.seg button:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+  color: #f1ede6 !important;
+}
+
+html.dark #fEstado.seg button[aria-pressed=true] {
+  background: #c6e24a !important;
+  color: #111417 !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.35) !important;
+}
+
+html.dark .d-foot,
 html.dark .modal-foot {
-  border-top-color: #293035 !important;
+  border-top: 1px solid #293035 !important;
   background: #131618 !important;
 }
 

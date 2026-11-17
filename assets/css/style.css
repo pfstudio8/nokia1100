@@ -674,12 +674,13 @@ input:-webkit-autofill:active {
 .btn-lcd {
     background: var(--lcd) !important;
     border-color: var(--lcd) !important;
-    color: var(--ink) !important;
+    color: #15171a !important;
 }
 
 .btn-lcd:hover {
     background: #d5ee66 !important;
     border-color: #d5ee66 !important;
+    color: #15171a !important;
 }
 
 .btn-back, .logout-btn {
@@ -1138,19 +1139,26 @@ html.is-animating body {
 .premium-input-container input, 
 .premium-input-container select {
     padding: 0.5rem 1rem 0.5rem 2.75rem !important;
-    background: var(--background) !important;
+    background-color: var(--background) !important;
     border: 1px solid var(--border) !important;
     border-radius: 8px !important;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: border-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     font-size: 0.85rem !important;
     color: var(--text-main) !important;
+}
+
+.premium-input-container select {
+    padding-right: 2.25rem !important;
+    background-repeat: no-repeat !important;
+    background-position: calc(100% - 10px) center !important;
+    background-size: 14px 14px !important;
 }
 
 .premium-input-container input:focus, 
 .premium-input-container select:focus {
     border-color: var(--primary-color) !important;
     box-shadow: 0 0 0 3px rgba(14, 165, 160, 0.2) !important;
-    background: var(--surface) !important;
+    background-color: var(--surface) !important;
 }
 
 /* ============================================================
@@ -1323,19 +1331,19 @@ html.is-animating body {
 .premium-form-input {
     width: 100%;
     padding: 0.9rem 1rem 0.9rem 2.75rem !important;
-    background: var(--background) !important;
+    background-color: var(--background) !important;
     border: 1px solid var(--border) !important;
     border-radius: 12px !important;
     color: var(--text-main) !important;
     font-size: 0.9rem !important;
-    transition: all 0.3s ease !important;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease !important;
 }
 
 .premium-form-input:focus {
     outline: none !important;
     border-color: var(--primary-color) !important;
     box-shadow: 0 0 0 3px rgba(14, 165, 160, 0.15) !important;
-    background: var(--surface) !important;
+    background-color: var(--surface) !important;
 }
 
 .premium-form-icon {
@@ -2014,12 +2022,13 @@ button.btn-export.is-canceled,
 
 .nk-btn--lcd {
   background: var(--nk-lcd);
-  color: var(--nk-ink);
-  border-color: var(--nk-ink);
+  color: #15171a;
+  border-color: #15171a;
 }
 
 .nk-btn--lcd:hover {
   background: var(--nk-lcd-hi);
+  color: #15171a;
 }
 
 .nk-btn--danger {
@@ -2696,16 +2705,21 @@ html.dark textarea:focus {
 
 html.dark select,
 html.dark .nk-field select,
-html.dark select.nk-field {
+html.dark select.nk-field,
+html.dark .premium-input-container select {
     background-color: var(--nk-field) !important;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f1ede6' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+    background-repeat: no-repeat !important;
+    background-position: calc(100% - 10px) center !important;
+    background-size: 14px 14px !important;
     border-color: var(--nk-line-2) !important;
     color: var(--nk-ink) !important;
 }
 
 html.dark select:hover,
 html.dark .nk-field select:hover,
-html.dark select.nk-field:hover {
+html.dark select.nk-field:hover,
+html.dark .premium-input-container select:hover {
     border-color: var(--nk-ink) !important;
     background-color: var(--nk-sunk) !important;
 }
@@ -2718,7 +2732,7 @@ html.dark label {
 html.dark .glass-card,
 html.dark .nk-panel,
 html.dark .caja-modal-dialog,
-html.dark .modal,
+html.dark .dialog,
 html.dark .nk-dialog,
 html.dark .dashboard-container,
 html.dark [class*="modal-dialog"] {
@@ -2808,6 +2822,17 @@ html.dark .nk-btn--primary:hover {
     background: var(--nk-lcd-hi) !important;
     border-color: var(--nk-lcd-hi) !important;
     color: #111417 !important;
+}
+
+html.dark .btn-lcd,
+html.dark .btn-lcd:hover,
+html.dark .btn-lcd span,
+html.dark .btn-lcd .material-symbols-outlined,
+html.dark .nk-btn--lcd,
+html.dark .nk-btn--lcd:hover,
+html.dark .nk-btn--lcd span,
+html.dark .nk-btn--lcd .material-symbols-outlined {
+    color: #15171a !important;
 }
 
 html.dark .nk-btn {

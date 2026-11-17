@@ -13,6 +13,7 @@ GUIA_PRUEBAS_*.md
 .env
 .env.*
 !.env.example
+config/*.local.php
 
 # Dependencias
 /vendor/
