@@ -745,8 +745,8 @@ public function get_active_products_in_stock()
             // 6. Crear Detalle de Venta (Servicio Técnico Taller)
             $id_producto_servicio = $this->get_or_ensure_service_product();
             $nombre_prod = "Servicio Técnico Taller";
-            $stmt_det = $this->conn->prepare("INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, nombre_producto, precio_copiado) VALUES (?, ?, 1, ?, ?, ?)");
-            $stmt_det->bind_param("iidsd", $id_venta, $id_producto_servicio, $monto_total, $nombre_prod, $monto_total);
+            $stmt_det = $this->conn->prepare("INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, nombre_producto) VALUES (?, ?, 1, ?, ?)");
+            $stmt_det->bind_param("iids", $id_venta, $id_producto_servicio, $monto_total, $nombre_prod);
             $stmt_det->execute();
             $stmt_det->close();
 
@@ -826,9 +826,9 @@ public function get_active_products_in_stock()
 
             // 2. Crear Detalle de Venta
             $id_producto_servicio = $this->get_or_ensure_service_product();
-            $stmt = $this->conn->prepare("INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, nombre_producto, precio_copiado) VALUES (?, ?, 1, ?, ?, ?)");
+            $stmt = $this->conn->prepare("INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, nombre_producto) VALUES (?, ?, 1, ?, ?)");
             $nombre_prod = "Servicio Técnico Taller";
-            $stmt->bind_param("iidsd", $id_venta, $id_producto_servicio, $monto, $nombre_prod, $monto);
+            $stmt->bind_param("iids", $id_venta, $id_producto_servicio, $monto, $nombre_prod);
             $stmt->execute();
             $stmt->close();
 

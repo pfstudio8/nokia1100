@@ -84,12 +84,11 @@ class SupplierModel extends BaseModel
     public function get_purchase_details($id_compra)
     {
         $stmt = $this->conn->prepare("SELECT dc.*, 
-                COALESCE(pch.nombre_producto, p.nombre, 'Artículo') AS nombre_producto, 
-                COALESCE(pch.marca, pd.marca, '') AS marca, 
-                COALESCE(pch.modelo, pd.modelo, '') AS modelo,
+                COALESCE(NULLIF(TRIM(dc.nombre_producto), ''), p.nombre, 'Artículo') AS nombre_producto, 
+                COALESCE(NULLIF(TRIM(dc.marca), ''), pd.marca, '') AS marca, 
+                COALESCE(NULLIF(TRIM(dc.modelo), ''), pd.modelo, '') AS modelo,
                 COALESCE(pd.codigo, '') AS sku
             FROM detalle_compra dc
-            LEFT JOIN producto_compra_historial pch ON dc.id_detalle_compra = pch.id_detalle_compra
             LEFT JOIN producto p ON dc.id_producto = p.id_producto
             LEFT JOIN producto_detalle pd ON dc.id_producto = pd.id_producto
             WHERE dc.id_compra = ?");
@@ -260,18 +259,11 @@ class SupplierModel extends BaseModel
                 // NO actualizamos el inventario aquí, el pedido queda 'Pendiente'
                 // El inventario se actualizará cuando se llame a receive_purchase()
 
-                $stmt_dc = $this->conn->prepare("INSERT INTO detalle_compra (id_compra, id_producto, cantidad, precio_compra) VALUES (?, ?, ?, ?)");
-                $stmt_dc->bind_param("iiid", $id_compra, $id_producto, $cantidad, $costo);
+                $stmt_dc = $this->conn->prepare("INSERT INTO detalle_compra (id_compra, id_producto, cantidad, precio_compra, nombre_producto, marca, modelo) VALUES (?, ?, ?, ?, ?, ?, ?)");
+                $stmt_dc->bind_param("iiidsss", $id_compra, $id_producto, $cantidad, $costo, $nombre, $marca, $modelo);
                 if (!$stmt_dc->execute())
                     throw new Exception("Error al crear detalle de compra");
-                $id_detalle_compra = (int) $this->conn->insert_id;
                 $stmt_dc->close();
-
-                $stmt_hist = $this->conn->prepare("INSERT INTO producto_compra_historial (id_detalle_compra, nombre_producto, marca, modelo) VALUES (?, ?, ?, ?)");
-                $stmt_hist->bind_param("isss", $id_detalle_compra, $nombre, $marca, $modelo);
-                if (!$stmt_hist->execute())
-                    throw new Exception("Error al crear historial de compra");
-                $stmt_hist->close();
             }
 
             $this->conn->commit();

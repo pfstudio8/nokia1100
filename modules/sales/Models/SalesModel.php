@@ -609,10 +609,10 @@ class SalesModel extends BaseModel
                 $nombres_vendidos[] = $item['cantidad'] . "x " . $nombre_producto;
 
                 $stmt = $this->conn->prepare(
-                    "INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, nombre_producto, precio_copiado)
-                     VALUES (?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, nombre_producto)
+                     VALUES (?, ?, ?, ?, ?)"
                 );
-                $stmt->bind_param("iiidsd", $id_venta, $item['id'], $item['cantidad'], $precio_unitario, $nombre_producto, $precio_unitario);
+                $stmt->bind_param("iiids", $id_venta, $item['id'], $item['cantidad'], $precio_unitario, $nombre_producto);
                 if (!$stmt->execute()) throw new Exception("Error al crear detalle");
                 $stmt->close();
 

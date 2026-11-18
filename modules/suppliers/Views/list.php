@@ -580,6 +580,8 @@ if ($isAdmin) {
       </div>
     </section>
   </div>
+  <!-- Hoja limpia de impresión: Orden de Reposición / Compra -->
+  <section id="nkPrintOrder" class="nk-print-order" aria-hidden="true"></section>
 </main>
 
 <!-- =====================================================================

@@ -10,6 +10,7 @@ switch ($action) {
         $controller->edit();
         break;
     case 'add':
+    case 'delete':
     case 'index':
     case 'clients':
         $controller->index();

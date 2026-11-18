@@ -515,6 +515,149 @@
     return list;
   }
 
+  function renderPrintOrder(options = {}) {
+    const container = $('#nkPrintOrder');
+    if (!container) return;
+
+    const docTitle = options.docTitle || 'ORDEN DE REPOSICIÓN';
+    const concepto = options.concepto || 'Reposición de stock';
+    const supId = options.supplierId !== undefined
+      ? Number(options.supplierId || 0)
+      : Number($('#smartSupplier')?.value || 0);
+    const sup = suppliers.find(s => s.id === supId) || null;
+    const items = Array.isArray(options.items) ? options.items : getSelectedSmartItems();
+
+    const now = new Date();
+    const fechaFmt = now.toLocaleDateString('es-AR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    const horaFmt = now.toLocaleTimeString('es-AR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+
+    const totalItems = items.length;
+    const totalUnits = items.reduce((acc, i) => acc + Number(i.cantidad || 0), 0);
+    const totalAmount = items.reduce((acc, i) => acc + (Number(i.cantidad || 0) * Number(i.costo || 0)), 0);
+    const waClean = sup ? cleanPhone(sup.telefono) : '';
+    const issuer = BOOT.currentUser || 'Admin';
+
+    const rowsHtml = items.length > 0
+      ? items.map((item, idx) => {
+          const prod = catalog.find(p => p.id === item.id_producto);
+          const meta = [item.marca || prod?.marca, item.modelo || prod?.modelo, prod?.categoria]
+            .filter(Boolean)
+            .join(' · ');
+          const qty = Number(item.cantidad || 0);
+          const cost = Number(item.costo || 0);
+          const sub = qty * cost;
+          return `
+            <tr>
+              <td class="is-c nk-po-num">${idx + 1}</td>
+              <td><span class="nk-po-sku">${esc(item.sku)}</span></td>
+              <td>
+                <div class="nk-po-item-name">${esc(item.nombre)}</div>
+                ${meta ? `<div class="nk-po-item-meta">${esc(meta)}</div>` : ''}
+              </td>
+              <td class="is-c nk-po-num">${qty} u.</td>
+              <td class="is-r nk-po-num">${money(cost)}</td>
+              <td class="is-r nk-po-num">${money(sub)}</td>
+            </tr>
+          `;
+        }).join('')
+      : `
+        <tr>
+          <td colspan="6" class="is-c" style="padding: 18px; color: #64748b;">
+            No hay artículos seleccionados para incluir en la orden.
+          </td>
+        </tr>
+      `;
+
+    container.innerHTML = `
+      <div class="nk-po-sheet">
+        <header class="nk-po-header">
+          <div class="nk-po-brand">
+            <h1>NOKIA 1100</h1>
+            <p>Servicio Técnico · Accesorios y Repuestos</p>
+            <p>Emitido por: <strong>${esc(issuer)}</strong></p>
+          </div>
+          <div class="nk-po-doc">
+            <h2 class="nk-po-doc-title">${esc(docTitle)}</h2>
+            <p class="nk-po-doc-meta">Fecha: ${esc(fechaFmt)} · ${esc(horaFmt)} hs</p>
+            <p class="nk-po-doc-meta">Estado: Solicitud de pedido</p>
+          </div>
+        </header>
+
+        <section class="nk-po-parties">
+          <div class="nk-po-box">
+            <h3>Proveedor / Distribuidor</h3>
+            <p><strong>Razón Social:</strong> ${esc(sup ? sup.nombre : 'A designar')}</p>
+            ${sup?.atencion ? `<p><strong>Contacto:</strong> ${esc(sup.atencion)}</p>` : ''}
+            ${waClean ? `<p><strong>WhatsApp / Tel.:</strong> +${esc(waClean)}</p>` : ''}
+            ${sup?.email ? `<p><strong>Email:</strong> ${esc(sup.email)}</p>` : ''}
+            ${sup?.domicilio ? `<p><strong>Retiro / Domicilio:</strong> ${esc(sup.domicilio)}</p>` : ''}
+          </div>
+          <div class="nk-po-box">
+            <h3>Resumen de la Orden</h3>
+            <p><strong>Concepto:</strong> ${esc(concepto)}</p>
+            <p><strong>Artículos:</strong> ${totalItems}</p>
+            <p><strong>Unidades totales:</strong> ${totalUnits} u.</p>
+            <p><strong>Moneda:</strong> Pesos Argentinos (ARS)</p>
+          </div>
+        </section>
+
+        <table class="nk-po-table">
+          <thead>
+            <tr>
+              <th class="is-c" style="width: 36px;">#</th>
+              <th style="width: 115px;">SKU</th>
+              <th>Artículo / Descripción</th>
+              <th class="is-c" style="width: 82px;">Cant.</th>
+              <th class="is-r" style="width: 110px;">Costo Unit.</th>
+              <th class="is-r" style="width: 115px;">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <section class="nk-po-summary">
+          <div class="nk-po-notes">
+            <strong>Observaciones</strong>
+            Solicitud de reposición de mercadería. Los precios unitarios corresponden al último costo registrado y quedan sujetos a confirmación de stock y valores vigentes del proveedor.
+          </div>
+          <div class="nk-po-totals">
+            <div class="nk-po-total-row">
+              <span>Artículos incluidos</span>
+              <span>${totalItems}</span>
+            </div>
+            <div class="nk-po-total-row">
+              <span>Unidades totales</span>
+              <span>${totalUnits} u.</span>
+            </div>
+            <div class="nk-po-total-row is-grand">
+              <span>Total estimado</span>
+              <strong>${money(totalAmount)}</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="nk-po-signatures">
+          <div class="nk-po-sign-line">Solicitado por (${esc(issuer)})</div>
+          <div class="nk-po-sign-line">Confirmación / Sello del Proveedor</div>
+        </section>
+
+        <footer class="nk-po-footer">
+          NOKIA 1100 · Documento de uso comercial e interno para pedido de abastecimiento.
+        </footer>
+      </div>
+    `;
+  }
+
   // =====================================================================
   // 03 · COMPRA MANUAL
   // =====================================================================
@@ -1631,9 +1774,17 @@
         break;
       }
 
-      case 'print':
+      case 'print': {
+        const items = getSelectedSmartItems();
+        if (!items.length) {
+          toast('Seleccioná al menos un artículo para imprimir la orden.', 'err');
+          break;
+        }
+        renderPrintOrder();
+        document.body.classList.add('nk-printing-order');
         window.print();
         break;
+      }
 
       case 'register-smart': {
         const supId = Number($('#smartSupplier')?.value || 0);
@@ -1764,6 +1915,26 @@
         st.checked = checked;
       }
       renderSmartReplenishment();
+    });
+
+    // Preparar hoja limpia de orden cuando el usuario imprime (botón o Ctrl+P)
+    window.addEventListener('beforeprint', () => {
+      if (currentView === 'sec2') {
+        renderPrintOrder();
+        document.body.classList.add('nk-printing-order');
+      } else if (currentView === 'sec3' && manualCart.length > 0) {
+        renderPrintOrder({
+          docTitle: 'ORDEN DE COMPRA',
+          concepto: ($('#manualDesc')?.value || '').trim() || 'Compra manual',
+          supplierId: Number($('#manualSupplier')?.value || 0),
+          items: manualCart
+        });
+        document.body.classList.add('nk-printing-order');
+      }
+    });
+
+    window.addEventListener('afterprint', () => {
+      document.body.classList.remove('nk-printing-order');
     });
   }
 

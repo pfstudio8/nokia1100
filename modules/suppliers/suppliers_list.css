@@ -1586,7 +1586,7 @@ a.link:hover {
   }
 }
 
-@media (max-width: 900px) {
+@media screen and (max-width: 900px) {
   .nk-table--cards {
     min-width: 0;
   }
@@ -1691,6 +1691,16 @@ a.link:hover {
   }
 }
 
+/* Hoja de Orden de Reposición / Compra (oculta en pantalla, formateada en impresión) */
+.nk-print-order {
+  display: none;
+}
+
+@page {
+  size: A4 portrait;
+  margin: 12mm 14mm;
+}
+
 @media print {
 
   .nk-subnav,
@@ -1714,6 +1724,279 @@ a.link:hover {
 
   .nk-table tr.is-off {
     display: none !important;
+  }
+
+  /* Modo Factura / Orden de Reposición limpia */
+  body.nk-printing-order,
+  body.nk-printing-order #main {
+    background: #ffffff !important;
+    color: #111827 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+  }
+
+  body.nk-printing-order .nk-page {
+    display: none !important;
+  }
+
+  body.nk-printing-order .nk-print-order {
+    display: block !important;
+    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    color: #111827 !important;
+    background: #ffffff !important;
+    font-size: 12px;
+    line-height: 1.45;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .nk-po-sheet {
+    width: 100%;
+    max-width: 100%;
+    color: #111827;
+  }
+
+  .nk-po-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+    border-bottom: 2px solid #111827;
+  }
+
+  .nk-po-brand h1 {
+    margin: 0;
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: #111827;
+  }
+
+  .nk-po-brand p {
+    margin: 3px 0 0;
+    font-size: 11px;
+    color: #4b5563;
+  }
+
+  .nk-po-doc {
+    text-align: right;
+  }
+
+  .nk-po-doc-title {
+    margin: 0;
+    font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #111827;
+  }
+
+  .nk-po-doc-meta {
+    margin: 4px 0 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: #374151;
+  }
+
+  .nk-po-parties {
+    display: grid;
+    grid-template-columns: 1.35fr 1fr;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .nk-po-box {
+    border: 1px solid #cbd5e1;
+    background: #f8fafc;
+    padding: 11px 14px;
+    border-radius: 3px;
+    page-break-inside: avoid;
+  }
+
+  .nk-po-box h3 {
+    margin: 0 0 7px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: #475569;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4px;
+  }
+
+  .nk-po-box p {
+    margin: 3px 0;
+    font-size: 11.5px;
+    color: #1e293b;
+  }
+
+  .nk-po-box p strong {
+    color: #0f172a;
+    font-weight: 600;
+  }
+
+  .nk-po-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 18px;
+    border: 1px solid #cbd5e1;
+  }
+
+  .nk-po-table thead {
+    display: table-header-group;
+  }
+
+  .nk-po-table th {
+    background: #f1f5f9;
+    color: #0f172a;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1.5px solid #334155;
+  }
+
+  .nk-po-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+    font-size: 11.5px;
+    color: #111827;
+  }
+
+  .nk-po-table tbody tr {
+    page-break-inside: avoid;
+  }
+
+  .nk-po-table tbody tr:last-child td {
+    border-bottom: 1px solid #cbd5e1;
+  }
+
+  .nk-po-table .is-c {
+    text-align: center;
+  }
+
+  .nk-po-table .is-r {
+    text-align: right;
+  }
+
+  .nk-po-sku {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #1e293b;
+    white-space: nowrap;
+  }
+
+  .nk-po-item-name {
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .nk-po-item-meta {
+    font-size: 10.5px;
+    color: #64748b;
+    margin-top: 1px;
+  }
+
+  .nk-po-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .nk-po-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    page-break-inside: avoid;
+    margin-bottom: 24px;
+  }
+
+  .nk-po-notes {
+    flex: 1;
+    border: 1px dashed #cbd5e1;
+    padding: 10px 12px;
+    border-radius: 3px;
+    font-size: 10.5px;
+    color: #475569;
+  }
+
+  .nk-po-notes strong {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #334155;
+    margin-bottom: 4px;
+  }
+
+  .nk-po-totals {
+    width: 240px;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .nk-po-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 12px;
+    font-size: 11.5px;
+    border-bottom: 1px solid #e2e8f0;
+    color: #334155;
+  }
+
+  .nk-po-total-row.is-grand {
+    background: #f1f5f9;
+    border-bottom: 0;
+    padding: 9px 12px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .nk-po-total-row.is-grand strong {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14.5px;
+  }
+
+  .nk-po-signatures {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 36px;
+    margin-top: 28px;
+    padding-top: 8px;
+    page-break-inside: avoid;
+  }
+
+  .nk-po-sign-line {
+    border-top: 1px solid #64748b;
+    padding-top: 5px;
+    font-size: 10.5px;
+    color: #475569;
+    text-align: center;
+  }
+
+  .nk-po-footer {
+    margin-top: 20px;
+    padding-top: 8px;
+    border-top: 1px solid #e2e8f0;
+    text-align: center;
+    font-size: 10px;
+    color: #64748b;
   }
 }
 
