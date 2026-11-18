@@ -68,6 +68,9 @@ class SuppliersController extends BaseController
             $atencion = trim($_POST['atencion'] ?? '');
             $email = trim($_POST['email'] ?? '');
 
+            if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $this->redirect(BASE_URL . "/modules/suppliers/index.php?error=" . urlencode("El formato del correo electrónico no es válido."));
+            }
             if ($nombre !== '' && $this->supplier_model->create_supplier($nombre, $domicilio, $telefono, $atencion, $email)) {
                 $new_id = $this->conn->insert_id;
                 audit_log($this->conn, 'SUPPLIER_CREATE', $_SESSION['user_id'] ?? null, 'proveedor', $new_id, "Creado proveedor: $nombre");
@@ -149,6 +152,10 @@ class SuppliersController extends BaseController
 
         if ($nombre === '') {
             echo json_encode(['success' => false, 'message' => 'La razón social o nombre del proveedor es obligatoria.']);
+            exit;
+        }
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            echo json_encode(['success' => false, 'message' => 'El formato del correo electrónico no es válido.']);
             exit;
         }
 
@@ -274,6 +281,8 @@ class SuppliersController extends BaseController
 
             if (empty($nombre)) {
                 $this->redirect("index.php?action=edit_supplier&id=$id_proveedor&error=" . urlencode("El nombre de la empresa es obligatorio."));
+            } elseif ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $this->redirect("index.php?action=edit_supplier&id=$id_proveedor&error=" . urlencode("El formato del correo electrónico no es válido."));
             } else {
                 if ($this->supplier_model->update_supplier($id_proveedor, $nombre, $domicilio, $telefono, $atencion, $email)) {
                     audit_log($this->conn, 'SUPPLIER_UPDATE', $_SESSION['user_id'], 'proveedor', $id_proveedor, "Actualizados datos de proveedor: $nombre");
@@ -303,7 +312,7 @@ class SuppliersController extends BaseController
 
     public function new_purchase()
     {
-        $this->check_access('proveedores');
+        $this->check_access('proveedores', $_SERVER["REQUEST_METHOD"] === "POST");
 
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
             header('Content-Type: application/json; charset=utf-8');

@@ -67,6 +67,15 @@ class AdminModel extends BaseModel
 
     // --- Gestión de Usuarios ---
 
+    public function get_primary_admin_id(): ?int
+    {
+        $res = $this->conn->query("SELECT id_usuario FROM usuario WHERE rol = 'admin' ORDER BY id_usuario ASC LIMIT 1");
+        if ($res && ($row = $res->fetch_assoc())) {
+            return (int)$row['id_usuario'];
+        }
+        return null;
+    }
+
     public function count_active_admins($exclude_id = null)
     {
         if ($exclude_id) {

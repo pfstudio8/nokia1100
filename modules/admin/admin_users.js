@@ -29,8 +29,6 @@ if (addUserForm) {
             e.preventDefault();
             if (typeof showToast === 'function') {
                 showToast('La contraseña debe tener mínimo 8 caracteres e incluir mayúscula, minúscula, número y carácter especial.', 'warning');
-            } else {
-                alert('La contraseña debe tener mínimo 8 caracteres e incluir mayúscula, minúscula, número y carácter especial.');
             }
             return;
         }
@@ -39,8 +37,6 @@ if (addUserForm) {
             e.preventDefault();
             if (typeof showToast === 'function') {
                 showToast('Las contraseñas no coinciden', 'error');
-            } else {
-                alert('Las contraseñas no coinciden');
             }
             return;
         }
@@ -55,8 +51,6 @@ if (editUserForm) {
             e.preventDefault();
             if (typeof showToast === 'function') {
                 showToast('La nueva contraseña debe tener mínimo 8 caracteres e incluir mayúscula, minúscula, número y carácter especial.', 'warning');
-            } else {
-                alert('La nueva contraseña debe tener mínimo 8 caracteres e incluir mayúscula, minúscula, número y carácter especial.');
             }
             return;
         }
@@ -129,7 +123,6 @@ const allSystemModules = [
     { id: 'clientes', label: 'Clientes', icon: 'contact_page', desc: 'Directorio e historial de clientes' },
     { id: 'reportes', label: 'Reportes y Estadísticas', icon: 'analytics', desc: 'Métricas financieras, ventas y taller' },
     { id: 'proveedores', label: 'Proveedores y Compras', icon: 'local_shipping', desc: 'Directorio de proveedores y órdenes de compra' },
-    { id: 'usuarios', label: 'Administrar Usuarios', icon: 'group', desc: 'Gestión de personal y cuentas' },
     { id: 'auditoria', label: 'Auditoría del Sistema', icon: 'security', desc: 'Registro de seguridad y eventos' }
 ];
 
@@ -152,8 +145,6 @@ function openModulePermissions(id, fullName, role, modulosStr) {
     if (role === 'admin') {
         if (typeof showToast === 'function') {
             showToast('Los administradores poseen acceso global a todos los módulos por diseño.', 'info');
-        } else {
-            alert('Los administradores poseen acceso global a todos los módulos por diseño.');
         }
         return;
     }

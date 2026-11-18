@@ -101,8 +101,8 @@ function initCustomFormValidation() {
                         } else {
                             showToast('Por favor completa los campos requeridos', 'warning');
                         }
-                    } else {
-                        alert(`Error:\nPor favor, completa correctamente el campo: ${fieldName}`);
+                    } else if (firstInvalid && typeof firstInvalid.reportValidity === 'function') {
+                        firstInvalid.focus();
                     }
                 }
             }
@@ -553,6 +553,7 @@ function initReadyRepairsWatcher() {
     let knownIds = new Set();
     let knownReceivedIds = new Set();
     let isFirstCheck = true;
+    let pollInterval = null;
 
     function playGlobalChime() {
         try {
@@ -681,7 +682,7 @@ function initReadyRepairsWatcher() {
 
     // Primer chequeo a los 2 segundos, luego cada 30 segundos y al volver a la pestaña
     setTimeout(checkReadyRepairs, 2000);
-    setInterval(checkReadyRepairs, 30000);
+    pollInterval = setInterval(checkReadyRepairs, 30000);
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) checkReadyRepairs();
     });

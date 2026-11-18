@@ -184,7 +184,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         } else {
                             api.reject();
                             if (otpStatusMsg) {
-                                otpStatusMsg.innerHTML = `<span style="color: #ef4444;">${data.message || 'Código incorrecto'}</span>`;
+                                otpStatusMsg.innerHTML = '';
+                                const errSpan = document.createElement('span');
+                                errSpan.style.color = '#ef4444';
+                                errSpan.textContent = data.message || 'Código incorrecto';
+                                otpStatusMsg.appendChild(errSpan);
                             }
                             if (typeof showToast === 'function') {
                                 showToast(data.message || 'Código incorrecto o expirado', 'error');

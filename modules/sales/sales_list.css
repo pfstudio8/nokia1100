@@ -389,7 +389,7 @@ html.dark #search-input {
 }
 
 html.dark #search-input::placeholder {
-    color: #757c82 !important;
+    color: #939ca3 !important;
 }
 
 html.dark .sales-table-wrap {
@@ -403,7 +403,7 @@ html.dark #sales-table thead tr {
 }
 
 html.dark #search-input::placeholder {
-    color: #757c82 !important;
+    color: #939ca3 !important;
 }
 
 html.dark #sales-table thead th {

@@ -175,7 +175,7 @@ if ($_SESSION['role'] === 'admin') {
                 <button type="button" onclick="closeAddClientModal()" class="btn-back"
                     style="width: auto; margin: 0;">Cancelar</button>
                 <button type="submit" class="btn-primary"
-                    style="width: auto; margin: 0; background: var(--primary-color); color: #ffffff;">
+                    style="width: auto; margin: 0; background: var(--primary-color); color: var(--text-inverse, #ffffff);">
                     Guardar Cliente
                 </button>
             </div>

@@ -32,6 +32,8 @@ class ClientsController extends BaseController
 
             if (empty($nombre)) {
                 $this->redirect('index.php?error=' . urlencode("El nombre del cliente es obligatorio."));
+            } elseif ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $this->redirect('index.php?error=' . urlencode("El formato del correo electrónico no es válido."));
             } else {
                 if ($this->client_model->exists($nombre, $telefono)) {
                     $this->redirect('index.php?error=' . urlencode("Ya existe un cliente registrado con ese nombre y teléfono."));
@@ -114,6 +116,8 @@ class ClientsController extends BaseController
 
             if (empty($nombre)) {
                 $this->redirect("index.php?action=edit&id=$id_cliente&error=" . urlencode("El nombre del cliente es obligatorio."));
+            } elseif ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $this->redirect("index.php?action=edit&id=$id_cliente&error=" . urlencode("El formato del correo electrónico no es válido."));
             } else {
                 if ($this->client_model->update($id_cliente, $nombre, $telefono, $email)) {
                     require_once __DIR__ . '/../../../config/audit.php';

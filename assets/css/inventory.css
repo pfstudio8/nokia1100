@@ -33,9 +33,9 @@ body.dark {
   --paper: #111417;
   --surface: #181c1f;
   --sunk: #22272b;
-  --ink: #f1ede6;
-  --ink-2: #a4aaad;
-  --ink-3: #757c82;
+  --ink: #f5f2ec;
+  --ink-2: #c7cdd1;
+  --ink-3: #a3abb2;
   --line: #293035;
   --line-2: #3a4248;
   --graphite: #0d0f11;
@@ -1480,15 +1480,15 @@ html.dark .pname {
 }
 
 html.dark .pmeta {
-  color: #a4aaad !important;
+  color: #c7cdd1 !important;
 }
 
 html.dark .pmeta b {
-  color: #f1ede6 !important;
+  color: #f5f2ec !important;
 }
 
 html.dark .pmeta .mono {
-  color: #757c82 !important;
+  color: #a3abb2 !important;
 }
 
 html.dark .price {
@@ -1592,7 +1592,7 @@ html.dark .modal select {
 }
 
 html.dark .field::placeholder {
-  color: #757c82 !important;
+  color: #939ca3 !important;
 }
 
 html.dark .kbd {
@@ -1760,11 +1760,11 @@ html.dark .d-body {
 }
 
 html.dark .d-body .lbl {
-  color: #a4aaad !important;
+  color: #c7cdd1 !important;
 }
 
 html.dark .d-body .hint {
-  color: #757c82 !important;
+  color: #a3abb2 !important;
 }
 
 html.dark .d-body .money span {

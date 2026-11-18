@@ -40,23 +40,23 @@ if ($_SESSION['role'] === 'admin') {
         $latest_operario = htmlspecialchars((string)($latest_received['operario_nombre'] ?? 'Empleado'));
         $latest_falla = htmlspecialchars((string)($latest_received['falla_declarada'] ?? ''));
     ?>
-        <div class="py-2.5 px-3.5 rounded-[2px] mb-4 border border-[#8a5200] border-l-4 border-l-[#8a5200] bg-[#f6e8c8] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 shadow-sm">
+        <div class="nk-intake-alert py-2.5 px-3.5 rounded-[2px] mb-4 border border-[#8a5200] border-l-4 border-l-[#8a5200] bg-[#f6e8c8] text-[#15171a] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2.5 shadow-sm">
             <div class="flex items-center gap-2.5 min-w-0">
-                <div class="w-7 h-7 rounded-[2px] bg-[#15181a] text-[#c6e24a] border border-[#222729] flex items-center justify-center flex-shrink-0">
+                <div class="nk-intake-badge-dark w-7 h-7 rounded-[2px] bg-[#15181a] text-[#c6e24a] border border-[#222729] flex items-center justify-center flex-shrink-0">
                     <span class="material-symbols-outlined text-[16px]">notifications_active</span>
                 </div>
                 <div class="min-w-0">
                     <div class="flex flex-wrap items-center gap-1.5">
-                        <span class="px-1.5 py-0.2 rounded-[2px] text-[9px] font-mono font-bold uppercase tracking-wider bg-[#15181a] text-[#c6e24a]">Nuevo Ingreso</span>
-                        <h3 class="text-xs sm:text-sm font-display font-bold text-[#15171a]">
+                        <span class="nk-intake-badge-dark px-1.5 py-0.2 rounded-[2px] text-[9px] font-mono font-bold uppercase tracking-wider bg-[#15181a] text-[#c6e24a]">Nuevo Ingreso</span>
+                        <h3 class="nk-intake-title text-xs sm:text-sm font-display font-bold" style="color: #15171a;">
                             <?php echo $received_count === 1 ? '¡Tienes un equipo que ha ingresado al Taller!' : "¡Tienes {$received_count} equipos recién ingresados en espera de diagnóstico!"; ?>
                         </h3>
-                        <span class="px-1.5 py-0.2 rounded-[2px] text-[10px] font-mono font-bold bg-[#8a5200] text-[#f8f6f0]"><?php echo $received_count; ?></span>
+                        <span class="nk-intake-badge-count px-1.5 py-0.2 rounded-[2px] text-[10px] font-mono font-bold bg-[#8a5200] text-[#f8f6f0]"><?php echo $received_count; ?></span>
                     </div>
-                    <p class="text-[11px] text-[#8a5200] font-medium mt-0.5 truncate">
-                        Último: <strong class="font-mono text-[#15171a]">#<?php echo $latest_code; ?></strong> — 
-                        <strong class="text-[#15171a]"><?php echo $latest_device; ?></strong> (<?php echo $latest_client; ?>) · 
-                        Por <span class="font-mono font-bold text-[#15171a]"><?php echo $latest_operario; ?></span>
+                    <p class="nk-intake-sub text-[11px] font-medium mt-0.5 truncate" style="color: #4a2c00;">
+                        Último: <strong class="nk-intake-dark font-mono" style="color: #15171a;">#<?php echo $latest_code; ?></strong> — 
+                        <strong class="nk-intake-dark" style="color: #15171a;"><?php echo $latest_device; ?></strong> (<?php echo $latest_client; ?>) · 
+                        Por <span class="nk-intake-dark font-mono font-bold" style="color: #15171a;"><?php echo $latest_operario; ?></span>
                         <?php if ($latest_falla !== ''): ?>
                             · <em>"<?php echo mb_strimwidth($latest_falla, 0, 55, '...'); ?>"</em>
                         <?php endif; ?>
@@ -169,7 +169,7 @@ if ($_SESSION['role'] === 'admin') {
                                             <span class="material-symbols-outlined text-[15px]">print</span>
                                             <span>Recibo / QR</span>
                                         </a>
-                                        <a href="index.php?action=view&id=<?php echo $r['id_reparacion']; ?>" class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface border border-border text-text-main hover:bg-primary-hover hover:text-white transition-colors" title="Ver / Gestionar">
+                                        <a href="index.php?action=view&id=<?php echo $r['id_reparacion']; ?>" class="w-8 h-8 rounded-lg flex items-center justify-center bg-surface border border-border text-text-main hover:bg-primary-hover hover:text-background transition-colors" title="Ver / Gestionar">
                                             <span class="material-symbols-outlined text-[16px]">visibility</span>
                                         </a>
                                     </div>

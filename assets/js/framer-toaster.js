@@ -28,7 +28,7 @@ if (document.readyState === 'loading') {
 
 let activeToasts = [];
 
-window.showToast = function(message, type = 'success', duration = 1000) {
+window.showToast = function(message, type = 'success', duration = 3200) {
     const toast = document.createElement('div');
     toast.setAttribute('role', 'status');
     toast.setAttribute('aria-live', 'polite');

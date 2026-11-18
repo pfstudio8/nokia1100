@@ -157,16 +157,16 @@ else Layout::renderEmployeeSidebar('venta');
 
             <?php // Método de Pago (Único o Combinado hasta 2 medios) ?>
             <div>
-                <div class="flex flex-wrap justify-between items-center gap-2 mb-2.5">
-                    <h4 class="text-[10px] font-bold text-text-muted uppercase tracking-widest">Modalidad y Medio de Pago</h4>
-                    <div class="inline-flex rounded-lg border border-border/60 bg-background p-0.5 text-[11px] font-semibold">
-                        <button type="button" id="btn-mode-single" onclick="setPaymentMode('unico')" class="px-3 py-1 rounded-md bg-primary text-background transition-all">
-                            1 Medio (Único)
-                        </button>
-                        <button type="button" id="btn-mode-combined" onclick="setPaymentMode('combinado')" class="px-3 py-1 rounded-md text-text-muted hover:text-text-main transition-all flex items-center gap-1">
-                            <span class="material-symbols-outlined text-[14px]">call_split</span> Combinar 2 Medios
-                        </button>
-                    </div>
+                <h4 class="text-[10px] font-bold text-text-muted uppercase tracking-widest mb-2">Modalidad y Medio de Pago</h4>
+                <div class="grid grid-cols-2 gap-1.5 rounded-xl border border-border bg-background/80 p-1 text-xs font-bold mb-3">
+                    <button type="button" id="btn-mode-single" onclick="setPaymentMode('unico')" class="py-2 px-3 rounded-lg border border-primary bg-primary text-background shadow-sm transition-all flex items-center justify-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px]">payments</span>
+                        <span>1 Medio (Único)</span>
+                    </button>
+                    <button type="button" id="btn-mode-combined" onclick="setPaymentMode('combinado')" class="py-2 px-3 rounded-lg border border-border bg-surface text-text-main hover:bg-surface-hover shadow-sm transition-all flex items-center justify-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px]">call_split</span>
+                        <span>Combinar 2 Medios</span>
+                    </button>
                 </div>
                 <input type="hidden" id="modal_modo_pago" value="unico">
 
@@ -324,9 +324,8 @@ else Layout::renderEmployeeSidebar('venta');
         </div>
     </div>
 </div>
-<?php Layout::renderFooter(); ?>
-
 <script>
     window.CSRF_TOKEN = '<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>';
 </script>
 <script src="<?php echo BASE_URL; ?>/modules/sales/new_sale.js?v=<?php echo time(); ?>"></script>
+<?php Layout::renderFooter(); ?>

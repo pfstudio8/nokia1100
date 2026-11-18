@@ -76,7 +76,7 @@
                         displayColors: false,
                         callbacks: {
                             label: function (context) {
-                                return 'Total: $' + context.raw.toFixed(2);
+                                return 'Total: $' + Number(context.raw || 0).toFixed(2);
                             }
                         }
                     }

@@ -72,7 +72,6 @@ class AuthController extends BaseController
 
         if (empty($smtpUser) || empty($smtpPass)) {
             error_log('SMTP_USER/SMTP_PASS no configurados para enviar código de verificación.');
-            $_SESSION['mail_debug_notice'] = 'Credenciales SMTP vacías en config_mail.php / mail.local.php';
             return false;
         }
 
@@ -99,6 +98,7 @@ class AuthController extends BaseController
 
             $year = date('Y');
             $codeFormatted = substr($code, 0, 3) . ' ' . substr($code, 3, 3);
+            $nombreSafe = htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8');
 
             $mail->Body = "
             <!DOCTYPE html>
@@ -144,7 +144,7 @@ class AuthController extends BaseController
                                         </div>
 
                                         <h1 style=\"margin: 0 0 14px 0; font-family: 'Bricolage Grotesque', 'IBM Plex Sans', Arial, sans-serif; font-size: 24px; font-weight: 800; color: #15171a; line-height: 1.2; letter-spacing: -0.02em;\">
-                                            ¡Hola, {$nombre}!
+                                            ¡Hola, {$nombreSafe}!
                                         </h1>
 
                                         <p style=\"margin: 0 0 20px 0; font-size: 14px; line-height: 1.6; color: #464b4f; font-weight: 400;\">
@@ -190,7 +190,6 @@ class AuthController extends BaseController
             return true;
         } catch (Exception $e) {
             error_log("Error al enviar email OTP: {$mail->ErrorInfo}");
-            $_SESSION['mail_debug_notice'] = 'Error de PHPMailer: ' . $mail->ErrorInfo;
             return false;
         }
     }
@@ -337,8 +336,12 @@ class AuthController extends BaseController
         $password = $_POST['password'] ?? '';
         $password_confirm = $_POST['password_confirm'] ?? '';
 
-        if (empty($nombre) || empty($apellido) || empty($dni) || empty($username) || empty($password) || empty($password_confirm)) {
+        if (empty($nombre) || empty($apellido) || empty($dni) || empty($email) || empty($username) || empty($password) || empty($password_confirm)) {
             $fail("Completá todos los campos requeridos");
+        }
+
+        if (!preg_match('/^[0-9]{7,10}$/', $dni)) {
+            $fail("El DNI debe tener entre 7 y 10 dígitos");
         }
 
         if ($password !== $password_confirm) {
@@ -431,8 +434,7 @@ class AuthController extends BaseController
             } elseif ($res['rol'] === 'admin') {
                 $this->redirect(BASE_URL . "/index.php?success=" . urlencode("Registro exitoso del administrador inicial. Ya podés ingresar."));
             } else {
-                $debug = isset($_SESSION['mail_debug_notice']) ? " (" . $_SESSION['mail_debug_notice'] . ")" : "";
-                $this->redirect(BASE_URL . "/index.php?action=verify_otp_modal&email=" . urlencode($email) . "&error=" . urlencode("Registro creado, pero no se pudo enviar el correo de verificación" . $debug . "."));
+                $this->redirect(BASE_URL . "/index.php?action=verify_otp_modal&email=" . urlencode($email) . "&error=" . urlencode("Registro creado, pero no se pudo enviar el correo de verificación."));
             }
 
         } catch (Exception $e) {
@@ -470,12 +472,28 @@ class AuthController extends BaseController
             exit();
         }
 
+        $rateKey = 'otp_attempts_' . hash('sha256', strtolower($email));
+        $attempts = $_SESSION[$rateKey] ?? ['count' => 0, 'blocked_until' => 0];
+        if (!empty($attempts['blocked_until']) && time() < (int)$attempts['blocked_until']) {
+            $waitMin = max(1, (int)ceil(((int)$attempts['blocked_until'] - time()) / 60));
+            echo json_encode(['success' => false, 'message' => "Demasiados intentos fallidos. Solicitá un nuevo código o esperá {$waitMin} min."]);
+            exit();
+        }
+
         $result = $this->auth_model->verify_otp($email, $code);
         if (!empty($result['success'])) {
+            unset($_SESSION[$rateKey]);
             require_once __DIR__ . '/../../../config/audit.php';
             $userId = $result['id_usuario'] ?? null;
             $username = $result['username'] ?? $email;
             audit_log($this->conn, 'EMAIL_VERIFIED', $userId, 'usuario', $userId, "Cuenta verificada con código OTP de 6 dígitos: $username");
+        } else {
+            $attempts['count'] = ((int)($attempts['count'] ?? 0)) + 1;
+            if ($attempts['count'] >= 5) {
+                $attempts['blocked_until'] = time() + 900; // 15 min
+                $attempts['count'] = 0;
+            }
+            $_SESSION[$rateKey] = $attempts;
         }
 
         echo json_encode($result);
@@ -505,6 +523,14 @@ class AuthController extends BaseController
             exit();
         }
 
+        $resendKey = 'otp_resend_' . hash('sha256', strtolower($email));
+        $lastSent = (int)($_SESSION[$resendKey] ?? 0);
+        if ($lastSent > 0 && (time() - $lastSent) < 45) {
+            $rem = 45 - (time() - $lastSent);
+            echo json_encode(['success' => false, 'message' => "Esperá {$rem} segundos antes de solicitar un nuevo código."]);
+            exit();
+        }
+
         $user = $this->auth_model->find_unverified_by_email_or_user($email);
         if (!$user) {
             echo json_encode(['success' => false, 'message' => 'No se encontró ninguna cuenta asociada a este correo.']);
@@ -531,10 +557,11 @@ class AuthController extends BaseController
         $mailSent = $this->send_otp_email($emailTarget, $nombre, $newOtp);
 
         if ($mailSent) {
+            $_SESSION[$resendKey] = time();
+            unset($_SESSION['otp_attempts_' . hash('sha256', strtolower($email))]);
             echo json_encode(['success' => true, 'message' => 'Nuevo código de 6 dígitos enviado a tu correo. Válido por 15 minutos.']);
         } else {
-            $debug = isset($_SESSION['mail_debug_notice']) ? " (" . $_SESSION['mail_debug_notice'] . ")" : "";
-            echo json_encode(['success' => false, 'message' => 'No se pudo enviar el correo' . $debug . '.']);
+            echo json_encode(['success' => false, 'message' => 'No se pudo enviar el correo de verificación en este momento.']);
         }
         exit();
     }
@@ -551,10 +578,14 @@ class AuthController extends BaseController
             $this->redirect(BASE_URL . "/auth/forgot_password.php?error=" . urlencode("Token de seguridad inválido o expirado."));
         }
 
-        $email = $_POST['email'] ?? '';
+        $email = trim($_POST['email'] ?? '');
 
         if (empty($email)) {
-            $this->redirect(BASE_URL . "/auth/forgot_password.php?error=Por favor ingrese su correo electrónico");
+            $this->redirect(BASE_URL . "/auth/forgot_password.php?error=" . urlencode("Por favor ingrese su correo electrónico"));
+        }
+
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $this->redirect(BASE_URL . "/auth/forgot_password.php?error=" . urlencode("El formato del correo electrónico no es válido"));
         }
 
         $user = $this->auth_model->find_by_email($email);
@@ -598,6 +629,7 @@ class AuthController extends BaseController
                     $mail->isHTML(true);
                     $mail->Subject = 'Recuperación de contraseña - Nokia 1100';
                     $year = date('Y');
+                    $nombreSafe = htmlspecialchars($nombre, ENT_QUOTES, 'UTF-8');
 
                     $mail->Body = "
                     <!DOCTYPE html>
@@ -646,7 +678,7 @@ class AuthController extends BaseController
                                                 </div>
 
                                                 <h1 style=\"margin: 0 0 14px 0; font-family: 'Bricolage Grotesque', 'IBM Plex Sans', Arial, sans-serif; font-size: 24px; font-weight: 800; color: #15171a; line-height: 1.2; letter-spacing: -0.02em;\">
-                                                    Hola, {$nombre}
+                                                    Hola, {$nombreSafe}
                                                 </h1>
 
                                                 <p style=\"margin: 0 0 24px 0; font-size: 14px; line-height: 1.65; color: #464b4f; font-weight: 400;\">
@@ -725,6 +757,9 @@ class AuthController extends BaseController
 
     public function reset_password_view()
     {
+        if (empty($_SESSION['session_token'])) {
+            $_SESSION['session_token'] = bin2hex(random_bytes(32));
+        }
         $token = $_GET['token'] ?? '';
         $isValidToken = false;
         $id_usuario = 0;
@@ -751,6 +786,11 @@ class AuthController extends BaseController
         }
 
         $token = $_POST['token'] ?? '';
+        $csrf = $_POST['csrf_token'] ?? '';
+        if (empty($_SESSION['session_token']) || !hash_equals($_SESSION['session_token'], (string)$csrf)) {
+            $this->redirect(BASE_URL . "/modules/auth/index.php?action=reset_password_view&token=" . urlencode($token) . "&error=" . urlencode("Token de seguridad inválido o sesión expirada."));
+        }
+
         $password = $_POST['password'] ?? '';
         $password_confirm = $_POST['password_confirm'] ?? '';
 

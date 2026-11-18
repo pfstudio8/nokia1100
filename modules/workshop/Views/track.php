@@ -388,9 +388,5 @@ $images = $images ?? [];
             }
         })();
     </script>
-                }, 4000);
-            }
-        })();
-    </script>
 </body>
 </html>

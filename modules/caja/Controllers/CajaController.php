@@ -75,7 +75,11 @@ class CajaController extends BaseController
 
         $newId = $this->caja_model->open_caja($monto_apertura, $userId);
         if ($newId === false) {
-            $this->respond_error('Ya existe una caja abierta en el sistema. Debe cerrarla antes de abrir una nueva.');
+            if ($this->caja_model->get_open_caja() !== null) {
+                $this->respond_error('Ya existe una caja abierta en el sistema. Debe cerrarla antes de abrir una nueva.');
+            } else {
+                $this->respond_error('No se pudo abrir la caja en la base de datos. Verifique que el monto sea válido.');
+            }
             return;
         }
 
@@ -134,6 +138,15 @@ class CajaController extends BaseController
 
         if (empty($concepto)) {
             $this->respond_error('El concepto es obligatorio.');
+            return;
+        }
+
+        $soloEfectivoLower = array_map(
+            fn(string $c) => mb_strtolower($c, 'UTF-8'),
+            CajaModel::CONCEPTOS_SOLO_EFECTIVO
+        );
+        if (in_array(mb_strtolower($concepto, 'UTF-8'), $soloEfectivoLower, true) && $medio_pago !== 'Efectivo') {
+            $this->respond_error("El concepto '$concepto' solo admite medio de pago en Efectivo.");
             return;
         }
 

@@ -109,16 +109,16 @@ body.dark {
     --nk-surface: #181c1f;
     --nk-sunk: #22272b;
     --nk-field: #131618;
-    --nk-ink: #f1ede6;
-    --nk-ink-2: #a4aaad;
-    --nk-ink-3: #757c82;
+    --nk-ink: #f5f2ec;
+    --nk-ink-2: #c7cdd1;
+    --nk-ink-3: #a3abb2;
     --nk-ink-hover: #ffffff;
     --nk-line: #293035;
-    --nk-line-2: #3a4248;
+    --nk-line-2: #465058;
     --nk-graphite: #0d0f11;
     --nk-graphite-2: #161a1d;
-    --nk-on-dark: #f1ede6;
-    --nk-on-dark-2: #9ba19f;
+    --nk-on-dark: #f5f2ec;
+    --nk-on-dark-2: #b5bcc0;
     --nk-lcd: #c6e24a;
     --nk-lcd-hi: #d5ee66;
     --nk-focus: #5a9cf8;
@@ -2696,6 +2696,12 @@ html.dark textarea {
     color: var(--nk-ink) !important;
 }
 
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+    color: #939ca3 !important;
+    opacity: 1;
+}
+
 html.dark input:not([type="checkbox"]):not([type="radio"]):focus,
 html.dark select:focus,
 html.dark textarea:focus {
@@ -2808,7 +2814,10 @@ html.dark .nk-cell-meta {
 html.dark .btn-primary,
 html.dark .btn-submit,
 html.dark .btn-add,
-html.dark .nk-btn--primary {
+html.dark .nk-btn--primary,
+html.dark .bg-primary.text-white,
+html.dark button.bg-primary,
+html.dark a.bg-primary {
     background: var(--nk-lcd) !important;
     color: #111417 !important;
     border-color: var(--nk-lcd) !important;
@@ -2818,7 +2827,9 @@ html.dark .nk-btn--primary {
 html.dark .btn-primary:hover,
 html.dark .btn-submit:hover,
 html.dark .btn-add:hover,
-html.dark .nk-btn--primary:hover {
+html.dark .nk-btn--primary:hover,
+html.dark button.bg-primary:hover,
+html.dark a.bg-primary:hover {
     background: var(--nk-lcd-hi) !important;
     border-color: var(--nk-lcd-hi) !important;
     color: #111417 !important;
@@ -2880,12 +2891,38 @@ html.dark main.bg-\[\#eeebe3\] {
     background-color: var(--nk-paper) !important;
 }
 
-html.dark .text-\[\#15171a\],
-html.dark [class*="text-[#15171a]"],
+html.dark .text-\[\#15171a\]:not(.bg-\[\#c6e24a\]):not(.bg-\[\#f6e8c8\]),
+html.dark [class*="text-[#15171a]"]:not(.bg-\[\#c6e24a\]):not(.bg-\[\#f6e8c8\]),
 html.dark h1.text-\[\#15171a\],
 html.dark h2.text-\[\#15171a\],
-html.dark h3.text-\[\#15171a\] {
+html.dark h3.text-\[\#15171a\]:not(.nk-intake-title) {
     color: var(--nk-ink) !important;
+}
+
+/* Mantener contraste oscuro en badges LCD y alertas crema incluso en modo oscuro */
+html.dark .bg-\[\#c6e24a\],
+html.dark .bg-\[\#c6e24a\].text-\[\#15171a\],
+html.dark .nk-intake-alert,
+html.dark .nk-intake-alert h3.nk-intake-title,
+html.dark .nk-intake-alert .nk-intake-title,
+html.dark .nk-intake-alert strong,
+html.dark .nk-intake-alert strong.nk-intake-dark,
+html.dark .nk-intake-alert span.nk-intake-dark {
+    color: #15171a !important;
+}
+
+html.dark .nk-intake-alert .nk-intake-sub {
+    color: #4a2c00 !important;
+}
+
+html.dark .nk-intake-alert .nk-intake-badge-dark {
+    background-color: #15181a !important;
+    color: #c6e24a !important;
+}
+
+html.dark .nk-intake-alert .nk-intake-badge-count {
+    background-color: #8a5200 !important;
+    color: #f8f6f0 !important;
 }
 
 html.dark .text-\[\#464b4f\],

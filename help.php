@@ -1,13 +1,43 @@
 <?php
 // help.php - Nokia 1100 Ayuda Rápida & Manual de Uso
-session_start();
 require_once __DIR__ . '/config/db.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once __DIR__ . '/classes/Layout.php';
 require_once __DIR__ . '/classes/ServiceProduct.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "/index.php");
     exit();
+}
+
+// Verificar cuenta activa y sesión única en BD (equivalente a BaseController::check_auth)
+if ($_SESSION['user_id'] !== 'guest' && is_numeric($_SESSION['user_id']) && isset($conn)) {
+    $stmtAuth = $conn->prepare("SELECT session_token, is_active, rol FROM usuario WHERE id_usuario = ?");
+    $uidHelp = (int)$_SESSION['user_id'];
+    $stmtAuth->bind_param("i", $uidHelp);
+    $stmtAuth->execute();
+    $resAuth = $stmtAuth->get_result()->fetch_assoc();
+    $stmtAuth->close();
+
+    if (!$resAuth || (int)($resAuth['is_active'] ?? 0) !== 1) {
+        session_unset();
+        session_destroy();
+        header("Location: " . BASE_URL . "/index.php?error=" . urlencode("Tu cuenta ha sido desactivada. Comunícate con el administrador."));
+        exit();
+    }
+
+    if (($resAuth['session_token'] ?? null) !== ($_SESSION['session_token'] ?? null)) {
+        session_unset();
+        session_destroy();
+        header("Location: " . BASE_URL . "/index.php?error=" . urlencode("Se ha iniciado sesión en otro dispositivo. Tu sesión actual ha sido cerrada."));
+        exit();
+    }
+
+    if (!empty($resAuth['rol'])) {
+        $_SESSION['role'] = $resAuth['rol'];
+    }
 }
 
 // 1. Inicializar variables con datos por defecto
@@ -124,7 +154,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
         <?php // MODULES FILTER TABS ?>
         <div class="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none" id="help-tabs-bar">
             <?php // Tab 1: Inventario ?>
-            <button onclick="switchTab('inventario')" id="tab-btn-inventario" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-primary border border-primary text-white shadow-sm font-display" type="button">
+            <button onclick="switchTab('inventario')" id="tab-btn-inventario" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-primary border border-primary text-white dark:text-[#111417] shadow-sm font-display" type="button">
                 <span class="material-symbols-outlined text-[18px]">inventory_2</span>
                 <span>1. Inventario y Stock</span>
             </button>
@@ -147,6 +177,11 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
             <button onclick="switchTab('proveedores')" id="tab-btn-proveedores" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-primary font-display" type="button">
                 <span class="material-symbols-outlined text-[18px]">local_shipping</span>
                 <span>5. Proveedores y Reportes</span>
+            </button>
+            <?php // Tab 6: Caja ?>
+            <button onclick="switchTab('caja')" id="tab-btn-caja" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-primary font-display" type="button">
+                <span class="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+                <span>6. Caja y Arqueo</span>
             </button>
         </div>
 
@@ -331,7 +366,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
                                 <span>Tip: Presiona <kbd class="px-1.5 py-0.5 rounded bg-card border border-border text-[11px] font-mono text-text-main">F3</kbd> en cualquier pantalla para saltar al inventario.</span>
                             </div>
-                            <a href="<?php echo BASE_URL; ?>/modules/inventory/index.php" class="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
+                            <a href="<?php echo BASE_URL; ?>/modules/inventory/index.php" class="px-4 py-2 rounded-xl bg-primary text-white dark:text-[#111417] font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
                                 <span>Ir al Inventario</span>
                                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </a>
@@ -458,7 +493,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                             <p class="text-sm font-semibold text-text-main">Acceder a "Registrar Nuevo Equipo"</p>
                                             <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
                                                 • <strong>Empleado:</strong> Desde el menú lateral pulsa en <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[#15181a] text-[#c6e24a]">Registrar Nuevo Equipo</span> o desde el Centro de Operaciones pulsa en el botón <strong class="text-text-main">"Nueva Orden de Equipo"</strong>.<br>
-                                                • <strong>Administrador:</strong> Puedes ingresar desde el módulo <strong class="text-text-main">Taller</strong> con el botón <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-primary text-white">+ Nueva Orden</span> o desde la cabecera de la Dashboard de Administración.
+                                                • <strong>Administrador:</strong> Puedes ingresar desde el módulo <strong class="text-text-main">Taller</strong> con el botón <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-primary text-white dark:text-[#111417]">+ Nueva Orden</span> o desde la cabecera de la Dashboard de Administración.
                                             </p>
                                         </div>
                                     </div>
@@ -500,7 +535,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                         <div class="flex-1">
                                             <p class="text-sm font-semibold text-text-main">Guardar y Derivación Automática al Taller</p>
                                             <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
-                                                Presiona <span class="px-2.5 py-1 rounded text-xs font-bold bg-primary text-white">Registrar y Enviar al Taller</span>. El sistema genera un código de orden único (ej. <code class="font-mono text-primary font-bold">#26118134</code>), emite la notificación en tiempo real con contador en el menú lateral para los técnicos y habilita la impresión inmediata del recibo con código QR.
+                                                Presiona <span class="px-2.5 py-1 rounded text-xs font-bold bg-primary text-white dark:text-[#111417]">Registrar y Enviar al Taller</span>. El sistema genera un código de orden único (ej. <code class="font-mono text-primary font-bold">#26118134</code>), emite la notificación en tiempo real con contador en el menú lateral para los técnicos y habilita la impresión inmediata del recibo con código QR.
                                             </p>
                                         </div>
                                     </div>
@@ -628,7 +663,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
                                 <span>Tip: Presiona <kbd class="px-1.5 py-0.5 rounded bg-card border border-border text-[11px] font-mono text-text-main">F4</kbd> en cualquier pantalla para saltar a Taller.</span>
                             </div>
-                            <a href="<?php echo BASE_URL; ?>/modules/workshop/index.php" class="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
+                            <a href="<?php echo BASE_URL; ?>/modules/workshop/index.php" class="px-4 py-2 rounded-xl bg-primary text-white dark:text-[#111417] font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
                                 <span>Ir a Taller</span>
                                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </a>
@@ -696,9 +731,9 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                             <span class="material-symbols-outlined text-[20px]">payments</span>
                                         </div>
                                         <div>
-                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Medios de Pago</h3>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Medios de Pago y Combinados</h3>
                                             <p class="text-xs text-text-muted leading-relaxed">
-                                                Acepta <strong class="text-text-main">Efectivo</strong>, <strong class="text-text-main">Transferencia</strong> y <strong class="text-text-main">Tarjeta</strong> con balance en el arqueo diario.
+                                                Acepta <strong class="text-text-main">Efectivo</strong>, <strong class="text-text-main">Transferencia</strong> y <strong class="text-text-main">Tarjeta</strong>, o usá <strong class="text-text-main">Combinar 2 Medios</strong>. Solo el efectivo suma al arqueo físico de Caja.
                                             </p>
                                         </div>
                                     </div>
@@ -761,7 +796,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                         <div class="flex-1">
                                             <p class="text-sm font-semibold text-text-main">Seleccionar Método de Pago y confirmar</p>
                                             <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
-                                                Elige el medio de pago acordado (<strong class="text-text-main">Efectivo</strong>, <strong class="text-text-main">Transferencia</strong> o <strong class="text-text-main">Tarjeta</strong>) y haz clic en el botón verde <span class="px-2.5 py-0.5 rounded text-[11px] font-bold bg-primary text-white">Cobrar y Entregar</span>.
+                                                Elige el medio de pago acordado (<strong class="text-text-main">Efectivo</strong>, <strong class="text-text-main">Transferencia</strong> o <strong class="text-text-main">Tarjeta</strong>) y haz clic en el botón verde <span class="px-2.5 py-0.5 rounded text-[11px] font-bold bg-primary text-white dark:text-[#111417]">Cobrar y Entregar</span>.
                                             </p>
                                         </div>
                                     </div>
@@ -823,7 +858,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     <span class="material-symbols-outlined text-[16px]">build</span>
                                     <span>Cobrar Reparaciones</span>
                                 </a>
-                                <a href="<?php echo BASE_URL; ?>/modules/sales/index.php" class="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
+                                <a href="<?php echo BASE_URL; ?>/modules/sales/index.php" class="px-4 py-2 rounded-xl bg-primary text-white dark:text-[#111417] font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
                                     <span>Ir a Ventas</span>
                                     <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                                 </a>
@@ -896,7 +931,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
                                 <span>Tip: Presiona <kbd class="px-1.5 py-0.5 rounded bg-card border border-border text-[11px] font-mono text-text-main">Ctrl + B</kbd> para abrir el módulo Clientes.</span>
                             </div>
-                            <a href="<?php echo BASE_URL; ?>/modules/clients/index.php" class="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
+                            <a href="<?php echo BASE_URL; ?>/modules/clients/index.php" class="px-4 py-2 rounded-xl bg-primary text-white dark:text-[#111417] font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
                                 <span>Ir a Clientes</span>
                                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </a>
@@ -968,8 +1003,121 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
                                 <span>Tip: Los administradores pueden consultar el historial de actividades desde el Dashboard de administración.</span>
                             </div>
-                            <a href="<?php echo BASE_URL; ?>/modules/suppliers/index.php" class="px-4 py-2 rounded-xl bg-primary text-white font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
+                            <a href="<?php echo BASE_URL; ?>/modules/suppliers/index.php" class="px-4 py-2 rounded-xl bg-primary text-white dark:text-[#111417] font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
                                 <span>Ir a Proveedores</span>
+                                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                            </a>
+                        </div>
+                    </article>
+                </div>
+
+                <?php // ==================== PESTAÑA 6: CAJA Y ARQUEO ==================== ?>
+                <div id="tab-pane-caja" class="help-pane space-y-6 hidden">
+                    <article class="rounded-3xl border border-border bg-card overflow-hidden shadow-lg transition-all">
+                        <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl">
+                                    06
+                                </div>
+                                <div>
+                                    <h2 class="text-xl md:text-2xl font-display font-bold text-text-main tracking-tight">
+                                        Caja, Libro Inmutable y Cierre Ciego
+                                    </h2>
+                                    <p class="text-xs md:text-sm text-text-muted">
+                                        Control diario del efectivo físico, trazabilidad completa de movimientos y arqueo sin alteraciones.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-6 md:p-8 space-y-6">
+                            <p class="text-sm md:text-base text-text-muted leading-relaxed">
+                                El módulo <strong class="text-text-main">Caja</strong> centraliza el dinero del turno: exige tener una caja abierta para cobrar en efectivo, registra automáticamente las ventas y reparaciones cobradas, y protege el conteo final mediante <strong class="text-text-main">cierre ciego</strong>.
+                            </p>
+
+                            <?php // Feature Points ?>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">payments</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Solo Efectivo en Arqueo</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                El arqueo físico cuenta únicamente movimientos en <strong class="text-text-main">Efectivo</strong>. Transferencias y Tarjetas se muestran aparte como <em>Otros medios</em>.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">history_edu</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Libro Inmutable</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                Nada se borra ni se edita. Si hubo un error, un supervisor registra un <strong class="text-text-main">Contra-asiento</strong> con motivo obligatorio.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">visibility_off</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Cierre Ciego</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                El saldo esperado permanece oculto mientras la caja está abierta y se revela recién al cargar el conteo físico.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <?php // Guía breve en 4 puntos ?>
+                            <div class="rounded-2xl border border-border bg-surface/60 p-5 space-y-4">
+                                <h3 class="text-sm md:text-base font-display font-bold text-text-main flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-primary text-[19px]">checklist</span>
+                                    Cómo usar la Caja paso a paso
+                                </h3>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed text-text-muted">
+                                    <div class="p-3.5 rounded-xl bg-card border border-border/70">
+                                        <p class="font-bold text-text-main mb-1">1. Apertura de Caja</p>
+                                        Cargá el efectivo inicial del cajón (o usá <strong class="text-text-main">"Usar como apertura"</strong> del último cierre). Es obligatorio abrir caja antes de cobrar ventas o reparaciones en efectivo.
+                                    </div>
+
+                                    <div class="p-3.5 rounded-xl bg-card border border-border/70">
+                                        <p class="font-bold text-text-main mb-1">2. Movimientos Manuales y Conceptos</p>
+                                        Registrá ingresos o egresos eligiendo concepto y medio de pago. Conceptos físicos como <strong class="text-text-main">Cambio para vuelto</strong> (agregar cambio al cajón) y <strong class="text-text-main">Retiro de efectivo</strong> solo permiten <strong class="text-text-main">Efectivo</strong>.
+                                    </div>
+
+                                    <div class="p-3.5 rounded-xl bg-card border border-border/70">
+                                        <p class="font-bold text-text-main mb-1">3. Ventas, Pagos Combinados y Anulaciones</p>
+                                        Las ventas (incluso con <strong class="text-text-main">2 medios combinados</strong>) se asientan automáticamente en el libro. Si anulás una venta desde Ventas, el sistema genera el contra-asiento automático en Caja.
+                                    </div>
+
+                                    <div class="p-3.5 rounded-xl bg-card border border-border/70">
+                                        <p class="font-bold text-text-main mb-1">4. Permisos y Cierre Ciego</p>
+                                        Los retiros iguales o mayores a <strong class="text-text-main">$50.000</strong>, los contra-asientos y el cierre requieren <strong class="text-text-main">Administrador / Supervisión de Caja</strong>. Si al cerrar hay diferencia entre lo contado y lo esperado, el monto queda fijado y exige una observación obligatoria.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="px-6 md:px-8 py-4 bg-surface/50 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <div class="flex items-center gap-2 text-xs text-text-muted">
+                                <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
+                                <span>Tip: Podés consultar el detalle y exportar el historial de cajas a Excel o PDF desde el mismo módulo.</span>
+                            </div>
+                            <a href="<?php echo BASE_URL; ?>/modules/caja/index.php" class="px-4 py-2 rounded-xl bg-primary text-white dark:text-[#111417] font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
+                                <span>Ir a Caja</span>
                                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </a>
                         </div>
@@ -1098,6 +1246,17 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 Desde el listado de <strong class="text-text-main">Ventas</strong>, busca la transacción y pulsa el botón de anulación (requiere confirmación). Los artículos volverán al stock automáticamente y podrás descargar la <strong class="text-text-main">Nota de Crédito</strong> asociada.
                             </div>
                         </details>
+
+                        <?php // FAQ 6 ?>
+                        <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
+                            <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
+                                <span>¿Cómo corrijo un movimiento en Caja y qué es el Cierre Ciego?</span>
+                                <span class="material-symbols-outlined text-text-muted text-[18px] group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <div class="p-3.5 pt-0 text-text-muted border-t border-border/40 mt-1 leading-relaxed">
+                                Los movimientos de Caja no se borran ni editan: un supervisor debe pulsar <strong class="text-text-main">Contra-asiento</strong> e indicar el motivo. En el <strong class="text-text-main">Cierre Ciego</strong>, contás los billetes sin ver el saldo esperado; si hay diferencia al confirmar, deberás cargar una observación obligatoria.
+                            </div>
+                        </details>
                     </div>
                 </div>
 
@@ -1112,14 +1271,14 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
 // Manejador interactivo de cambio de pestañas de ayuda
 function switchTab(tabId) {
     // 1. Actualizar estilos de los botones de pestañas
-    const tabs = ['inventario', 'taller', 'ventas', 'clientes', 'proveedores'];
+    const tabs = ['inventario', 'taller', 'ventas', 'clientes', 'proveedores', 'caja'];
     tabs.forEach(t => {
         const btn = document.getElementById('tab-btn-' + t);
         const pane = document.getElementById('tab-pane-' + t);
         
         if (t === tabId) {
             if (btn) {
-                btn.className = 'help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-primary border border-primary text-white shadow-sm font-display';
+                btn.className = 'help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-primary border border-primary text-white dark:text-[#111417] shadow-sm font-display';
             }
             if (pane) {
                 pane.classList.remove('hidden');
@@ -1161,7 +1320,7 @@ function toggleAccordion(id) {
 document.addEventListener('DOMContentLoaded', () => {
     try {
         const saved = sessionStorage.getItem('help_active_tab');
-        if (saved && ['inventario', 'taller', 'ventas', 'clientes', 'proveedores'].includes(saved)) {
+        if (saved && ['inventario', 'taller', 'ventas', 'clientes', 'proveedores', 'caja'].includes(saved)) {
             switchTab(saved);
         }
     } catch(e) {}

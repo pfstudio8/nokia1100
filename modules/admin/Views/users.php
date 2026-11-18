@@ -44,7 +44,7 @@ Layout::renderAdminSidebar('usuarios');
                         <!-- Botones de Exportación -->
                         <?php echo Layout::renderExportButtons('users-table', 'Listado de Usuarios', 'usuarios'); ?>
 
-                        <button type="button" onclick="openAddUserModal()" style="width:max-content; padding:.45rem .9rem; border-radius:8px; font-size:.8rem; font-weight:600; background:var(--primary-color); color:#ffffff; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem; transition: all 0.2s; white-space:nowrap; flex-shrink:0;">
+                        <button type="button" onclick="openAddUserModal()" class="btn-primary" style="width:max-content; padding:.45rem .9rem; border-radius:8px; font-size:.8rem; font-weight:700; background:var(--primary-color); color:var(--text-inverse, #ffffff); border:none; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem; transition: all 0.2s; white-space:nowrap; flex-shrink:0;">
                             <span class="material-symbols-outlined" style="font-size:1.1rem; font-weight:600;">person_add</span>
                             Nuevo
                         </button>
@@ -80,13 +80,17 @@ Layout::renderAdminSidebar('usuarios');
                                             <?php if ($row['is_active']): ?>
                                                 <span class="role-badge badge-active">Activo</span>
                                             <?php else: ?>
-                                                <span class="badge-inactive role-badge" title="Baja: <?php echo $row['fecha_baja'] ?? ''; ?>">Inactivo</span>
+                                                <span class="badge-inactive role-badge" title="Baja: <?php echo htmlspecialchars($row['fecha_baja'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">Inactivo</span>
                                             <?php endif; ?>
                                         </td>
                                         <td>
                                             <?php if ($row['is_active']): ?>
+                                                <?php $isPrimaryTarget = isset($primary_admin_id) && (int)$row['id_usuario'] === (int)$primary_admin_id; ?>
                                                 <div style="display:flex; align-items:center; gap:1.25rem; flex-wrap:wrap; justify-content: flex-start;">
                                                     <?php // Cambio de rol ?>
+                                                    <?php if ($isPrimaryTarget): ?>
+                                                        <span class="text-[11px] px-2.5 py-1 rounded-[4px] border border-primary/40 text-primary bg-primary/10 font-mono font-bold uppercase tracking-wider">Admin Principal</span>
+                                                    <?php else: ?>
                                                     <form action="<?php echo BASE_URL; ?>/modules/admin/index.php?action=update_user_role"
                                                           method="POST" style="display:inline-flex; gap:.5rem; align-items:center; margin-bottom:0;">
                                                         <input type="hidden" name="id_usuario" value="<?php echo (int)$row['id_usuario']; ?>">
@@ -100,6 +104,7 @@ Layout::renderAdminSidebar('usuarios');
 
                                                         </div>
                                                     </form>
+                                                    <?php endif; ?>
 
                                                     <?php
                                                      $user_data = json_encode([
@@ -140,6 +145,7 @@ Layout::renderAdminSidebar('usuarios');
                                                     <?php endif; ?>
 
                                                     <?php // Baja lógica vía POST ?>
+                                                    <?php if (!$isPrimaryTarget): ?>
                                                     <form method="POST" action="index.php?action=delete_user" style="display:inline;">
                                                         <input type="hidden" name="id" value="<?php echo (int)$row['id_usuario']; ?>">
                                                         <input type="hidden" name="filtro" value="<?php echo htmlspecialchars($filtro, ENT_QUOTES, 'UTF-8'); ?>">
@@ -151,6 +157,7 @@ Layout::renderAdminSidebar('usuarios');
                                                             Desactivar
                                                         </button>
                                                     </form>
+                                                    <?php endif; ?>
                                                 </div>
                                             <?php else: ?>
                                                 <?php // Restaurar vía POST ?>
@@ -219,7 +226,7 @@ Layout::renderAdminSidebar('usuarios');
 
         <div class="p-4 px-6 border-t border-border flex gap-3 flex-shrink-0 bg-surface">
             <button type="button" onclick="closeModulePermissions()" class="btn-back flex-1 text-center py-2.5" style="margin:0; width:auto;">Cancelar</button>
-            <button type="submit" class="btn-primary flex-1 text-center py-2.5" style="margin:0; width:auto; background:var(--primary-color); color:#ffffff;">Guardar</button>
+            <button type="submit" class="btn-primary flex-1 text-center py-2.5" style="margin:0; width:auto; background:var(--primary-color); color:var(--text-inverse, #ffffff);">Guardar</button>
         </div>
     </form>
 </div>
@@ -371,7 +378,7 @@ Layout::renderAdminSidebar('usuarios');
 
             <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
                 <button type="button" onclick="closeAddUserModal()" class="btn-back" style="width: auto; margin: 0;">Cancelar</button>
-                <button type="submit" class="btn-primary" style="width: auto; margin: 0; background: var(--primary-color); color: #ffffff;">
+                <button type="submit" class="btn-primary" style="width: auto; margin: 0; background: var(--primary-color); color: var(--text-inverse, #ffffff);">
                     Registrar Usuario
                 </button>
             </div>
@@ -520,7 +527,7 @@ Layout::renderAdminSidebar('usuarios');
 
             <div style="display: flex; gap: 1rem; justify-content: flex-end; margin-top: 1.5rem; border-top: 1px solid var(--border); padding-top: 1rem;">
                 <button type="button" onclick="closeEditUserModal()" class="btn-back" style="width: auto; margin: 0;">Cancelar</button>
-                <button type="submit" class="btn-primary" style="width: auto; margin: 0; background: var(--primary-color); color: #ffffff;">
+                <button type="submit" class="btn-primary" style="width: auto; margin: 0; background: var(--primary-color); color: var(--text-inverse, #ffffff);">
                     Guardar Cambios
                 </button>
             </div>

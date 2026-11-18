@@ -184,12 +184,21 @@ class SalesModel extends BaseModel
                         'N/A'
                     ) AS metodo_de_pago,
                     v.estado,
-                    COALESCE(dv.nombre_producto, p.nombre, NULLIF(TRIM(v.descripcion), ''), 'Venta directa') AS producto,
-                    COALESCE(dv.cantidad, 1) AS cantidad
+                    COALESCE(
+                        NULLIF(GROUP_CONCAT(
+                            CASE WHEN dv.id_detalle_venta IS NOT NULL THEN
+                                CONCAT(dv.cantidad, 'x ', COALESCE(NULLIF(TRIM(dv.nombre_producto), ''), p.nombre, 'Producto'))
+                            ELSE NULL END
+                            ORDER BY dv.id_detalle_venta ASC SEPARATOR ' · '
+                        ), ''),
+                        NULLIF(TRIM(v.descripcion), ''),
+                        'Venta directa'
+                    ) AS producto,
+                    COALESCE(SUM(dv.cantidad), 1) AS cantidad
                 FROM venta v
                 LEFT JOIN detalle_venta dv ON v.id_venta = dv.id_venta
                 LEFT JOIN producto p ON dv.id_producto = p.id_producto
-
+                GROUP BY v.id_venta
                 ORDER BY v.fecha DESC, v.id_venta DESC
                 LIMIT ? OFFSET ?";
         $stmt = $this->conn->prepare($sql);
@@ -208,9 +217,7 @@ class SalesModel extends BaseModel
 
     public function get_sales_count()
     {
-        $sql = "SELECT COUNT(*) as total
-                FROM venta v
-                LEFT JOIN detalle_venta dv ON v.id_venta = dv.id_venta";
+        $sql = "SELECT COUNT(*) as total FROM venta";
         $res = $this->conn->query($sql);
         if ($res && $row = $res->fetch_assoc()) {
             return (int)$row['total'];
@@ -307,7 +314,7 @@ class SalesModel extends BaseModel
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $dates[] = $row['sale_date'];
-                $totals[] = $row['daily_total'];
+                $totals[] = (float)$row['daily_total'];
             }
         }
         return ['dates' => array_reverse($dates), 'totals' => array_reverse($totals)];
@@ -390,7 +397,7 @@ class SalesModel extends BaseModel
         $limit = (int) $limit;
         $excludeServices = ServiceProduct::excludeSql('p', 'pd');
         $sql = "SELECT COALESCE(NULLIF(TRIM(CONCAT(COALESCE(pd.marca, ''), ' ', COALESCE(pd.modelo, ''))), ''), p.nombre) as nombre_real, 
-                        SUM((dv.precio_unitario - COALESCE((SELECT AVG(precio_compra) FROM detalle_compra WHERE id_producto = p.id_producto), 0)) * dv.cantidad) as rentabilidad
+                        SUM((dv.precio_unitario - COALESCE((SELECT AVG(dc.precio_compra) FROM detalle_compra dc JOIN compra c ON dc.id_compra = c.id_compra WHERE dc.id_producto = p.id_producto AND c.estado = 'Recibido'), 0)) * dv.cantidad) as rentabilidad
                 FROM detalle_venta dv
                 JOIN venta v ON dv.id_venta = v.id_venta
                 JOIN producto p ON dv.id_producto = p.id_producto
@@ -455,12 +462,21 @@ class SalesModel extends BaseModel
                         'N/A'
                     ) AS metodo_de_pago,
                     v.estado,
-                    COALESCE(dv.nombre_producto, p.nombre, NULLIF(TRIM(v.descripcion), ''), 'Venta directa') AS producto,
-                    COALESCE(dv.cantidad, 1) AS cantidad
+                    COALESCE(
+                        NULLIF(GROUP_CONCAT(
+                            CASE WHEN dv.id_detalle_venta IS NOT NULL THEN
+                                CONCAT(dv.cantidad, 'x ', COALESCE(NULLIF(TRIM(dv.nombre_producto), ''), p.nombre, 'Producto'))
+                            ELSE NULL END
+                            ORDER BY dv.id_detalle_venta ASC SEPARATOR ' · '
+                        ), ''),
+                        NULLIF(TRIM(v.descripcion), ''),
+                        'Venta directa'
+                    ) AS producto,
+                    COALESCE(SUM(dv.cantidad), 1) AS cantidad
                 FROM venta v
                 LEFT JOIN detalle_venta dv ON v.id_venta = dv.id_venta
                 LEFT JOIN producto p ON dv.id_producto = p.id_producto
-
+                GROUP BY v.id_venta
                 ORDER BY v.fecha DESC, v.id_venta DESC";
         $result = $this->conn->query($sql);
         $data = [];

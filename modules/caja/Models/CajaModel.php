@@ -11,6 +11,11 @@ class CajaModel extends BaseModel
     public const MEDIOS_PAGO = ['Efectivo', 'Transferencia', 'Tarjeta'];
 
     /**
+     * Conceptos que representan efectivo físico en caja y no admiten medios electrónicos.
+     */
+    public const CONCEPTOS_SOLO_EFECTIVO = ['Venta en efectivo', 'Cambio para vuelto', 'Retiro de efectivo'];
+
+    /**
      * Límite máximo para retiros/egresos manuales sin rol Administrador / Supervisor de caja.
      */
     public const LIMITE_RETIRO_EMPLEADO = 50000.00;

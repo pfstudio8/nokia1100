@@ -59,6 +59,7 @@ $mainVer = file_exists(__DIR__ . '/../../../assets/js/main.js') ? filemtime(__DI
                 </a>
             <?php else: ?>
                 <form action="<?php echo BASE_URL; ?>/modules/auth/index.php?action=reset_password" method="POST" novalidate>
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                     <input type="hidden" name="token" value="<?php echo htmlspecialchars($token); ?>">
 
                     <div class="field-group">
@@ -83,7 +84,7 @@ $mainVer = file_exists(__DIR__ . '/../../../assets/js/main.js') ? filemtime(__DI
                         <div class="strength-segment" id="seg-2"></div>
                         <div class="strength-segment" id="seg-3"></div>
                     </div>
-                    <p class="strength-hint" id="strength-text">Usá al menos 8 caracteres, mayúscula, minúscula y número.</p>
+                    <p class="strength-hint" id="strength-text">Usá al menos 8 caracteres, mayúscula, minúscula, número y símbolo.</p>
 
                     <div class="field-group">
                         <label for="password_confirm" class="field-label">CONFIRMAR CONTRASEÑA</label>
@@ -118,6 +119,7 @@ $mainVer = file_exists(__DIR__ . '/../../../assets/js/main.js') ? filemtime(__DI
         </div>
     </main>
 
+    <script src="<?php echo BASE_URL; ?>/assets/js/session-cache.js"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/framer-toaster.js?v=<?php echo $toasterVer; ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/main.js?v=<?php echo $mainVer; ?>"></script>
     <script>
@@ -143,10 +145,15 @@ $mainVer = file_exists(__DIR__ . '/../../../assets/js/main.js') ? filemtime(__DI
                 const s3 = document.getElementById('seg-3');
                 const hint = document.getElementById('strength-text');
 
+                const hasLen = val.length >= 8;
+                const hasCases = /[A-Z]/.test(val) && /[a-z]/.test(val);
+                const hasNum = /[0-9]/.test(val);
+                const hasSym = /[^a-zA-Z0-9]/.test(val);
+
                 let score = 0;
-                if (val.length >= 8) score++;
-                if (/[A-Z]/.test(val) && /[a-z]/.test(val)) score++;
-                if (/[0-9]/.test(val)) score++;
+                if (hasLen) score++;
+                if (hasCases) score++;
+                if (hasNum && hasSym) score++;
 
                 const colors = ['#dcd7c9', '#a82a1d', '#d98a1c', '#1d6a38'];
                 const activeColor = colors[score];
@@ -156,11 +163,11 @@ $mainVer = file_exists(__DIR__ . '/../../../assets/js/main.js') ? filemtime(__DI
                 s3.style.backgroundColor = score >= 3 ? activeColor : '#dcd7c9';
 
                 if (!val.length) {
-                    hint.textContent = 'Usá al menos 8 caracteres, mayúscula, minúscula y número.';
-                } else if (score === 1) {
-                    hint.textContent = 'Seguridad baja: agregá mayúsculas y números.';
+                    hint.textContent = 'Usá al menos 8 caracteres, mayúscula, minúscula, número y símbolo.';
+                } else if (score <= 1) {
+                    hint.textContent = 'Seguridad baja: agregá mayúsculas, minúsculas, números y símbolos.';
                 } else if (score === 2) {
-                    hint.textContent = 'Seguridad media: completá todos los requisitos.';
+                    hint.textContent = 'Seguridad media: falta completar número y símbolo.';
                 } else {
                     hint.textContent = 'Contraseña segura y lista para guardar.';
                 }

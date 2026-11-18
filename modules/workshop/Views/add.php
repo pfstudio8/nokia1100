@@ -496,10 +496,15 @@ function renderPreviews() {
         // Pie de tarjeta con nombre y peso
         const info = document.createElement('div');
         info.className = 'flex flex-col px-0.5';
-        info.innerHTML = `
-            <span class="text-xs font-medium text-text-main truncate" title="${item.name}">${item.name}</span>
-            <span class="text-[10px] font-mono text-text-muted">${formatFileSize(item.size)}</span>
-        `;
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'text-xs font-medium text-text-main truncate';
+        nameSpan.title = String(item.name || '');
+        nameSpan.textContent = String(item.name || '');
+        const sizeSpan = document.createElement('span');
+        sizeSpan.className = 'text-[10px] font-mono text-text-muted';
+        sizeSpan.textContent = formatFileSize(item.size);
+        info.appendChild(nameSpan);
+        info.appendChild(sizeSpan);
 
         card.appendChild(photoBox);
         card.appendChild(info);

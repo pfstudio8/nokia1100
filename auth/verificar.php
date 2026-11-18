@@ -1,7 +1,9 @@
 <?php
 // verificar.php - Nokia 1100 Design System
-session_start();
 require_once __DIR__ . '/../config/db.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 /** @var mysqli $conn */
 global $conn;
 
@@ -66,7 +68,14 @@ function renderVerificationView(bool $isSuccess, string $title, string $message)
 }
 
 if (isset($_GET['token'])) {
-    $token = $_GET['token'];
+    $token = trim((string)$_GET['token']);
+    if (!preg_match('/^[0-9]{6}$/', $token)) {
+        renderVerificationView(
+            false,
+            'Enlace no disponible',
+            'El código de verificación es inválido o expiró.'
+        );
+    }
     $now = date('Y-m-d H:i:s');
 
     $stmt = $conn->prepare("SELECT id_usuario, nombre_usuario, rol FROM usuario WHERE token_verificacion = ? AND token_expira > ? AND verificado = 0");

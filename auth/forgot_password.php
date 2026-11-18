@@ -1,6 +1,8 @@
 <?php
-session_start();
 require_once __DIR__ . '/../config/db.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 if (empty($_SESSION['session_token'])) {
     $_SESSION['session_token'] = bin2hex(random_bytes(32));
@@ -77,6 +79,7 @@ $mainVer = file_exists(__DIR__ . '/../assets/js/main.js') ? filemtime(__DIR__ . 
         </div>
     </main>
 
+    <script src="<?php echo BASE_URL; ?>/assets/js/session-cache.js"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/framer-toaster.js?v=<?php echo $toasterVer; ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/main.js?v=<?php echo $mainVer; ?>"></script>
     <?php if (isset($_SESSION['mail_debug_notice'])): ?>

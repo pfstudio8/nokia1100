@@ -117,7 +117,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!parent.querySelector('.chart-empty-msg')) {
                 const div = document.createElement('div');
                 div.className = 'chart-empty-msg flex flex-col items-center justify-center h-full text-center text-xs font-mono text-[#6b7075] dark:text-[#9ba19f] py-8';
-                div.innerHTML = `<span class="material-symbols-outlined text-[28px] mb-1.5 opacity-50">bar_chart</span><span>${message}</span>`;
+                div.innerHTML = '<span class="material-symbols-outlined text-[28px] mb-1.5 opacity-50">bar_chart</span>';
+                const msgSpan = document.createElement('span');
+                msgSpan.textContent = String(message ?? '');
+                div.appendChild(msgSpan);
                 parent.appendChild(div);
             }
         }

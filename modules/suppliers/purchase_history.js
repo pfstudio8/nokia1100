@@ -7,16 +7,12 @@ function toggleDetails(id) {
 }
 
 async function receivePurchase(id) {
-    let isConfirmed = false;
-    if (typeof showConfirmModal === 'function') {
-        isConfirmed = await showConfirmModal(
-            'Recibir Pedido',
-            'Esto actualizará el stock en el inventario. ¿Confirmás?',
-            'Sí, recibir', 'Cancelar', false
-        );
-    } else {
-        isConfirmed = confirm('¿Está seguro que desea marcar este pedido como recibido? Esto actualizará el stock en el inventario.');
-    }
+    if (typeof showConfirmModal !== 'function') return;
+    const isConfirmed = await showConfirmModal(
+        'Recibir Pedido',
+        'Esto actualizará el stock en el inventario. ¿Confirmás?',
+        'Sí, recibir', 'Cancelar', false
+    );
 
     if (isConfirmed) {
         fetch('index.php?action=receive_purchase', {
@@ -34,23 +30,18 @@ async function receivePurchase(id) {
                 setTimeout(() => window.location.reload(), 1000);
             } else {
                 if (typeof showToast === 'function') showToast(data.message, 'error');
-                else alert('Error: ' + data.message);
             }
         });
     }
 }
 
 async function cancelPurchase(id) {
-    let isConfirmed = false;
-    if (typeof showConfirmModal === 'function') {
-        isConfirmed = await showConfirmModal(
-            'Cancelar Pedido',
-            'Esta acción no se puede deshacer. ¿Confirmás la cancelación?',
-            'Sí, cancelar', 'Volver', true
-        );
-    } else {
-        isConfirmed = confirm('¿Está seguro que desea cancelar este pedido? Esta acción no se puede deshacer.');
-    }
+    if (typeof showConfirmModal !== 'function') return;
+    const isConfirmed = await showConfirmModal(
+        'Cancelar Pedido',
+        'Esta acción no se puede deshacer. ¿Confirmás la cancelación?',
+        'Sí, cancelar', 'Volver', true
+    );
 
     if (isConfirmed) {
         fetch('index.php?action=cancel_purchase', {
@@ -68,7 +59,6 @@ async function cancelPurchase(id) {
                 setTimeout(() => window.location.reload(), 1000);
             } else {
                 if (typeof showToast === 'function') showToast(data.message, 'error');
-                else alert('Error: ' + data.message);
             }
         });
     }

@@ -58,7 +58,6 @@ Layout::renderAdminSidebar('graficos');
         </div>
     </div>
 </main>
-<?php Layout::renderFooter(); ?>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     window.salesData = {
@@ -71,3 +70,4 @@ Layout::renderAdminSidebar('graficos');
     };
 </script>
 <script src="<?php echo BASE_URL; ?>/modules/sales/sales_charts.js?v=<?php echo time(); ?>"></script>
+<?php Layout::renderFooter(); ?>

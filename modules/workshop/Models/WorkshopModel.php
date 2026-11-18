@@ -395,48 +395,80 @@ public function get_active_products_in_stock()
     {
         $id_cliente_existente = intval($id_cliente_existente);
         $user_id = intval($user_id);
-        $codigo_orden = date('ym') . mt_rand(1000, 9999);
+        $budget = max(0.0, round((float)$budget, 2));
 
-        if ($id_cliente_existente > 0) {
-            $id_cliente = $id_cliente_existente;
-        } else {
-            // Buscar cliente existente o crear uno nuevo con sentencia preparada
-            $stmt = $this->conn->prepare("SELECT id_cliente FROM cliente WHERE nombre = ? AND telefono = ? LIMIT 1");
-            $stmt->bind_param("ss", $client_name, $client_phone);
-            $stmt->execute();
-            $res_client = $stmt->get_result();
-            if ($res_client && $row = $res_client->fetch_assoc()) {
-                $id_cliente = (int)$row['id_cliente'];
-            } else {
-                $stmt_insert = $this->conn->prepare("INSERT INTO cliente (nombre, telefono, email) VALUES (?, ?, ?)");
-                $stmt_insert->bind_param("sss", $client_name, $client_phone, $client_email);
-                if (!$stmt_insert->execute()) {
-                    throw new Exception("Error al registrar cliente: " . $stmt_insert->error);
+        $this->conn->begin_transaction();
+        try {
+            // Generar código de orden único verificando colisión en BD
+            $codigo_orden = '';
+            for ($attempt = 0; $attempt < 15; $attempt++) {
+                $candidate = date('ym') . random_int(1000, 9999);
+                $stmtChk = $this->conn->prepare("SELECT id_reparacion FROM reparacion WHERE codigo_orden = ? LIMIT 1");
+                $stmtChk->bind_param("s", $candidate);
+                $stmtChk->execute();
+                $exists = $stmtChk->get_result()->num_rows > 0;
+                $stmtChk->close();
+                if (!$exists) {
+                    $codigo_orden = $candidate;
+                    break;
                 }
-                $id_cliente = (int)$this->conn->insert_id;
-                $stmt_insert->close();
             }
-            $stmt->close();
-        }
+            if ($codigo_orden === '') {
+                $codigo_orden = date('ym') . substr((string)time(), -4) . random_int(10, 99);
+            }
 
-        $stmt_rep = $this->conn->prepare("INSERT INTO reparacion (codigo_orden, id_cliente, equipo_marca, equipo_modelo, equipo_imei, falla_declarada, observaciones, presupuesto, id_usuario_recibe) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt_rep->bind_param("sisssssdi", $codigo_orden, $id_cliente, $brand, $model, $imei, $failure, $notes, $budget, $user_id);
+            if ($id_cliente_existente > 0) {
+                $id_cliente = $id_cliente_existente;
+            } else {
+                // Buscar cliente existente o crear uno nuevo con sentencia preparada
+                $stmt = $this->conn->prepare("SELECT id_cliente FROM cliente WHERE nombre = ? AND telefono = ? LIMIT 1");
+                $stmt->bind_param("ss", $client_name, $client_phone);
+                $stmt->execute();
+                $res_client = $stmt->get_result();
+                if ($res_client && $row = $res_client->fetch_assoc()) {
+                    $id_cliente = (int)$row['id_cliente'];
+                    $stmt->close();
+                } else {
+                    $stmt->close();
+                    $stmt_insert = $this->conn->prepare("INSERT INTO cliente (nombre, telefono, email) VALUES (?, ?, ?)");
+                    $stmt_insert->bind_param("sss", $client_name, $client_phone, $client_email);
+                    if (!$stmt_insert->execute()) {
+                        $err = $stmt_insert->error;
+                        $stmt_insert->close();
+                        throw new Exception("Error al registrar cliente: " . $err);
+                    }
+                    $id_cliente = (int)$this->conn->insert_id;
+                    $stmt_insert->close();
+                }
+            }
 
-        if (!$stmt_rep->execute()) {
-            $err = $stmt_rep->error;
+            $stmt_rep = $this->conn->prepare("INSERT INTO reparacion (codigo_orden, id_cliente, equipo_marca, equipo_modelo, equipo_imei, falla_declarada, observaciones, presupuesto, id_usuario_recibe) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt_rep->bind_param("sisssssdi", $codigo_orden, $id_cliente, $brand, $model, $imei, $failure, $notes, $budget, $user_id);
+
+            if (!$stmt_rep->execute()) {
+                $err = $stmt_rep->error;
+                $stmt_rep->close();
+                throw new Exception("Error al crear la orden: " . $err);
+            }
+            $id_reparacion = (int)$this->conn->insert_id;
             $stmt_rep->close();
-            throw new Exception("Error al crear la orden: " . $err);
+
+            // Historial inicial preparado
+            $stmt_hist = $this->conn->prepare("INSERT INTO reparacion_historial (id_reparacion, estado_nuevo, nota, id_usuario) VALUES (?, 'Recibido', 'Ingreso inicial del equipo', ?)");
+            $stmt_hist->bind_param("ii", $id_reparacion, $user_id);
+            if (!$stmt_hist->execute()) {
+                $err = $stmt_hist->error;
+                $stmt_hist->close();
+                throw new Exception("Error al registrar historial inicial: " . $err);
+            }
+            $stmt_hist->close();
+
+            $this->conn->commit();
+            return $id_reparacion;
+        } catch (Throwable $e) {
+            $this->conn->rollback();
+            throw $e;
         }
-        $id_reparacion = (int)$this->conn->insert_id;
-        $stmt_rep->close();
-
-        // Historial inicial preparado
-        $stmt_hist = $this->conn->prepare("INSERT INTO reparacion_historial (id_reparacion, estado_nuevo, nota, id_usuario) VALUES (?, 'Recibido', 'Ingreso inicial del equipo', ?)");
-        $stmt_hist->bind_param("ii", $id_reparacion, $user_id);
-        $stmt_hist->execute();
-        $stmt_hist->close();
-
-        return $id_reparacion;
     }
 
     public function update_repair_status_and_budget(int $id_reparacion, string $status, float $budget, string $note, int $user_id)
@@ -444,47 +476,61 @@ public function get_active_products_in_stock()
         $id_reparacion = intval($id_reparacion);
         $user_id = intval($user_id);
 
-        $stmt_old = $this->conn->prepare("SELECT estado, presupuesto FROM reparacion WHERE id_reparacion = ?");
-        $stmt_old->bind_param("i", $id_reparacion);
-        $stmt_old->execute();
-        $res_old = $stmt_old->get_result();
-        if (!$res_old || $res_old->num_rows === 0) {
+        $allowedStatuses = ['Recibido', 'En diagnóstico', 'En reparación', 'Listo', 'Cancelado'];
+        if (!in_array($status, $allowedStatuses, true)) {
+            throw new Exception("Estado de reparación no válido o gestionado exclusivamente por Caja.");
+        }
+
+        $this->conn->begin_transaction();
+        try {
+            $stmt_old = $this->conn->prepare("SELECT estado, presupuesto FROM reparacion WHERE id_reparacion = ? FOR UPDATE");
+            $stmt_old->bind_param("i", $id_reparacion);
+            $stmt_old->execute();
+            $res_old = $stmt_old->get_result();
+            if (!$res_old || $res_old->num_rows === 0) {
+                $stmt_old->close();
+                throw new Exception("Orden de reparación no encontrada");
+            }
+            $row_old = $res_old->fetch_assoc();
+            $old_state = $row_old['estado'];
+            $prev_budget = floatval($row_old['presupuesto'] ?? 0);
             $stmt_old->close();
-            throw new Exception("Orden de reparación no encontrada");
-        }
-        $row_old = $res_old->fetch_assoc();
-        $old_state = $row_old['estado'];
-        $prev_budget = floatval($row_old['presupuesto'] ?? 0);
-        $stmt_old->close();
 
-        // Preservar el presupuesto previo si el valor enviado viene en 0 o vacío
-        $budget_val = round((float)$budget, 2);
-        if ($budget_val <= 0 && $prev_budget > 0) {
-            $budget_val = $prev_budget;
-        }
+            if ($old_state === 'Entregado' || $old_state === 'Cancelado') {
+                throw new Exception("Esta orden ya fue cerrada ($old_state) y no puede reabrirse ni modificarse.");
+            }
 
-        $sql_update = "UPDATE reparacion SET estado = ?, presupuesto = ?";
-        if ($status === 'Entregado' && $old_state !== 'Entregado') {
-            $sql_update .= ", fecha_entrega = CURRENT_TIMESTAMP";
-        }
-        $sql_update .= " WHERE id_reparacion = ?";
+            // Preservar el presupuesto previo si el valor enviado viene en 0 o vacío
+            $budget_val = round((float)$budget, 2);
+            if ($budget_val <= 0 && $prev_budget > 0) {
+                $budget_val = $prev_budget;
+            }
+            if ($budget_val < 0) {
+                throw new Exception("El presupuesto no puede ser negativo.");
+            }
 
-        $stmt_update = $this->conn->prepare($sql_update);
-        $stmt_update->bind_param("sdi", $status, $budget_val, $id_reparacion);
-        
-        if ($stmt_update->execute()) {
+            $stmt_update = $this->conn->prepare("UPDATE reparacion SET estado = ?, presupuesto = ? WHERE id_reparacion = ?");
+            $stmt_update->bind_param("sdi", $status, $budget_val, $id_reparacion);
+
+            if (!$stmt_update->execute()) {
+                $err = $stmt_update->error;
+                $stmt_update->close();
+                throw new Exception("Error al actualizar la orden: " . $err);
+            }
             $stmt_update->close();
+
             if ($old_state !== $status || !empty($note)) {
                 $stmt_hist = $this->conn->prepare("INSERT INTO reparacion_historial (id_reparacion, estado_anterior, estado_nuevo, nota, id_usuario) VALUES (?, ?, ?, ?, ?)");
                 $stmt_hist->bind_param("isssi", $id_reparacion, $old_state, $status, $note, $user_id);
                 $stmt_hist->execute();
                 $stmt_hist->close();
             }
+
+            $this->conn->commit();
             return true;
-        } else {
-            $err = $stmt_update->error;
-            $stmt_update->close();
-            throw new Exception("Error al actualizar la orden: " . $err);
+        } catch (Throwable $e) {
+            $this->conn->rollback();
+            throw $e;
         }
     }
 

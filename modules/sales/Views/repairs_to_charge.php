@@ -131,13 +131,13 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     <input type="hidden" name="modo_pago" value="unico" class="input-modo-pago">
                                     
                                     <div>
-                                        <div class="flex items-center justify-between gap-1 mb-2">
+                                        <div class="flex items-center justify-between gap-2 mb-2.5">
                                             <label class="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
                                                 <span class="material-symbols-outlined text-[16px] text-primary">account_balance_wallet</span>
                                                 Método de Pago
                                             </label>
-                                            <button type="button" onclick="toggleRepairComboMode(this)" class="btn-toggle-combo text-[10px] font-bold text-primary hover:underline flex items-center gap-0.5">
-                                                <span class="material-symbols-outlined text-[13px]">call_split</span> Combinar 2 medios
+                                            <button type="button" onclick="toggleRepairComboMode(this)" class="btn-toggle-combo px-2.5 py-1.5 rounded-lg border border-primary/40 bg-primary/10 hover:bg-primary/20 text-xs font-bold text-primary flex items-center gap-1.5 transition-all shadow-sm">
+                                                <span class="material-symbols-outlined text-[15px]">call_split</span> Combinar 2 medios
                                             </button>
                                         </div>
 
@@ -388,7 +388,7 @@ function toggleRepairComboMode(btn) {
         modoInput.value = 'combinado';
         singleBlock.classList.add('hidden');
         comboBlock.classList.remove('hidden');
-        btn.innerHTML = '<span class="material-symbols-outlined text-[13px]">payments</span> Pago único';
+        btn.innerHTML = '<span class="material-symbols-outlined text-[15px]">payments</span> Pago único';
         const half1 = Math.round((total / 2) * 100) / 100;
         const half2 = Math.round((total - half1) * 100) / 100;
         form.querySelector('.rep-monto-1').value = half1.toFixed(2);
@@ -398,7 +398,7 @@ function toggleRepairComboMode(btn) {
         modoInput.value = 'unico';
         comboBlock.classList.add('hidden');
         singleBlock.classList.remove('hidden');
-        btn.innerHTML = '<span class="material-symbols-outlined text-[13px]">call_split</span> Combinar 2 medios';
+        btn.innerHTML = '<span class="material-symbols-outlined text-[15px]">call_split</span> Combinar 2 medios';
     }
 }
 
@@ -466,8 +466,6 @@ function validateRepairChargeForm(form) {
     if (modo === 'combinado' && !updateRepairComboStatus(form)) {
         if (typeof showToast === 'function') {
             showToast('La suma de ambos medios de pago debe ser exactamente igual al total a cobrar.', 'error');
-        } else {
-            alert('La suma de ambos medios de pago debe ser exactamente igual al total a cobrar.');
         }
         return false;
     }

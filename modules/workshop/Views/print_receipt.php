@@ -290,11 +290,20 @@ $qrSvg = QRCodeSVG::render($trackingUrl, 138, 1, '#15171a', '#ffffff');
                         }
                         const original = copyText.textContent;
                         copyText.textContent = '¡Link copiado!';
+                        if (typeof showToast === 'function') {
+                            showToast('Link de seguimiento copiado al portapapeles.', 'success');
+                        }
                         setTimeout(function() {
                             copyText.textContent = original;
                         }, 2000);
                     } catch (err) {
-                        prompt('Copiá el link de seguimiento:', url);
+                        copyText.textContent = 'Error al copiar';
+                        if (typeof showToast === 'function') {
+                            showToast('No se pudo copiar automáticamente. Copiá el enlace mostrado en el comprobante.', 'warning');
+                        }
+                        setTimeout(function() {
+                            copyText.textContent = 'Copiar Link';
+                        }, 2500);
                     }
                 });
             }
@@ -325,5 +334,6 @@ $qrSvg = QRCodeSVG::render($trackingUrl, 138, 1, '#15171a', '#ffffff');
             }
         })();
     </script>
+    <script src="<?php echo BASE_URL; ?>/assets/js/framer-toaster.js"></script>
 </body>
 </html>

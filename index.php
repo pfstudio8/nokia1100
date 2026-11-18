@@ -1,7 +1,9 @@
 <?php
 // index.php - Pantalla de Acceso Premium Nokia 1100 System
-session_start();
 require_once __DIR__ . '/config/db.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 if (empty($_SESSION['session_token'])) {
     $_SESSION['session_token'] = bin2hex(random_bytes(32));
@@ -155,7 +157,7 @@ if (isset($_SESSION['user_id'])) {
                     <div id="password-strength-container" class="w-full h-1 bg-[#d3cebf] mb-1 rounded-full overflow-hidden" style="display: none;">
                         <div id="password-strength-bar" class="h-full w-0 transition-all duration-300"></div>
                     </div>
-                    <span class="font-mono text-[9px] text-[#5c6165] block mb-2">Mínimo 8 caracteres (mayúscula, minúscula y símbolo).</span>
+                    <span class="font-mono text-[9px] text-[#5c6165] block mb-2">Mínimo 8 caracteres (mayúscula, minúscula, número y símbolo).</span>
 
                     <button type="submit" class="btn-primary-auth">
                         <span>Crear cuenta</span>
@@ -395,42 +397,13 @@ if (isset($_SESSION['user_id'])) {
         </div>
     </div>
 
-    <?php // Contenedor Unificado para Notificaciones Toasts Flotantes ?>
-    <div id="toast-container" class="fixed top-6 right-6 z-[9999] flex flex-col items-end pointer-events-none gap-2"></div>
-
     <?php // Cargar Scripts del Sistema ?>
+    <script src="<?php echo BASE_URL; ?>/assets/js/session-cache.js?v=<?php echo time(); ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/framer-toaster.js?v=<?php echo time(); ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/one-time-code.js?v=<?php echo time(); ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/nokia-loader.js?v=<?php echo time(); ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/main.js?v=<?php echo time(); ?>"></script>
     <script src="<?php echo BASE_URL; ?>/assets/js/login.js?v=<?php echo time(); ?>"></script>
-    
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            let msgShowed = false;
-            
-            if (urlParams.has("success")) {
-                if (typeof showToast === "function") showToast(urlParams.get("success"), "success");
-                urlParams.delete("success");
-                msgShowed = true;
-            }
-            if (urlParams.has("error")) {
-                if (typeof showToast === "function") showToast(urlParams.get("error"), "error");
-                urlParams.delete("error");
-                msgShowed = true;
-            }
-            
-            if (msgShowed) {
-                if (urlParams.has("action")) {
-                    const action = urlParams.get("action");
-                    window.history.replaceState({}, document.title, window.location.pathname + "?action=" + action);
-                } else {
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-            }
-        });
-    </script>
 </body>
 
 </html>

@@ -177,7 +177,7 @@ krsort($uniqueMonths);
         </div>
 
         <!-- Formulario para agregar movimiento -->
-        <form class="mv-form" id="mvForm" novalidate style="grid-template-columns: auto minmax(150px, 1.1fr) minmax(120px, 0.8fr) minmax(180px, 1.4fr) minmax(120px, 0.9fr) auto;">
+        <form class="mv-form" id="mvForm" novalidate>
           <div>
             <span class="nk-label" id="mvTipoL">Tipo</span>
             <div class="nk-seg" id="mvTipo" role="group" aria-labelledby="mvTipoL">

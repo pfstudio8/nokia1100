@@ -74,13 +74,14 @@ a.user-filter-btn:active {
 a.user-filter-btn.is-active {
     background: var(--primary-color);
     border-color: var(--primary-color);
-    color: #ffffff;
+    color: var(--text-inverse, #ffffff);
+    font-weight: 700;
 }
 
 a.user-filter-btn.is-active:hover {
-    background: #23272c;
-    border-color: #23272c;
-    color: #ffffff;
+    background: var(--primary-hover, #23272c);
+    border-color: var(--primary-hover, #23272c);
+    color: var(--text-inverse, #ffffff);
 }
 
 a.user-filter-btn.is-active-danger {
@@ -93,4 +94,44 @@ a.user-filter-btn.is-active-danger:hover {
     background: #b91c1c;
     border-color: #991b1b;
     color: #ffffff;
+}
+
+html.dark a.user-filter-btn {
+    border-color: var(--nk-line-2, #465058);
+    color: var(--nk-ink-2, #c7cdd1);
+}
+
+html.dark a.user-filter-btn:hover {
+    color: var(--nk-ink, #f5f2ec);
+    border-color: var(--nk-ink-2, #c7cdd1);
+}
+
+html.dark a.user-filter-btn.is-active,
+html.dark a.user-filter-btn.is-active:hover {
+    color: #111417;
+    font-weight: 700;
+}
+
+html.dark .role-admin {
+    background: #172738;
+    color: #93c5fd;
+    border-color: #1e3a5f;
+}
+
+html.dark .role-employee {
+    background: #132c2b;
+    color: #5eead4;
+    border-color: #1f4f4d;
+}
+
+html.dark .badge-active {
+    background: #132f1f;
+    color: #4ade80;
+    border-color: #1e4a30;
+}
+
+html.dark .badge-inactive {
+    background: #381515;
+    color: #fca5a5;
+    border-color: #7f1d1d;
 }

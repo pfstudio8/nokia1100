@@ -290,7 +290,9 @@ if ($_SESSION['role'] === 'admin') {
                     
                         if (file) {
                             if (!file.type.startsWith('image/')) {
-                                alert('Por favor, selecciona un archivo de imagen válido.');
+                                if (typeof showToast === 'function') {
+                                    showToast('Por favor, selecciona un archivo de imagen válido.', 'warning');
+                                }
                                 this.value = '';
                                 resetImagePreview();
                                 return;
@@ -358,8 +360,6 @@ if ($_SESSION['role'] === 'admin') {
                                 const errorMsg = params.get('error') || 'Ocurrió un error en el servidor.';
                                 if (typeof showToast === 'function') {
                                     showToast(errorMsg, 'error');
-                                } else {
-                                    alert(errorMsg);
                                 }
                                 btnSubmit.innerHTML = originalText;
                                 btnSubmit.disabled = false;
@@ -371,10 +371,13 @@ if ($_SESSION['role'] === 'admin') {
                             const parser = new DOMParser();
                             const doc = parser.parseFromString(html, 'text/html');
                             const newGrid = doc.getElementById('images_grid_container');
-                            if(newGrid) {
+                            if (newGrid) {
                                 document.getElementById('images_grid_container').innerHTML = newGrid.innerHTML;
-                            } else {
-                                if (typeof showToast === 'function') showToast('Error en el servidor al cargar la imagen.', 'error');
+                                if (typeof showToast === 'function') {
+                                    showToast('Foto subida correctamente', 'success');
+                                }
+                            } else if (typeof showToast === 'function') {
+                                showToast('Error en el servidor al cargar la imagen.', 'error');
                             }
                             
                             this.reset();
@@ -382,19 +385,12 @@ if ($_SESSION['role'] === 'admin') {
                             
                             btnSubmit.innerHTML = originalText;
                             btnSubmit.disabled = false;
-                            
-                            if (typeof showToast === 'function' && newGrid) {
-                                showToast('Foto subida correctamente', 'success');
-                            } else {
-                                alert('¡Foto subida correctamente!');
-                            }
                         })
                         .catch(error => {
+                            if (error === 'Backend error') return;
                             console.error('Error:', error);
                             if (typeof showToast === 'function') {
                                 showToast('Ocurrió un error al subir la imagen.', 'error');
-                            } else {
-                                alert('Ocurrió un error al subir la imagen.');
                             }
                             btnSubmit.innerHTML = originalText;
                             btnSubmit.disabled = false;
@@ -622,12 +618,9 @@ if ($_SESSION['role'] === 'admin') {
                             
                             const actionInput = this.querySelector('input[name="action"]');
                             if (actionInput && actionInput.value === 'remove_repuesto') {
-                                if (typeof showConfirmModal === 'function') {
-                                    const confirmed = await showConfirmModal('Quitar Repuesto', '¿Seguro que deseas quitar este repuesto de la orden?', 'Sí, quitar', 'Cancelar', true);
-                                    if (!confirmed) return;
-                                } else {
-                                    if (!confirm('¿Quitar este repuesto?')) return;
-                                }
+                                if (typeof showConfirmModal !== 'function') return;
+                                const confirmed = await showConfirmModal('Quitar Repuesto', '¿Seguro que deseas quitar este repuesto de la orden?', 'Sí, quitar', 'Cancelar', true);
+                                if (!confirmed) return;
                             }
 
                             const formData = new FormData(this);
@@ -648,8 +641,6 @@ if ($_SESSION['role'] === 'admin') {
                                     if (errorMsg) {
                                         if (typeof showToast === 'function') {
                                             showToast(decodeURIComponent(errorMsg), 'error');
-                                        } else {
-                                            alert(decodeURIComponent(errorMsg));
                                         }
                                         btnSubmit.innerHTML = originalHtml;
                                         btnSubmit.disabled = false;
@@ -692,8 +683,6 @@ if ($_SESSION['role'] === 'admin') {
                                 console.error('Error:', error);
                                 if (typeof showToast === 'function') {
                                     showToast('Ocurrió un error al procesar el repuesto.', 'error');
-                                } else {
-                                    alert('Ocurrió un error al procesar el repuesto.');
                                 }
                                 btnSubmit.innerHTML = originalHtml;
                                 btnSubmit.disabled = false;

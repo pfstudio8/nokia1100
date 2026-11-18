@@ -25,6 +25,12 @@ class AdminController extends BaseController
     public function get_dashboard_data()
     {
         $this->check_access('dashboard', true);
+        if (($_SESSION['role'] ?? '') !== 'admin') {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'error' => 'Acceso restringido a administradores']);
+            exit;
+        }
 
         $total_ventas = $this->admin_model->get_total_sales();
         $total_trans = $this->admin_model->get_total_transactions();
@@ -44,7 +50,7 @@ class AdminController extends BaseController
 
     public function users()
     {
-        $this->check_access('usuarios');
+        $this->require_primary_admin();
 
         $filtro = $_GET['filtro'] ?? 'activos';
         if (!in_array($filtro, ['activos', 'inactivos', 'todos'], true)) {
@@ -54,13 +60,14 @@ class AdminController extends BaseController
 
         $this->render_view(__DIR__ . '/../Views/users.php', [
             'clientes' => $users, // Se usa 'clientes' por coherencia con la vista
-            'filtro' => $filtro
+            'filtro' => $filtro,
+            'primary_admin_id' => $this->admin_model->get_primary_admin_id()
         ]);
     }
 
     public function add_user()
     {
-        $this->check_access('usuarios');
+        $this->require_primary_admin();
 
         if ($_SERVER["REQUEST_METHOD"] !== "POST") {
             $this->redirect("index.php?action=users");
@@ -148,7 +155,7 @@ class AdminController extends BaseController
 
     public function edit_user()
     {
-        $this->check_access('usuarios');
+        $this->require_primary_admin();
 
         if ($_SERVER["REQUEST_METHOD"] !== "POST") {
             $this->redirect("index.php?action=users");
@@ -191,9 +198,10 @@ class AdminController extends BaseController
             $this->redirect("index.php?action=users&error=" . urlencode("El usuario especificado no existe"));
         }
 
-        // Evita la autodegradación de rol
-        if ($id_usuario === (int)$_SESSION['user_id'] && $rol !== 'admin') {
-            $this->redirect("index.php?action=users&error=" . urlencode("No puedes cambiar tu propio rol de administrador"));
+        // Evita la autodegradación de rol o degradar al administrador principal
+        $primaryId = $this->admin_model->get_primary_admin_id();
+        if (($id_usuario === (int)$_SESSION['user_id'] || ($primaryId !== null && $id_usuario === $primaryId)) && $rol !== 'admin') {
+            $this->redirect("index.php?action=users&error=" . urlencode("No puedes cambiar el rol del administrador principal"));
         }
 
         // No permitir degradar al único admin activo del sistema
@@ -242,6 +250,10 @@ class AdminController extends BaseController
 
             $this->admin_model->update_user_transaction($id_usuario, $id_persona, $persona_data, $user_data);
 
+            if ($id_usuario === (int)$_SESSION['user_id']) {
+                $_SESSION['username'] = $username;
+            }
+
             require_once __DIR__ . '/../../../config/audit.php';
             audit_log($this->conn, 'USER_UPDATE', $_SESSION['user_id'], 'usuario', $id_usuario, "Administrador editó datos del usuario: $username ($nombre $apellido) con rol $rol");
 
@@ -253,7 +265,7 @@ class AdminController extends BaseController
 
     public function delete_user()
     {
-        $this->check_access('usuarios');
+        $this->require_primary_admin();
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             $this->redirect("index.php?action=users&error=" . urlencode("Método no permitido. Se requiere petición POST."));
@@ -269,9 +281,10 @@ class AdminController extends BaseController
             $this->redirect("index.php?action=users");
         }
 
-        // Evita la autodesactivación
-        if ($id_usuario === (int)$_SESSION['user_id']) {
-            $this->redirect("index.php?action=users&error=" . urlencode("No puedes desactivarte a ti mismo"));
+        // Evita la autodesactivación o desactivar al administrador principal
+        $primaryId = $this->admin_model->get_primary_admin_id();
+        if ($id_usuario === (int)$_SESSION['user_id'] || ($primaryId !== null && $id_usuario === $primaryId)) {
+            $this->redirect("index.php?action=users&error=" . urlencode("No puedes desactivar al administrador principal del sistema"));
         }
 
         $target = $this->admin_model->find_user_by_id($id_usuario);
@@ -306,7 +319,7 @@ class AdminController extends BaseController
 
     public function save_user_modules()
     {
-        $this->check_access('usuarios');
+        $this->require_primary_admin();
 
         if ($_SERVER["REQUEST_METHOD"] !== "POST") {
             $this->redirect("index.php?action=users");
@@ -318,6 +331,11 @@ class AdminController extends BaseController
 
         $id_usuario = (int)($_POST['id_usuario'] ?? 0);
         $modulos = $_POST['modulos'] ?? [];
+        if (!is_array($modulos)) {
+            $modulos = [];
+        }
+        // La gestión de usuarios/perfiles es exclusiva del administrador principal
+        $modulos = array_values(array_filter(array_map('trim', $modulos), fn($m) => $m !== '' && $m !== 'usuarios'));
 
         if ($id_usuario === 0) {
             $this->redirect("index.php?action=users&error=" . urlencode("Usuario no válido"));
@@ -346,7 +364,7 @@ class AdminController extends BaseController
 
     public function update_user_role()
     {
-        $this->check_access('usuarios');
+        $this->require_primary_admin();
 
         if ($_SERVER["REQUEST_METHOD"] !== "POST") {
             $this->redirect("index.php?action=users");
@@ -363,10 +381,10 @@ class AdminController extends BaseController
             $this->redirect("index.php?action=users&error=" . urlencode("Datos no válidos"));
         }
 
-
-        // Verificación de autodegradación
-        if ($id_usuario === (int)($_SESSION['user_id'] ?? 0)) {
-            $this->redirect("index.php?action=users&error=" . urlencode("No puedes cambiar tu propio rol"));
+        // Verificación de autodegradación o degradación del administrador principal
+        $primaryId = $this->admin_model->get_primary_admin_id();
+        if ($id_usuario === (int)($_SESSION['user_id'] ?? 0) || ($primaryId !== null && $id_usuario === $primaryId)) {
+            $this->redirect("index.php?action=users&error=" . urlencode("No puedes cambiar el rol del administrador principal"));
         }
 
         // No permitir degradar al único admin activo
@@ -414,11 +432,18 @@ class AdminController extends BaseController
             if (empty($nombre) || empty($apellido) || empty($username) || empty($dni)) {
                 header("Location: index.php?action=profile&error=" . urlencode("Complete todos los campos obligatorios."));
                 exit;
+            } elseif (!preg_match('/^[0-9]{7,10}$/', $dni)) {
+                header("Location: index.php?action=profile&error=" . urlencode("El DNI debe tener entre 7 y 10 dígitos."));
+                exit;
             } else {
                 try {
                     // Obtiene el ID de la persona actual
                     $current = $this->admin_model->get_user_profile($id_user);
                     $id_persona = $current['id_persona'];
+
+                    if ($this->admin_model->check_dni_exists($dni, $id_persona)) {
+                        throw new Exception("El DNI ingresado ya está registrado en otra cuenta.");
+                    }
 
                     $persona_data = [
                         'nombre' => $nombre,

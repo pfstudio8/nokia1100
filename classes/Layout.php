@@ -137,11 +137,49 @@ class Layout
         return 0;
     }
 
+    /**
+     * Retorna el ID del primer administrador registrado en el sistema (el único habilitado para gestionar usuarios/perfiles).
+     */
+    public static function getPrimaryAdminId(): ?int
+    {
+        global $conn;
+        if (!isset($conn) || !($conn instanceof mysqli)) {
+            return null;
+        }
+        $res = $conn->query("SELECT id_usuario FROM usuario WHERE rol = 'admin' ORDER BY id_usuario ASC LIMIT 1");
+        if ($res && ($row = $res->fetch_assoc())) {
+            return (int)$row['id_usuario'];
+        }
+        return null;
+    }
+
+    /**
+     * Indica si el usuario autenticado (o el ID indicado) es el primer administrador registrado.
+     */
+    public static function isPrimaryAdmin(?int $userId = null): bool
+    {
+        if ($userId === null) {
+            if (!isset($_SESSION['user_id']) || !is_numeric($_SESSION['user_id'])) {
+                return false;
+            }
+            if (($_SESSION['role'] ?? '') !== 'admin') {
+                return false;
+            }
+            $userId = (int)$_SESSION['user_id'];
+        }
+        $primaryId = self::getPrimaryAdminId();
+        return ($primaryId !== null && $userId > 0 && $userId === $primaryId);
+    }
+
     // Versión sin redirección de checkAccess(): indica si la sesión actual puede usar el módulo.
     public static function hasAccess(string $moduleId): bool
     {
         if (!isset($_SESSION['user_id'])) {
             return false;
+        }
+        // La gestión de usuarios, perfiles y permisos es exclusiva del primer administrador registrado
+        if ($moduleId === 'usuarios') {
+            return self::isPrimaryAdmin();
         }
         $rol = $_SESSION['role'] ?? 'empleado';
         if ($rol === 'admin') {
@@ -155,7 +193,7 @@ class Layout
         }
         $allowed = self::getAllowedModules($_SESSION['user_id']);
         if ($allowed === null) {
-            return true;
+            return false;
         }
         if ($moduleId === 'ventas' && in_array('venta', $allowed, true)) {
             return true;
@@ -172,6 +210,7 @@ class Layout
     public static function checkAccess(string $moduleId): void
     {
         if (session_status() === PHP_SESSION_NONE) {
+            require_once __DIR__ . '/../config/bootstrap.php';
             session_start();
         }
 
@@ -182,7 +221,16 @@ class Layout
 
         $rol = $_SESSION['role'] ?? 'empleado';
 
-        // Los administradores tienen acceso a todos los módulos sin restricción
+        // La gestión de usuarios/perfiles es exclusiva del primer administrador registrado
+        if ($moduleId === 'usuarios' && !self::isPrimaryAdmin()) {
+            $redirectUrl = ($rol === 'admin')
+                ? BASE_URL . "/modules/admin/index.php?error=" . urlencode("Solo el administrador principal del sistema puede gestionar usuarios y permisos.")
+                : BASE_URL . "/modules/employee/index.php?error=" . urlencode("No tiene permiso para acceder a ese módulo");
+            header("Location: " . $redirectUrl);
+            exit();
+        }
+
+        // Los administradores tienen acceso al resto de módulos sin restricción
         if ($rol === 'admin') {
             return;
         }
@@ -209,31 +257,32 @@ class Layout
         if ($rol !== 'admin') {
             $requestUri = $_SERVER['REQUEST_URI'] ?? '';
             if (strpos($requestUri, '/modules/admin/') !== false) {
-                // Solo se permite si el módulo específico (usuarios, auditoria) está explícitamente en sus permisos y no es el dashboard de admin
+                // Solo se permite si el módulo (ej. auditoria) está explícitamente en sus permisos y no es dashboard ni usuarios
                 $isAdminDashboard = (strpos($requestUri, '/modules/admin/dashboard.php') !== false) ||
                                     (strpos($requestUri, '/modules/admin/index.php') !== false && (!isset($_GET['action']) || $_GET['action'] === 'dashboard')) ||
                                     rtrim(parse_url($requestUri, PHP_URL_PATH), '/') === rtrim(BASE_URL . '/modules/admin', '/');
-                if ($allowed === null || !in_array($moduleId, $allowed, true) || $isAdminDashboard) {
+                if ($moduleId === 'usuarios' || $allowed === null || !in_array($moduleId, $allowed, true) || $isAdminDashboard) {
                     header("Location: " . BASE_URL . "/modules/employee/index.php?error=" . urlencode("No tiene permiso para acceder a ese módulo"));
                     exit();
                 }
             }
         }
 
-        if ($allowed !== null) {
-            $hasPerm = in_array($moduleId, $allowed, true)
-                || ($moduleId === 'registrar_equipo')
-                || ($moduleId === 'ventas' && in_array('venta', $allowed, true))
-                || ($moduleId === 'venta' && in_array('ventas', $allowed, true))
-                || ($moduleId === 'cobrar_reparaciones' && (in_array('cobrar_reparaciones', $allowed, true) || in_array('venta', $allowed, true) || in_array('ventas', $allowed, true)));
+        if ($allowed === null) {
+            header("Location: " . BASE_URL . "/modules/employee/index.php?error=" . urlencode("No tiene permiso para acceder a ese módulo"));
+            exit();
+        }
 
-            if (!$hasPerm) {
-                $redirectUrl = ($rol === 'admin')
-                    ? BASE_URL . "/modules/admin/index.php?error=" . urlencode("No tiene permiso para acceder a ese módulo")
-                    : BASE_URL . "/modules/employee/index.php?error=" . urlencode("No tiene permiso para acceder a ese módulo");
-                header("Location: " . $redirectUrl);
-                exit();
-            }
+        $hasPerm = in_array($moduleId, $allowed, true)
+            || ($moduleId === 'registrar_equipo')
+            || ($moduleId === 'ventas' && in_array('venta', $allowed, true))
+            || ($moduleId === 'venta' && in_array('ventas', $allowed, true))
+            || ($moduleId === 'cobrar_reparaciones' && (in_array('cobrar_reparaciones', $allowed, true) || in_array('venta', $allowed, true) || in_array('ventas', $allowed, true)));
+
+        if (!$hasPerm) {
+            $redirectUrl = BASE_URL . "/modules/employee/index.php?error=" . urlencode("No tiene permiso para acceder a ese módulo");
+            header("Location: " . $redirectUrl);
+            exit();
         }
     }
 
@@ -351,6 +400,9 @@ class Layout
 
         foreach ($links as $l) {
             $perm = $l['permission'] ?? $l['id'];
+            if ($perm === 'usuarios' && !self::isPrimaryAdmin()) {
+                continue;
+            }
             if ($allowed !== null && !in_array($perm, $allowed)) {
                 continue;
             }
@@ -418,7 +470,6 @@ class Layout
             ['id' => 'clientes', 'url' => BASE_URL . '/modules/clients/index.php', 'icon' => 'contact_page', 'label' => 'Clientes'],
             ['id' => 'reportes', 'url' => BASE_URL . '/modules/reports/index.php', 'icon' => 'analytics', 'label' => 'Reportes'],
             ['id' => 'proveedores', 'url' => BASE_URL . '/modules/suppliers/index.php', 'icon' => 'local_shipping', 'label' => 'Proveedores'],
-            ['id' => 'usuarios', 'url' => BASE_URL . '/modules/admin/index.php?action=users', 'icon' => 'group', 'label' => 'Usuarios'],
             ['id' => 'auditoria', 'url' => BASE_URL . '/modules/admin/index.php?action=audit', 'icon' => 'security', 'label' => 'Auditoría'],
         ];
 

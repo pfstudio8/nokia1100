@@ -177,9 +177,12 @@ function setPaymentMode(mode) {
     const singleBlock = document.getElementById('single-payment-block');
     const combinedBlock = document.getElementById('combined-payment-block');
 
+    const activeModeClasses = 'py-2 px-3 rounded-lg border border-primary bg-primary text-background shadow-sm transition-all flex items-center justify-center gap-1.5';
+    const inactiveModeClasses = 'py-2 px-3 rounded-lg border border-border bg-surface text-text-main hover:bg-surface-hover shadow-sm transition-all flex items-center justify-center gap-1.5';
+
     if (mode === 'combinado') {
-        btnCombined.className = 'px-3 py-1 rounded-md bg-primary text-background transition-all flex items-center gap-1';
-        btnSingle.className = 'px-3 py-1 rounded-md text-text-muted hover:text-text-main transition-all';
+        btnCombined.className = activeModeClasses;
+        btnSingle.className = inactiveModeClasses;
         singleBlock.classList.add('hidden');
         combinedBlock.classList.remove('hidden');
 
@@ -196,8 +199,8 @@ function setPaymentMode(mode) {
 
         validateCombinedPayment();
     } else {
-        btnSingle.className = 'px-3 py-1 rounded-md bg-primary text-background transition-all';
-        btnCombined.className = 'px-3 py-1 rounded-md text-text-muted hover:text-text-main transition-all flex items-center gap-1';
+        btnSingle.className = activeModeClasses;
+        btnCombined.className = inactiveModeClasses;
         singleBlock.classList.remove('hidden');
         combinedBlock.classList.add('hidden');
 
@@ -477,7 +480,8 @@ async function submitSaleFromModal() {
     confirmBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">refresh</span> Procesando...';
 
     try {
-        const response = await fetch('new_sale.php', {
+        const saleEndpoint = (window.BASE_URL || '') + '/modules/sales/index.php?action=new_sale';
+        const response = await fetch(saleEndpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 

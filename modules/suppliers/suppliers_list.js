@@ -1197,18 +1197,17 @@
       return;
     }
 
-    let ok = false;
-    if (typeof window.showConfirmModal === 'function') {
-      ok = await window.showConfirmModal(
-        'Eliminar Proveedor',
-        `¿Seguro que querés eliminar a «${sup.nombre}» del directorio?`,
-        'Sí, eliminar',
-        'Cancelar',
-        true
-      );
-    } else {
-      ok = window.confirm(`¿Eliminar a «${sup.nombre}» del directorio?`);
+    if (typeof window.showConfirmModal !== 'function') {
+      toast('No se pudo abrir el modal de confirmación.', 'err');
+      return;
     }
+    const ok = await window.showConfirmModal(
+      'Eliminar Proveedor',
+      `¿Seguro que querés eliminar a «${sup.nombre}» del directorio?`,
+      'Sí, eliminar',
+      'Cancelar',
+      true
+    );
     if (!ok) return;
 
     try {
@@ -1320,18 +1319,17 @@
     const ord = orders.find(o => o.id === Number(orderId));
     if (!ord || ord.estado !== 'Pendiente') return;
 
-    let ok = false;
-    if (typeof window.showConfirmModal === 'function') {
-      ok = await window.showConfirmModal(
-        'Cancelar Orden de Compra',
-        `¿Confirmás la cancelación de la orden #OC-${String(ord.id).padStart(4, '0')} (${ord.proveedor_nombre})?`,
-        'Sí, cancelar orden',
-        'Volver',
-        true
-      );
-    } else {
-      ok = window.confirm(`¿Cancelar la orden #OC-${String(ord.id).padStart(4, '0')}?`);
+    if (typeof window.showConfirmModal !== 'function') {
+      toast('No se pudo abrir el modal de confirmación.', 'err');
+      return;
     }
+    const ok = await window.showConfirmModal(
+      'Cancelar Orden de Compra',
+      `¿Confirmás la cancelación de la orden #OC-${String(ord.id).padStart(4, '0')} (${ord.proveedor_nombre})?`,
+      'Sí, cancelar orden',
+      'Volver',
+      true
+    );
     if (!ok) return;
 
     try {

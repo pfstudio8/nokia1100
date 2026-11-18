@@ -6,9 +6,10 @@
     'use strict';
 
     const CONCEPTOS = {
-        in: ['Venta en efectivo', 'Cobro de reparación', 'Seña', 'Aporte de cambio', 'Otro ingreso'],
+        in: ['Venta', 'Cobro de reparación', 'Seña', 'Cambio para vuelto', 'Otro ingreso'],
         out: ['Pago a proveedor', 'Retiro de efectivo', 'Gasto menor', 'Otro egreso']
     };
+    const CONCEPTOS_SOLO_EFECTIVO = new Set(['Cambio para vuelto', 'Retiro de efectivo']);
 
     let currentTipo = 'in';
     let closeCompleted = false;
@@ -36,7 +37,9 @@
         }
         const el = document.createElement('div');
         el.className = 'nk-toast' + (type === 'err' ? ' nk-toast--err' : '');
-        el.innerHTML = `<span>${msg}</span>`;
+        const span = document.createElement('span');
+        span.textContent = String(msg ?? '');
+        el.appendChild(span);
         box.appendChild(el);
         setTimeout(() => el.remove(), 4200);
     }
@@ -65,11 +68,27 @@
         }
     }
 
+    // Sincroniza las opciones de medio de pago cuando el concepto es exclusivo de efectivo físico
+    function syncMedioPago() {
+        const conceptoSel = document.getElementById('mvConcepto');
+        const medioSel = document.getElementById('mvMedio');
+        if (!conceptoSel || !medioSel) return;
+
+        const soloEfectivo = CONCEPTOS_SOLO_EFECTIVO.has(conceptoSel.value);
+        Array.from(medioSel.options).forEach(opt => {
+            opt.disabled = soloEfectivo && opt.value !== 'Efectivo';
+        });
+        if (soloEfectivo) {
+            medioSel.value = 'Efectivo';
+        }
+    }
+
     // Actualiza dropdown de conceptos según el tipo (in/out)
     function fillConceptos() {
         const select = document.getElementById('mvConcepto');
         if (!select) return;
         select.innerHTML = CONCEPTOS[currentTipo].map(c => `<option value="${c}">${c}</option>`).join('');
+        syncMedioPago();
     }
 
     // Filtrar tabla historial por estado y mes
@@ -176,6 +195,11 @@
                 currentTipo = btn.dataset.v;
                 fillConceptos();
             });
+        }
+
+        const mvConcepto = document.getElementById('mvConcepto');
+        if (mvConcepto) {
+            mvConcepto.addEventListener('change', syncMedioPago);
         }
 
         // Control segmentado para Filtro de Historial

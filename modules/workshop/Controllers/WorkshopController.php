@@ -87,6 +87,11 @@ class WorkshopController extends BaseController
                 $this->redirect("index.php?action=add&error=" . urlencode("Token CSRF inválido"));
             }
             try {
+                $rawBudget = str_replace(',', '.', trim((string)($_POST['presupuesto'] ?? '')));
+                $budgetVal = ($rawBudget !== '' && is_numeric($rawBudget)) ? (float)$rawBudget : 0.0;
+                if ($budgetVal < 0) {
+                    throw new Exception("El presupuesto no puede ser negativo.");
+                }
                 $id_reparacion = $this->workshop_model->create_repair_order(
                     $_POST['id_cliente_existente'] ?? 0,
                     $_POST['cliente_nombre'] ?? '',
@@ -97,7 +102,7 @@ class WorkshopController extends BaseController
                     $_POST['equipo_imei'] ?? '',
                     $_POST['falla_declarada'] ?? '',
                     $_POST['observaciones'] ?? '',
-                    isset($_POST['presupuesto']) && $_POST['presupuesto'] !== '' ? (float)$_POST['presupuesto'] : 0.0,
+                    $budgetVal,
                     $_SESSION['user_id']
                 );
 
@@ -220,6 +225,9 @@ class WorkshopController extends BaseController
                 $estado = trim($_POST['estado'] ?? '');
                 $raw_presupuesto = str_replace(',', '.', (string)($_POST['presupuesto'] ?? ''));
                 $presupuesto = is_numeric($raw_presupuesto) ? (float)$raw_presupuesto : 0;
+                if ($presupuesto < 0) {
+                    throw new Exception("El presupuesto no puede ser negativo.");
+                }
                 
                 $this->workshop_model->update_repair_status_and_budget(
                     $id_reparacion,
@@ -447,7 +455,7 @@ class WorkshopController extends BaseController
 
     public function check_status()
     {
-        $this->check_auth(true);
+        $this->check_any_access(['taller', 'cobrar_reparaciones', 'ventas', 'venta'], true);
         header('Content-Type: application/json; charset=utf-8');
 
         if (isset($_SESSION['role']) && $_SESSION['role'] === 'guest') {

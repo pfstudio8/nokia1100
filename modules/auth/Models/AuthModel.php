@@ -132,7 +132,7 @@ class AuthModel extends BaseModel
             SELECT u.id_usuario, p.nombre 
             FROM usuario u 
             JOIN persona p ON u.id_persona = p.id_persona 
-            WHERE p.email = ?
+            WHERE p.email = ? AND u.is_active = 1
         ");
         $stmt->bind_param("s", $email);
         $stmt->execute();
@@ -152,7 +152,10 @@ class AuthModel extends BaseModel
 
     public function find_by_valid_token(string $token): ?array
     {
-        $stmt = $this->conn->prepare("SELECT id_usuario FROM usuario WHERE token_verificacion = ? AND token_expira > NOW()");
+        if (!preg_match('/^[a-f0-9]{64}$/i', $token)) {
+            return null;
+        }
+        $stmt = $this->conn->prepare("SELECT id_usuario FROM usuario WHERE token_verificacion = ? AND CHAR_LENGTH(token_verificacion) = 64 AND token_expira > NOW() AND is_active = 1");
         $stmt->bind_param("s", $token);
         $stmt->execute();
         $res = $stmt->get_result()->fetch_assoc();
@@ -205,7 +208,7 @@ class AuthModel extends BaseModel
             return ['success' => true, 'already_verified' => true, 'message' => 'Esta cuenta ya se encuentra verificada.'];
         }
 
-        if (empty($user['token_verificacion']) || $user['token_verificacion'] !== $otp) {
+        if (empty($user['token_verificacion']) || !hash_equals((string)$user['token_verificacion'], (string)$otp)) {
             return ['success' => false, 'message' => 'El código de verificación es incorrecto.'];
         }
 

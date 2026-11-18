@@ -92,6 +92,10 @@ class InventoryController extends BaseController
             $cantidad = intval($cantidad);
             $stock_minimo = intval($stock_minimo);
 
+            if ($precio < 0 || $cantidad < 0 || $stock_minimo < 0) {
+                $this->redirect("index.php?action=add_product&error=" . urlencode("El precio, stock y stock mínimo no pueden ser negativos"));
+            }
+
             try {
                 $product_data = [
                     'nombre' => $nombre,
@@ -142,8 +146,10 @@ class InventoryController extends BaseController
             $precio = $_POST['precio'] ?? '';
             $cantidad = $_POST['cantidad'] ?? '';
 
-            if (empty($nombre) || empty($marca) || empty($modelo) || empty($precio) || empty($cantidad)) {
+            if (empty($nombre) || empty($marca) || empty($modelo) || $precio === '' || $cantidad === '') {
                 $this->redirect("index.php?action=add_stock&error=" . urlencode("Todos los campos son obligatorios"));
+            } elseif (floatval($precio) < 0 || intval($cantidad) < 0) {
+                $this->redirect("index.php?action=add_stock&error=" . urlencode("El precio y la cantidad no pueden ser negativos"));
             } else {
                 try {
                     $product_data = [
@@ -209,8 +215,10 @@ class InventoryController extends BaseController
             $precio = $_POST['precio'] ?? '';
             $cantidad = $_POST['cantidad'] ?? '';
 
-            if (empty($nombre) || empty($marca) || empty($modelo) || empty($precio) || empty($cantidad)) {
+            if (empty($nombre) || empty($marca) || empty($modelo) || $precio === '' || $cantidad === '') {
                 $this->redirect("index.php?action=edit_stock&id=$id_producto&error=" . urlencode("Todos los campos son obligatorios"));
+            } elseif (floatval($precio) < 0 || intval($cantidad) < 0) {
+                $this->redirect("index.php?action=edit_stock&id=$id_producto&error=" . urlencode("El precio y la cantidad no pueden ser negativos"));
             } else {
                 try {
                     $product_data = ['nombre' => $nombre, 'precio' => floatval($precio)];
@@ -250,22 +258,41 @@ class InventoryController extends BaseController
 
     public function change_status()
     {
-        $this->check_access('inventario');
-        if ($_SESSION['role'] !== 'admin') {
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+            || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+
+        $this->check_access('inventario', $isAjax);
+        if (($_SESSION['role'] ?? '') !== 'admin') {
+            if ($isAjax) {
+                http_response_code(403);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Acceso restringido a administradores']);
+                exit();
+            }
             $this->redirect(BASE_URL . "/modules/inventory/index.php");
         }
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            if ($isAjax) {
+                http_response_code(405);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Método no permitido']);
+                exit();
+            }
             $this->redirect(BASE_URL . "/modules/inventory/index.php");
         }
 
-        if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+        if (!$this->verify_csrf($_POST['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? null))) {
+            if ($isAjax) {
+                http_response_code(403);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'message' => 'Token CSRF inválido']);
+                exit();
+            }
             $this->redirect(BASE_URL . "/modules/inventory/index.php?error=" . urlencode("Token CSRF inválido"));
         }
 
         $id_producto = isset($_POST['id']) ? intval($_POST['id']) : 0;
-        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
-            || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
 
         if ($id_producto > 0) {
             if ($this->inventory_model->toggle_product_status($id_producto)) {
@@ -331,8 +358,8 @@ class InventoryController extends BaseController
 
     public function check_stock()
     {
-        header('Content-Type: application/json');
-        $this->check_auth();
+        header('Content-Type: application/json; charset=utf-8');
+        $this->check_any_access(['inventario', 'venta', 'ventas', 'taller'], true);
 
         $id_producto = isset($_GET['id_producto']) ? (int) $_GET['id_producto'] : 0;
 
@@ -359,9 +386,10 @@ class InventoryController extends BaseController
 
     public function ajax_create_product()
     {
-        $this->check_access('inventario');
-        header('Content-Type: application/json');
+        $this->check_access('inventario', true);
+        header('Content-Type: application/json; charset=utf-8');
         if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+            http_response_code(403);
             echo json_encode(['success' => false, 'message' => 'No autorizado']);
             exit();
         }
@@ -385,6 +413,10 @@ class InventoryController extends BaseController
         $modelo = $input['modelo'] ?? '';
         $categoria = $input['categoria'] ?? 'Celular';
         $precio = floatval($input['precio']);
+        if ($precio < 0) {
+            echo json_encode(['success' => false, 'message' => 'El precio no puede ser negativo']);
+            exit();
+        }
 
         try {
             $product_data = [
@@ -410,9 +442,10 @@ class InventoryController extends BaseController
 
     public function ajax_save_product()
     {
-        $this->check_access('inventario');
-        header('Content-Type: application/json');
+        $this->check_access('inventario', true);
+        header('Content-Type: application/json; charset=utf-8');
         if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
+            http_response_code(403);
             echo json_encode(['success' => false, 'message' => 'No autorizado']);
             exit();
         }
@@ -442,6 +475,10 @@ class InventoryController extends BaseController
 
         if (empty($nombre)) {
             echo json_encode(['success' => false, 'message' => 'El nombre del producto es obligatorio']);
+            exit();
+        }
+        if ($precio < 0 || $cantidad < 0 || $minimo < 0) {
+            echo json_encode(['success' => false, 'message' => 'El precio, stock y stock mínimo no pueden ser negativos']);
             exit();
         }
 
@@ -493,8 +530,13 @@ class InventoryController extends BaseController
 
     public function get_purchase_history()
     {
-        header('Content-Type: application/json');
-        $this->check_auth();
+        header('Content-Type: application/json; charset=utf-8');
+        $this->check_any_access(['proveedores', 'inventario'], true);
+        if (($_SESSION['role'] ?? '') === 'guest') {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'No autorizado']);
+            exit();
+        }
 
         $id_producto = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
@@ -515,6 +557,10 @@ class InventoryController extends BaseController
     public function update_images()
     {
         $this->check_access('inventario');
+        if (($_SESSION['role'] ?? '') !== 'admin') {
+            http_response_code(403);
+            die("Acceso denegado.");
+        }
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             http_response_code(405);
             die("Método no permitido. Se requiere petición POST.");
