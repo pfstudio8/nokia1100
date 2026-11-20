@@ -1,5 +1,6 @@
 *.sql
 database/*
+!database/nokia1100_actual.sql
 !database/migration_caja.sql
 !database/migration_pago_combinado.sql
 !database/run_migrations.php

@@ -21,9 +21,8 @@ Copia o clona la carpeta del proyecto dentro del directorio raíz de tu servidor
 ### 2. Configurar la Base de Datos
 1. Inicia los servicios de Apache y MySQL en el Panel de Control de XAMPP.
 2. Abre **phpMyAdmin** (`http://localhost/phpmyadmin`) y crea una base de datos llamada `nokia1100`.
-3. Importa el archivo SQL completo con la estructura y los datos de prueba iniciales:
-   * Archivo a importar: [database/bd_nokia1100.sql](file:///c:/xampp/htdocs/nokia1100/database/bd_nokia1100.sql)
-   * Si prefieres importar solo la estructura limpia sin datos de ejemplo, utiliza: [database/nokia1100_estructura.sql](file:///c:/xampp/htdocs/nokia1100/database/nokia1100_estructura.sql)
+3. Importa el archivo SQL completo con la estructura actualizada (20 tablas, claves foráneas) y los datos iniciales:
+   * Archivo a importar: `database/nokia1100_actual.sql`
 
 *Nota: La base de datos ya incluye la estructura de tablas de negocio, seguridad y auditoría requeridas para el funcionamiento del sistema.*
 
@@ -64,7 +63,7 @@ SMTP_FROM_NAME="Nokia 1100 System"
 Una vez configurado, abre tu navegador e ingresa a: `http://localhost/nokia1100`
 
 ### Credenciales de Prueba por Defecto
-El archivo de volcado de base de datos (`bd_nokia1100.sql`) incluye usuarios iniciales con diferentes roles. Puedes ingresar con:
+El archivo de volcado de base de datos (`database/nokia1100_actual.sql`) incluye usuarios iniciales con diferentes roles. Puedes ingresar o registrar un nuevo usuario desde la pantalla inicial.
 
 * **Administrador:**
   * Usuario: `admin`
