@@ -15,18 +15,6 @@ class SalesModel extends BaseModel
     }
 
     /**
-     * Delegado de compatibilidad hacia el migrador SQL centralizado (`database/run_migrations.php`).
-     */
-    public static function ensure_payment_schema(mysqli $conn): void
-    {
-        $migFile = __DIR__ . '/../../../database/run_migrations.php';
-        if (file_exists($migFile)) {
-            require_once $migFile;
-            apply_system_migrations($conn);
-        }
-    }
-
-    /**
      * Valida y normaliza hasta 2 medios de pago combinados contra el total exacto de la venta.
      *
      * @param array  $pagos_raw       Lista de pagos [['metodo' => string, 'monto' => float], ...]
@@ -284,12 +272,17 @@ class SalesModel extends BaseModel
 
     public function get_active_products_in_stock()
     {
-        $sql = "SELECT p.id_producto, p.nombre, d.marca, d.modelo, p.precio, i.cantidad
+        $sql = "SELECT p.id_producto, p.nombre, p.precio, i.cantidad,
+                       COALESCE(d.marca, '') AS marca,
+                       COALESCE(d.modelo, '') AS modelo,
+                       COALESCE(d.categoria, '') AS categoria,
+                       COALESCE(d.tipo_repuesto, '') AS tipo_repuesto,
+                       COALESCE(d.codigo, '') AS codigo
                 FROM producto p
                 JOIN inventario i ON p.id_producto = i.id_producto
                 JOIN producto_detalle d ON p.id_producto = d.id_producto
-                WHERE i.cantidad > 0 AND p.is_active = 1 AND " . ServiceProduct::excludeSql('p') . "
-                ORDER BY p.nombre ASC";
+                WHERE i.cantidad > 0 AND p.is_active = 1 AND " . ServiceProduct::excludeSql('p', 'd') . "
+                ORDER BY d.categoria ASC, p.nombre ASC, d.marca ASC, d.modelo ASC";
         $result = $this->conn->query($sql);
         $products = [];
         if ($result && $result->num_rows > 0) {
@@ -443,49 +436,6 @@ class SalesModel extends BaseModel
             }
         }
         return ['labels' => $labels, 'values' => $values];
-    }
-
-    public function get_sales_export_data()
-    {
-        $sql = "SELECT 
-                    v.id_venta, 
-                    v.fecha, 
-                    v.total, 
-                    COALESCE(
-                        (SELECT CASE 
-                            WHEN COUNT(*) > 1 THEN GROUP_CONCAT(CONCAT(vp.metodo_pago, ' ($', FORMAT(vp.monto, 2), ')') ORDER BY vp.id_pago ASC SEPARATOR ' + ')
-                            WHEN COUNT(*) = 1 THEN MAX(vp.metodo_pago)
-                            ELSE NULL
-                         END
-                         FROM venta_pago vp WHERE vp.id_venta = v.id_venta),
-                        NULLIF(TRIM(v.metodo_de_pago), ''), 
-                        'N/A'
-                    ) AS metodo_de_pago,
-                    v.estado,
-                    COALESCE(
-                        NULLIF(GROUP_CONCAT(
-                            CASE WHEN dv.id_detalle_venta IS NOT NULL THEN
-                                CONCAT(dv.cantidad, 'x ', COALESCE(NULLIF(TRIM(dv.nombre_producto), ''), p.nombre, 'Producto'))
-                            ELSE NULL END
-                            ORDER BY dv.id_detalle_venta ASC SEPARATOR ' · '
-                        ), ''),
-                        NULLIF(TRIM(v.descripcion), ''),
-                        'Venta directa'
-                    ) AS producto,
-                    COALESCE(SUM(dv.cantidad), 1) AS cantidad
-                FROM venta v
-                LEFT JOIN detalle_venta dv ON v.id_venta = dv.id_venta
-                LEFT JOIN producto p ON dv.id_producto = p.id_producto
-                GROUP BY v.id_venta
-                ORDER BY v.fecha DESC, v.id_venta DESC";
-        $result = $this->conn->query($sql);
-        $data = [];
-        if ($result && $result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                $data[] = $row;
-            }
-        }
-        return $data;
     }
 
     public function create_sale_transaction(array $items, string|array $metodo_o_pagos, int|string $user_id, string $descripcion = '')
@@ -647,12 +597,6 @@ class SalesModel extends BaseModel
 
             $this->conn->commit();
 
-            $pagos_log_parts = array_map(fn($p) => "{$p['metodo']}: \$" . number_format((float)$p['monto'], 2, '.', ''), $pagos_validados);
-            $pagos_log_str = implode(" + ", $pagos_log_parts);
-
-            audit_log($this->conn, 'SALE_CREATE', $user_id, 'venta', $id_venta,
-                "Usuario $username_audit registró venta. Total: \$$total_venta. Pagos: $pagos_log_str. Productos: $productos_str");
-
             return $id_venta;
         } catch (Exception $e) {
             $this->conn->rollback();
@@ -683,20 +627,6 @@ class SalesModel extends BaseModel
             if (!$stmt->execute()) throw new Exception("Error al actualizar el estado de la venta");
             $stmt->close();
 
-            // Fetch username
-            $username_audit = "Desconocido";
-            if ($user_id !== 'guest' && $user_id > 0) {
-                $stmt = $this->conn->prepare("SELECT nombre_usuario FROM usuario WHERE id_usuario = ?");
-                $stmt->bind_param("i", $user_id);
-                $stmt->execute();
-                $res_u = $stmt->get_result();
-                if ($res_u->num_rows > 0) {
-                    $username_audit = $res_u->fetch_assoc()['nombre_usuario'];
-                }
-                $stmt->close();
-            } elseif ($user_id === 'guest') {
-                $username_audit = "Invitado";
-            }
             $audit_user = ($user_id === 'guest') ? null : $user_id;
             $service_id = ServiceProduct::findId($this->conn);
 
@@ -781,94 +711,10 @@ class SalesModel extends BaseModel
 
             $this->conn->commit();
 
-            $extra = $reparacion_afectada ? " Reparación #$reparacion_afectada con nota de cobro anulado." : '';
-            audit_log($this->conn, 'SALE_ROLLBACK', $audit_user, 'venta', $id_venta,
-                "Venta anulada por usuario $username_audit. Stock devuelto para $items_revertidos producto(s).$extra");
-
             return true;
         } catch (Exception $e) {
             $this->conn->rollback();
             throw $e;
         }
-    }
-
-    public function get_sales_daily($days = 7)
-    {
-        $days = intval($days);
-        $sql = "SELECT DATE(fecha) as dia, SUM(total) as total_ventas 
-                FROM venta 
-                WHERE estado != 'anulada' AND fecha >= DATE(NOW()) - INTERVAL ? DAY 
-                GROUP BY DATE(fecha) 
-                ORDER BY dia ASC";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $days);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        $labels = [];
-        $data = [];
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
-                $labels[] = $row['dia'];
-                $data[] = $row['total_ventas'];
-            }
-        }
-        $stmt->close();
-        return ['labels' => $labels, 'data' => $data];
-    }
-
-    public function get_sales_methods()
-    {
-        $sql = "SELECT 
-                    COALESCE(NULLIF(TRIM(vp.metodo_pago), ''), NULLIF(TRIM(v.metodo_de_pago), ''), 'Otro') AS metodo,
-                    SUM(COALESCE(vp.monto, v.total)) AS total_ventas
-                FROM venta v
-                LEFT JOIN venta_pago vp ON v.id_venta = vp.id_venta
-                WHERE v.estado != 'anulada' AND v.fecha >= DATE(NOW()) - INTERVAL 30 DAY
-                GROUP BY COALESCE(NULLIF(TRIM(vp.metodo_pago), ''), NULLIF(TRIM(v.metodo_de_pago), ''), 'Otro')";
-        $result = $this->conn->query($sql);
-        
-        $labels = [];
-        $data = [];
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
-                $labels[] = $row['metodo'];
-                $data[] = (float)$row['total_ventas'];
-            }
-        }
-        return ['labels' => $labels, 'data' => $data];
-    }
-
-    public function get_top_sales_products($limit = 5)
-    {
-        $limit = intval($limit);
-        $excludeServices = ServiceProduct::excludeSql('p', 'pd');
-        $serviceName = ServiceProduct::NAME;
-        $sql = "SELECT COALESCE(dv.nombre_producto, p.nombre) as nombre, SUM(dv.cantidad) as total_vendido
-                FROM detalle_venta dv
-                LEFT JOIN producto p ON dv.id_producto = p.id_producto
-                LEFT JOIN producto_detalle pd ON p.id_producto = pd.id_producto
-                JOIN venta v ON dv.id_venta = v.id_venta
-                WHERE v.estado != 'anulada'
-                  AND v.fecha >= DATE(NOW()) - INTERVAL 30 DAY
-                  AND COALESCE(dv.nombre_producto, '') <> '$serviceName'
-                  AND (p.id_producto IS NULL OR $excludeServices)
-                GROUP BY dv.id_producto, COALESCE(dv.nombre_producto, p.nombre)
-                ORDER BY total_vendido DESC LIMIT ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $limit);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        $labels = [];
-        $data = [];
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
-                $labels[] = $row['nombre'];
-                $data[] = (int)$row['total_vendido'];
-            }
-        }
-        $stmt->close();
-        return ['labels' => $labels, 'data' => $data];
     }
 }

@@ -14,12 +14,6 @@ class AdminModel extends BaseModel
         return ($res && $res->num_rows > 0) ? (float) $res->fetch_assoc()['total_ventas'] : 0.0;
     }
 
-    public function get_total_transactions()
-    {
-        $res = $this->conn->query("SELECT COUNT(*) as total_transacciones FROM venta WHERE estado != 'anulada'");
-        return ($res && $res->num_rows > 0) ? (int) $res->fetch_assoc()['total_transacciones'] : 0;
-    }
-
     public function get_total_users()
     {
         $res = $this->conn->query("SELECT COUNT(*) as total_usuarios FROM usuario");
@@ -69,11 +63,8 @@ class AdminModel extends BaseModel
 
     public function get_primary_admin_id(): ?int
     {
-        $res = $this->conn->query("SELECT id_usuario FROM usuario WHERE rol = 'admin' ORDER BY id_usuario ASC LIMIT 1");
-        if ($res && ($row = $res->fetch_assoc())) {
-            return (int)$row['id_usuario'];
-        }
-        return null;
+        require_once __DIR__ . '/../../../classes/Layout.php';
+        return Layout::getPrimaryAdminId();
     }
 
     public function count_active_admins($exclude_id = null)
@@ -404,7 +395,7 @@ class AdminModel extends BaseModel
     }
 
     // --- Auditoría ---
-    public function get_audit_logs($limit = 100, $modulo = '')
+    public function get_audit_logs($limit = 100)
     {
         $limit = (int) $limit;
         // La auditoría del sistema está dedicada exclusivamente al inventario

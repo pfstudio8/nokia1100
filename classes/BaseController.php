@@ -179,4 +179,12 @@ class BaseController
         $session_token = $_SESSION['session_token'] ?? '';
         return !empty($session_token) && !empty($token) && hash_equals($session_token, (string)$token);
     }
+
+    protected function is_ajax(): bool
+    {
+        return (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+            || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'))
+            || (isset($_POST['ajax']) && $_POST['ajax'] === '1')
+            || (isset($_GET['ajax']) && $_GET['ajax'] === '1');
+    }
 }

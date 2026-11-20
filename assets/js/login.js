@@ -27,20 +27,6 @@ function toggleAuthMode(mode) {
     }
 }
 
-// Conmutador entre el formulario de Registro y el formulario de Invitado (ahora en Registro)
-function showGuestForm(show) {
-    const registerWrapper = document.getElementById('register-form-wrapper');
-    const guestWrapper = document.getElementById('guest-form-wrapper');
-    
-    if (show) {
-        if (registerWrapper) registerWrapper.classList.add('hidden');
-        if (guestWrapper) guestWrapper.classList.remove('hidden');
-    } else {
-        if (registerWrapper) registerWrapper.classList.remove('hidden');
-        if (guestWrapper) guestWrapper.classList.add('hidden');
-    }
-}
-
 // Conmutador de visibilidad de contraseña
 function togglePasswordVisibility(inputId, btn) {
     const input = document.getElementById(inputId);

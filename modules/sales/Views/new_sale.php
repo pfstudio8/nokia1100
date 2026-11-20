@@ -44,13 +44,46 @@ else Layout::renderEmployeeSidebar('venta');
                 <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Producto</label>
                 <select id="id_producto" class="w-full bg-surface border border-border p-3 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm text-text-main appearance-none">
                     <option value="">Seleccione un producto...</option>
-                    <?php foreach ($products as $p): ?>
-                        <option value="<?php echo $p['id_producto']; ?>"
-                                data-nombre="<?php echo htmlspecialchars($p['nombre'] . " " . $p['marca'] . " " . $p['modelo']); ?>"
-                                data-precio="<?php echo $p['precio']; ?>"
-                                data-stock="<?php echo $p['cantidad']; ?>">
-                            <?php echo htmlspecialchars($p['nombre'] . " - " . $p['marca'] . " " . $p['modelo'] . " ($" . number_format($p['precio'], 2) . ") - Stock: " . $p['cantidad']); ?>
-                        </option>
+                    <?php
+                    $grouped_prods = [];
+                    foreach ($products as $p) {
+                        $catKey = !empty($p['categoria']) ? trim($p['categoria']) : 'Otros';
+                        $grouped_prods[$catKey][] = $p;
+                    }
+                    uksort($grouped_prods, function ($a, $b) {
+                        if ($a === 'Otros') return 1;
+                        if ($b === 'Otros') return -1;
+                        return strcasecmp($a, $b);
+                    });
+                    foreach ($grouped_prods as $catTitle => $items):
+                    ?>
+                        <optgroup label="── <?php echo htmlspecialchars($catTitle); ?> ──">
+                            <?php foreach ($items as $p):
+                                $marca = trim($p['marca'] ?? '');
+                                $modelo = trim($p['modelo'] ?? '');
+                                $marcaModelo = trim($marca . ' ' . $modelo);
+                                $tipoRep = trim($p['tipo_repuesto'] ?? '');
+
+                                $labelParts = [];
+                                $labelParts[] = '[' . $catTitle . ']';
+                                $labelParts[] = trim($p['nombre'] ?? '');
+                                if ($marcaModelo !== '') {
+                                    $labelParts[] = '· ' . $marcaModelo;
+                                }
+                                if ($tipoRep !== '' && stripos($p['nombre'], $tipoRep) === false) {
+                                    $labelParts[] = '(' . $tipoRep . ')';
+                                }
+                                $labelTxt = implode(' ', $labelParts) . ' — $' . number_format((float)$p['precio'], 2) . ' (Stock: ' . (int)$p['cantidad'] . ')';
+                                $fullNombre = trim(($p['nombre'] ?? '') . ' ' . $marca . ' ' . $modelo);
+                            ?>
+                                <option value="<?php echo (int)$p['id_producto']; ?>"
+                                        data-nombre="<?php echo htmlspecialchars($fullNombre); ?>"
+                                        data-precio="<?php echo htmlspecialchars((string)$p['precio']); ?>"
+                                        data-stock="<?php echo (int)$p['cantidad']; ?>">
+                                    <?php echo htmlspecialchars($labelTxt); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </optgroup>
                     <?php endforeach; ?>
                 </select>
             </div>

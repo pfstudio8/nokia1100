@@ -56,13 +56,6 @@ class AuthController extends BaseController
         ];
     }
 
-    private function is_ajax(): bool
-    {
-        return (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') ||
-               (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false) ||
-               (isset($_POST['ajax']) && $_POST['ajax'] === '1');
-    }
-
     private function send_otp_email(string $email, string $nombre, string $code): bool
     {
         require_once __DIR__ . '/../../../config/config_mail.php';

@@ -25,8 +25,6 @@ class ReportsController extends BaseController
 
     public function dashboard()
     {
-        $this->check_auth();
-        // Permiso especial 'reportes' o usar 'graficos' que ya existía
         $this->check_access('reportes');
 
         // Data 1: Financiero

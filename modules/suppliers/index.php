@@ -6,9 +6,6 @@ $controller = new SuppliersController();
 $action = $_GET['action'] ?? ($_POST['action'] ?? 'suppliers');
 
 switch ($action) {
-    case 'edit_supplier':
-        $controller->edit_supplier();
-        break;
     case 'save_supplier':
         $controller->save_supplier();
         break;
@@ -28,7 +25,6 @@ switch ($action) {
         $controller->quick_product();
         break;
     case 'suppliers':
-    case 'add':
     case 'delete_supplier':
         $controller->suppliers();
         break;

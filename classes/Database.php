@@ -36,29 +36,4 @@ class Database
     {
         return $this->conn;
     }
-
-    public function query($sql)
-    {
-        return $this->conn->query($sql);
-    }
-
-    public function prepare($sql)
-    {
-        return $this->conn->prepare($sql);
-    }
-
-    public function escape($string)
-    {
-        return $this->conn->real_escape_string($string);
-    }
-
-    public function insert_id()
-    {
-        return $this->conn->insert_id;
-    }
-
-    public function close()
-    {
-        $this->conn->close();
-    }
 }

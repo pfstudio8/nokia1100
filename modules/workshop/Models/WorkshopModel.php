@@ -802,44 +802,6 @@ public function get_active_products_in_stock()
         return $new_id;
     }
 
-    public function register_repair_payment(int $id_reparacion, float $monto, string $metodo_pago, int $id_usuario)
-    {
-        $id_reparacion = intval($id_reparacion);
-        $monto = floatval($monto);
-        $id_usuario = intval($id_usuario);
-        
-        // Obtener detalles de la reparación
-        $repair = $this->find_repair_by_id($id_reparacion);
-        if (!$repair) throw new Exception("Reparación no encontrada");
-
-        $descripcion = "Cobro de Reparación #" . $repair['codigo_orden'] . " - " . $repair['equipo_marca'] . " " . $repair['equipo_modelo'];
-        $fecha = date('Y-m-d H:i:s');
-
-        $this->conn->begin_transaction();
-        try {
-            // 1. Crear Venta
-            $stmt = $this->conn->prepare("INSERT INTO venta (fecha, total, metodo_de_pago, id_usuario, descripcion) VALUES (?, ?, ?, ?, ?)");
-            $stmt->bind_param("sdsis", $fecha, $monto, $metodo_pago, $id_usuario, $descripcion);
-            if (!$stmt->execute()) throw new Exception("Error al registrar el ingreso");
-            $id_venta = $stmt->insert_id;
-            $stmt->close();
-
-            // 2. Crear Detalle de Venta
-            $id_producto_servicio = $this->get_or_ensure_service_product();
-            $stmt = $this->conn->prepare("INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, nombre_producto) VALUES (?, ?, 1, ?, ?)");
-            $nombre_prod = "Servicio Técnico Taller";
-            $stmt->bind_param("iids", $id_venta, $id_producto_servicio, $monto, $nombre_prod);
-            $stmt->execute();
-            $stmt->close();
-
-            $this->conn->commit();
-            return $id_venta;
-        } catch (Exception $e) {
-            $this->conn->rollback();
-            throw $e;
-        }
-    }
-
     public function add_repair_image(int $id_reparacion, string $ruta_archivo, string $tipo = 'Ingreso')
     {
         $id_reparacion = intval($id_reparacion);

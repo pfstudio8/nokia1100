@@ -8,9 +8,6 @@ class SalesController extends BaseController
 {
     private SalesModel $sales_model;
 
-    // Métodos de pago permitidos (deben coincidir con los que ofrece la interfaz)
-    private const METODOS_PAGO = ['Efectivo', 'Transferencia', 'Tarjeta'];
-
     public function __construct()
     {
         parent::__construct();
@@ -19,11 +16,7 @@ class SalesController extends BaseController
 
     public function sales()
     {
-        if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
-            $this->check_access('ventas');
-        } else {
-            $this->check_access('venta');
-        }
+        $this->check_access('venta');
 
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
         if ($page < 1) $page = 1;
@@ -46,12 +39,7 @@ class SalesController extends BaseController
 
     public function new_sale()
     {
-        $this->check_auth();
-        if ($_SESSION['role'] === 'admin') {
-            $this->check_access('ventas');
-        } else {
-            $this->check_access('venta');
-        }
+        $this->check_access('venta');
 
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $input = json_decode(file_get_contents('php://input'), true);
@@ -59,7 +47,7 @@ class SalesController extends BaseController
             if ($input) {
                 // Validación Anti-CSRF
                 $token = $input['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
-                if (empty($_SESSION['session_token']) || !hash_equals($_SESSION['session_token'], (string)$token)) {
+                if (!$this->verify_csrf($token)) {
                     echo json_encode(['success' => false, 'message' => 'Token de seguridad inválido o expirado.']);
                     exit;
                 }
@@ -74,7 +62,7 @@ class SalesController extends BaseController
                     exit;
                 }
 
-                if (empty($pagos) && !in_array($metodo_pago, self::METODOS_PAGO, true)) {
+                if (empty($pagos) && !in_array($metodo_pago, SalesModel::METODOS_PAGO, true)) {
                     echo json_encode(['success' => false, 'message' => 'Método de pago no válido']);
                     exit;
                 }
@@ -103,7 +91,7 @@ class SalesController extends BaseController
 
     public function invoice()
     {
-        $this->check_any_access(['ventas', 'venta']);
+        $this->check_access('venta');
 
         $id_venta = isset($_GET['id']) ? intval($_GET['id']) : 0;
         if ($id_venta === 0) {
@@ -125,9 +113,8 @@ class SalesController extends BaseController
 
     public function repairs_to_charge()
     {
-        $this->check_auth();
-        // Verificar acceso a cobrar reparaciones o ventas
-        $this->check_any_access(['cobrar_reparaciones', 'venta', 'ventas']);
+        // 'cobrar_reparaciones' en Layout::checkAccess ya autoriza también a quienes tengan 'venta'
+        $this->check_access('cobrar_reparaciones');
 
         require_once __DIR__ . '/../../workshop/Models/WorkshopModel.php';
         $workshop_model = new WorkshopModel();
@@ -136,8 +123,7 @@ class SalesController extends BaseController
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'charge_repair') {
             try {
                 // Validación Anti-CSRF
-                $token = $_POST['csrf_token'] ?? '';
-                if (empty($_SESSION['session_token']) || !hash_equals($_SESSION['session_token'], (string)$token)) {
+                if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
                     throw new Exception("Token de seguridad inválido o expirado.");
                 }
 
@@ -155,7 +141,7 @@ class SalesController extends BaseController
                     ];
                 } else {
                     $metodo = trim((string)($_POST['metodo_pago'] ?? 'Efectivo'));
-                    if (!in_array($metodo, self::METODOS_PAGO, true)) {
+                    if (!in_array($metodo, SalesModel::METODOS_PAGO, true)) {
                         throw new Exception("Método de pago no válido.");
                     }
                     $pagoPayload = $metodo;
@@ -191,7 +177,7 @@ class SalesController extends BaseController
 
     public function credit_note()
     {
-        $this->check_any_access(['ventas', 'venta']);
+        $this->check_access('venta');
 
         $id_venta = isset($_GET['id']) ? intval($_GET['id']) : 0;
         if ($id_venta === 0) {
@@ -215,61 +201,10 @@ class SalesController extends BaseController
         ]);
     }
 
-    public function sales_charts()
-    {
-        $this->check_access('graficos');
-        if ($_SESSION['role'] !== 'admin') {
-            $this->redirect(BASE_URL . "/index.php");
-        }
-
-        $daily = $this->sales_model->get_sales_daily_totals();
-        $methods = $this->sales_model->get_sales_by_payment_methods();
-        $top_products = $this->sales_model->get_top_products();
-
-        $this->render_view(__DIR__ . '/../Views/sales_charts.php', [
-            'dates' => $daily['dates'],
-            'totals' => $daily['totals'],
-            'methods' => $methods['methods'],
-            'method_amounts' => $methods['amounts'],
-            'top_names' => $top_products['names'],
-            'top_quantities' => $top_products['quantities']
-        ]);
-    }
-
-    public function export_sales()
-    {
-        $this->check_any_access(['ventas', 'venta']);
-
-        header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename=ventas_' . date('Y-m-d') . '.csv');
-
-        $output = fopen('php://output', 'w');
-        // Add UTF-8 BOM for right encoding in Excel
-        fputs($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
-
-        fputcsv($output, ['ID Venta', 'Fecha', 'Total ($)', 'Metodo de Pago', 'Producto', 'Cantidad']);
-
-        $data = $this->sales_model->get_sales_export_data();
-
-        foreach ($data as $row) {
-            fputcsv($output, [
-                $row['id_venta'],
-                $row['fecha'],
-                number_format($row['total'], 2, '.', ''),
-                $row['metodo_de_pago'],
-                $row['producto'] ? $row['producto'] : 'Desconocido',
-                $row['cantidad'] ? $row['cantidad'] : 1
-            ]);
-        }
-        fclose($output);
-        exit;
-    }
-
     public function rollback()
     {
         header('Content-Type: application/json');
-        // Admin usa 'ventas' y empleados 'venta': se aceptan ambos y se responde en JSON si se deniega
-        $this->check_any_access(['ventas', 'venta'], true);
+        $this->check_access('venta', true);
         
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $input = json_decode(file_get_contents('php://input'), true);
@@ -277,7 +212,7 @@ class SalesController extends BaseController
             if ($input && isset($input['id_venta'])) {
                 // Validación Anti-CSRF
                 $token = $input['csrf_token'] ?? ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? '');
-                if (empty($_SESSION['session_token']) || !hash_equals($_SESSION['session_token'], (string)$token)) {
+                if (!$this->verify_csrf($token)) {
                     echo json_encode(['success' => false, 'message' => 'Token de seguridad inválido o expirado.']);
                     exit;
                 }
@@ -302,19 +237,9 @@ class SalesController extends BaseController
         $this->check_auth(true);
         header('Content-Type: application/json; charset=utf-8');
 
-        // Los usuarios invitados no acceden a reparaciones
-        if (isset($_SESSION['role']) && $_SESSION['role'] === 'guest') {
-            echo json_encode(['success' => false, 'count' => 0, 'repairs' => []]);
-            exit();
-        }
-
-        // Solo quien tenga acceso a taller, cobro de reparaciones o ventas ve montos y órdenes
+        // Solo quien tenga acceso a taller o cobro de reparaciones/ventas ve montos y órdenes (excluye automáticamente a guest)
         require_once __DIR__ . '/../../../classes/Layout.php';
-        $allowed = false;
-        foreach (['taller', 'cobrar_reparaciones', 'ventas', 'venta'] as $mod) {
-            if (Layout::hasAccess($mod)) { $allowed = true; break; }
-        }
-        if (!$allowed) {
+        if (!Layout::hasAccess('taller') && !Layout::hasAccess('cobrar_reparaciones')) {
             echo json_encode(['success' => false, 'count' => 0, 'repairs' => []]);
             exit();
         }

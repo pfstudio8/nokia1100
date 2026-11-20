@@ -16,12 +16,6 @@ switch ($action) {
     case 'invoice':
         $controller->invoice();
         break;
-    case 'sales_charts':
-        $controller->sales_charts();
-        break;
-    case 'export_sales':
-        $controller->export_sales();
-        break;
     case 'check_ready_repairs':
         $controller->check_ready_repairs();
         break;

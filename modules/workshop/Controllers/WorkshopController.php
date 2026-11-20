@@ -18,7 +18,6 @@ class WorkshopController extends BaseController
 
     public function index()
     {
-        $this->check_auth();
         $this->check_access('taller');
 
         $estado_filter = $_GET['estado'] ?? '';
@@ -49,7 +48,6 @@ class WorkshopController extends BaseController
 
     public function history()
     {
-        $this->check_auth();
         $this->check_access('taller');
 
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -73,17 +71,11 @@ class WorkshopController extends BaseController
 
     public function add()
     {
-        $this->check_auth();
-        $this->check_any_access(['registrar_equipo', 'taller', 'venta', 'ventas', 'dashboard']);
-        
-        if (isset($_SESSION['role']) && $_SESSION['role'] === 'guest') {
-            $this->redirect(BASE_URL . "/modules/workshop/index.php");
-        }
+        $this->check_access('registrar_equipo');
 
         $error = '';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $token = $_POST['csrf_token'] ?? '';
-            if (empty($_SESSION['session_token']) || !hash_equals($_SESSION['session_token'], (string)$token)) {
+            if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
                 $this->redirect("index.php?action=add&error=" . urlencode("Token CSRF inválido"));
             }
             try {
@@ -177,7 +169,6 @@ class WorkshopController extends BaseController
 
     public function view()
     {
-        $this->check_auth();
         $this->check_access('taller');
 
         $id_reparacion = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -189,8 +180,7 @@ class WorkshopController extends BaseController
         $success = '';
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $token = $_POST['csrf_token'] ?? '';
-            if (empty($_SESSION['session_token']) || !hash_equals($_SESSION['session_token'], (string)$token)) {
+            if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
                 $this->redirect("index.php?action=view&id=$id_reparacion&error=" . urlencode("Token CSRF inválido"));
             }
         }
@@ -354,7 +344,7 @@ class WorkshopController extends BaseController
 
     public function print_receipt()
     {
-        $this->check_any_access(['registrar_equipo', 'taller', 'cobrar_reparaciones', 'ventas', 'venta']);
+        $this->check_any_access(['registrar_equipo', 'taller', 'cobrar_reparaciones']);
 
         $id_reparacion = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         if (!$id_reparacion) {
@@ -437,8 +427,8 @@ class WorkshopController extends BaseController
 
     public function delivery_receipt()
     {
-        // Se imprime desde el taller y también desde la caja (Cobrar Reparaciones)
-        $this->check_any_access(['taller', 'cobrar_reparaciones', 'ventas', 'venta']);
+        // Se imprime desde el taller y también desde la caja (Cobrar Reparaciones / Ventas)
+        $this->check_any_access(['taller', 'cobrar_reparaciones']);
 
         $id_reparacion = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         if (!$id_reparacion) {
@@ -455,14 +445,8 @@ class WorkshopController extends BaseController
 
     public function check_status()
     {
-        $this->check_any_access(['taller', 'cobrar_reparaciones', 'ventas', 'venta'], true);
+        $this->check_any_access(['taller', 'cobrar_reparaciones'], true);
         header('Content-Type: application/json; charset=utf-8');
-
-        if (isset($_SESSION['role']) && $_SESSION['role'] === 'guest') {
-            http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'Acceso denegado']);
-            exit();
-        }
 
         $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         if (!$id) {

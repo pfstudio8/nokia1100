@@ -561,14 +561,6 @@ class Layout
     }
 
     /**
-     * Compatibilidad hacia atrás
-     */
-    public static function renderExportSplitButton(string $tableId, string $title, string $filename): string
-    {
-        return self::renderExportButtons($tableId, $title, $filename);
-    }
-
-    /**
      * Devuelve la clase CSS sutil correspondiente a cada medio de pago.
      */
     public static function getPaymentBadgeClass(?string $method): string

@@ -6,64 +6,6 @@ require_once __DIR__ . '/../../../classes/ServiceProduct.php';
 
 class InventoryModel extends BaseModel
 {
-    public function get_inventory($search = '', $filter = '', $limit = 50, $offset = 0, $categoria = '')
-    {
-        $where_parts = [];
-        $types = "";
-        $params = [];
-
-        // Excluir servicios no físicos (facturación interna del taller)
-        $where_parts[] = "(d.categoria IS NULL OR d.categoria != 'Servicios')";
-        $where_parts[] = ServiceProduct::excludeSql('p');
-
-        if ($search) {
-            $search_wildcard = "%" . $search . "%";
-            $where_parts[] = "(p.nombre LIKE ? OR d.marca LIKE ? OR d.modelo LIKE ? OR d.categoria LIKE ? OR d.codigo LIKE ?)";
-            $types .= "sssss";
-            array_push($params, $search_wildcard, $search_wildcard, $search_wildcard, $search_wildcard, $search_wildcard);
-        }
-        if ($filter === 'low_stock') {
-            $where_parts[] = "i.cantidad <= d.stock_minimo";
-        }
-        if (!empty($categoria)) {
-            $where_parts[] = "d.categoria = ?";
-            $types .= "s";
-            $params[] = $categoria;
-        }
-
-        $where_clause = count($where_parts) > 0 ? " WHERE " . implode(" AND ", $where_parts) : "";
-
-        $limit = (int)$limit;
-        $offset = (int)$offset;
-
-        $sql = "SELECT p.id_producto, p.nombre, d.marca, d.modelo, d.categoria, d.codigo, d.stock_minimo, i.cantidad, p.precio, p.is_active
-                FROM inventario i
-                JOIN producto p ON i.id_producto = p.id_producto
-                JOIN producto_detalle d ON p.id_producto = d.id_producto
-                $where_clause
-                ORDER BY p.nombre ASC
-                LIMIT ? OFFSET ?";
-
-        $types .= "ii";
-        array_push($params, $limit, $offset);
-
-        $stmt = $this->conn->prepare($sql);
-        if ($types) {
-            $stmt->bind_param($types, ...$params);
-        }
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        $items = [];
-        if ($result && $result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                $items[] = $row;
-            }
-        }
-        $stmt->close();
-        return $items;
-    }
-
     public function get_all_products_catalog()
     {
         $excludeServices = ServiceProduct::excludeSql('p');
@@ -105,54 +47,6 @@ class InventoryModel extends BaseModel
         ];
     }
 
-    public function get_inventory_count($search = '', $filter = '', $categoria = '')
-    {
-        $where_parts = [];
-        $types = "";
-        $params = [];
-
-        // Excluir servicios no físicos (facturación interna del taller)
-        $where_parts[] = "(d.categoria IS NULL OR d.categoria != 'Servicios')";
-        $where_parts[] = ServiceProduct::excludeSql('p');
-
-        if ($search) {
-            $search_wildcard = "%" . $search . "%";
-            $where_parts[] = "(p.nombre LIKE ? OR d.marca LIKE ? OR d.modelo LIKE ? OR d.categoria LIKE ? OR d.codigo LIKE ?)";
-            $types .= "sssss";
-            array_push($params, $search_wildcard, $search_wildcard, $search_wildcard, $search_wildcard, $search_wildcard);
-        }
-        if ($filter === 'low_stock') {
-            $where_parts[] = "i.cantidad <= d.stock_minimo";
-        }
-        if (!empty($categoria)) {
-            $where_parts[] = "d.categoria = ?";
-            $types .= "s";
-            $params[] = $categoria;
-        }
-
-        $where_clause = count($where_parts) > 0 ? " WHERE " . implode(" AND ", $where_parts) : "";
-
-        $sql = "SELECT COUNT(*) as total
-                FROM inventario i
-                JOIN producto p ON i.id_producto = p.id_producto
-                JOIN producto_detalle d ON p.id_producto = d.id_producto
-                $where_clause";
-
-        $stmt = $this->conn->prepare($sql);
-        if ($types) {
-            $stmt->bind_param($types, ...$params);
-        }
-        $stmt->execute();
-        $res = $stmt->get_result();
-        
-        $total = 0;
-        if ($res && $row = $res->fetch_assoc()) {
-            $total = (int)$row['total'];
-        }
-        $stmt->close();
-        return $total;
-    }
-
     public function get_all_categories()
     {
         $sql = "SELECT DISTINCT categoria FROM producto_detalle WHERE categoria IS NOT NULL AND categoria != '' AND categoria != 'Servicios' ORDER BY categoria ASC";
@@ -180,21 +74,6 @@ class InventoryModel extends BaseModel
         $res = $stmt->get_result()->fetch_assoc();
         $stmt->close();
         return $res;
-    }
-
-    public function check_product_sales_purchases(int $id_producto)
-    {
-        $stmt = $this->conn->prepare("SELECT 
-            (SELECT COUNT(*) FROM detalle_venta WHERE id_producto = ?) + 
-            (SELECT COUNT(*) FROM detalle_compra WHERE id_producto = ?) +
-            (SELECT COUNT(*) FROM reparacion_repuesto WHERE id_producto = ?) AS total");
-        $stmt->bind_param("iii", $id_producto, $id_producto, $id_producto);
-        $stmt->execute();
-        $total = 0;
-        $stmt->bind_result($total);
-        $stmt->fetch();
-        $stmt->close();
-        return $total;
     }
 
     public function create_product_transaction(array $product_data, array $detail_data, int $cantidad)
@@ -315,90 +194,6 @@ class InventoryModel extends BaseModel
         }
         return true;
     }
-
-    // Alias retrocompatible para no romper llamadas externas existentes (sin borrar inventario físico)
-    public function deactivate_product_and_delete_stock(int $id_producto)
-    {
-        return $this->deactivate_product($id_producto);
-    }
-
-    public function delete_product_completely(int $id_producto)
-    {
-        $this->conn->begin_transaction();
-        try {
-            $stmt = $this->conn->prepare("DELETE FROM inventario WHERE id_producto = ?");
-            $stmt->bind_param("i", $id_producto);
-            if (!$stmt->execute())
-                throw new Exception("Error al eliminar de inventario");
-            $stmt->close();
-
-            $stmt = $this->conn->prepare("DELETE FROM producto_detalle WHERE id_producto = ?");
-            $stmt->bind_param("i", $id_producto);
-            if (!$stmt->execute())
-                throw new Exception("Error al eliminar detalles");
-            $stmt->close();
-
-            $stmt = $this->conn->prepare("DELETE FROM producto WHERE id_producto = ?");
-            $stmt->bind_param("i", $id_producto);
-            if (!$stmt->execute())
-                throw new Exception("Error al eliminar producto");
-            $stmt->close();
-
-            $this->conn->commit();
-            return true;
-        } catch (Exception $e) {
-            $this->conn->rollback();
-            throw $e;
-        }
-    }
-
-    public function get_purchase_history(int $id_producto)
-    {
-        $id_producto = intval($id_producto);
-        $sql = "SELECT c.fecha, pr.nombre as proveedor, dc.cantidad, dc.precio_compra, 
-                       (dc.cantidad * dc.precio_compra) as subtotal,
-                       c.descripcion, c.autorizado_por
-                FROM detalle_compra dc
-                JOIN compra c ON dc.id_compra = c.id_compra
-                JOIN proveedor pr ON c.id_proveedor = pr.id_proveedor
-                WHERE dc.id_producto = ?
-                ORDER BY c.fecha DESC";
-
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $id_producto);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $purchases = [];
-        while ($row = $result->fetch_assoc()) {
-            $purchases[] = $row;
-        }
-        $stmt->close();
-        return $purchases;
-    }
-
-    public function update_images_db()
-    {
-        // iPhones
-        $this->conn->query("UPDATE producto_detalle SET imagen_url = 'https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?auto=format&fit=crop&q=80&w=400' WHERE modelo LIKE '%iPhone%' OR marca = 'Apple'");
-
-        // Samsung
-        $this->conn->query("UPDATE producto_detalle SET imagen_url = 'https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?auto=format&fit=crop&q=80&w=400' WHERE modelo LIKE '%Samsung%' OR marca = 'Samsung'");
-
-        // Motorola (Generic Smartphone)
-        $this->conn->query("UPDATE producto_detalle SET imagen_url = 'https://images.unsplash.com/photo-1598327105666-5b89351aff23?auto=format&fit=crop&q=80&w=400' WHERE modelo LIKE '%Motorola%' OR marca = 'Motorola'");
-
-        // Accessories - Charger
-        $this->conn->query("UPDATE producto_detalle SET imagen_url = 'https://images.unsplash.com/photo-1583863788434-e58a36330cf0?auto=format&fit=crop&q=80&w=400' WHERE tipo_repuesto LIKE '%Cargador%' OR modelo LIKE '%Cargador%'");
-
-        // Accessories - Case/Funda
-        $this->conn->query("UPDATE producto_detalle SET imagen_url = 'https://images.unsplash.com/photo-1586105251261-72a756497a11?auto=format&fit=crop&q=80&w=400' WHERE tipo_repuesto LIKE '%Funda%' OR modelo LIKE '%Funda%'");
-
-        // Generic fallback for others
-        $this->conn->query("UPDATE producto_detalle SET imagen_url = 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&q=80&w=400' WHERE imagen_url IS NULL OR imagen_url LIKE '%via.placeholder%'");
-
-        return true;
-    }
-
 
     public function get_critical_stock_details()
     {

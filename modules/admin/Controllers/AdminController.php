@@ -33,7 +33,6 @@ class AdminController extends BaseController
         }
 
         $total_ventas = $this->admin_model->get_total_sales();
-        $total_trans = $this->admin_model->get_total_transactions();
         $total_usuarios = $this->admin_model->get_total_users();
         $bajo_stock = $this->admin_model->get_low_stock_count();
         $ventas_recientes = $this->admin_model->get_recent_sales(5);
@@ -488,14 +487,12 @@ class AdminController extends BaseController
         $this->check_access('auditoria'); 
 
         $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
-        $modulo = isset($_GET['modulo']) ? trim($_GET['modulo']) : '';
         
-        $logs = $this->admin_model->get_audit_logs($limit, $modulo);
+        $logs = $this->admin_model->get_audit_logs($limit);
 
         $this->render_view(__DIR__ . '/../Views/audit.php', [
             'logs' => $logs,
-            'limit' => $limit,
-            'modulo' => $modulo
+            'limit' => $limit
         ]);
     }
 }

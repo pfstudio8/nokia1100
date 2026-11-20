@@ -502,13 +502,6 @@ class CajaController extends BaseController
         exit;
     }
 
-    private function is_ajax(): bool
-    {
-        return !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
-            || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'))
-            || isset($_POST['ajax']) || isset($_GET['ajax']);
-    }
-
     private function respond_error(string $message, int $code = 400): void
     {
         if ($this->is_ajax()) {

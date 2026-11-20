@@ -22,34 +22,9 @@ class EmployeeModel extends BaseModel
 
     public function get_recent_sales(int $limit = 5): array
     {
-        $limit = (int) $limit;
-        $sql = "SELECT v.id_venta, v.fecha, v.total,
-                       COALESCE(
-                           (SELECT CASE 
-                               WHEN COUNT(*) > 1 THEN GROUP_CONCAT(CONCAT(vp.metodo_pago, ' ($', FORMAT(vp.monto, 2), ')') ORDER BY vp.id_pago ASC SEPARATOR ' + ')
-                               WHEN COUNT(*) = 1 THEN MAX(vp.metodo_pago)
-                               ELSE NULL
-                            END
-                            FROM venta_pago vp WHERE vp.id_venta = v.id_venta),
-                           NULLIF(TRIM(v.metodo_de_pago), ''), 
-                           'N/A'
-                       ) AS metodo_de_pago
-                FROM venta v
-                WHERE v.estado != 'anulada'
-                ORDER BY v.fecha DESC, v.id_venta DESC
-                LIMIT ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $limit);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        $sales = [];
-        if ($result && $result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                $sales[] = $row;
-            }
-        }
-        $stmt->close();
-        return $sales;
+        require_once __DIR__ . '/../../admin/Models/AdminModel.php';
+        $adminModel = new AdminModel();
+        return $adminModel->get_recent_sales($limit);
     }
 
     public function get_featured_products(int $limit = 4): array
