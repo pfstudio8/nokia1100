@@ -859,56 +859,117 @@ public function get_active_products_in_stock()
         return false;
     }
 
-    public function get_repair_status_stats()
+    private function buildRepairPeriodFilter(?string $start_dt, ?string $end_dt, ?string $hora_desde, ?string $hora_hasta, string &$types, array &$params, string $alias = 'r'): string
     {
-        $sql = "SELECT estado, COUNT(*) as total
-                FROM reparacion
-                GROUP BY estado
-                ORDER BY FIELD(estado, 'Recibido','En diagnóstico','En reparación','Listo','Entregado','Cancelado')";
-        $result = $this->conn->query($sql);
+        $conds = [];
+        if (!empty($start_dt)) {
+            $conds[] = "{$alias}.fecha_ingreso >= ?";
+            $types .= "s";
+            $params[] = $start_dt;
+        }
+        if (!empty($end_dt)) {
+            $conds[] = "{$alias}.fecha_ingreso <= ?";
+            $types .= "s";
+            $params[] = $end_dt;
+        }
+        if ((!empty($hora_desde) && $hora_desde !== '00:00') || (!empty($hora_hasta) && $hora_hasta !== '23:59')) {
+            $conds[] = "TIME({$alias}.fecha_ingreso) >= ? AND TIME({$alias}.fecha_ingreso) <= ?";
+            $types .= "ss";
+            $params[] = (!empty($hora_desde) ? $hora_desde : '00:00') . ':00';
+            $params[] = (!empty($hora_hasta) ? $hora_hasta : '23:59') . ':59';
+        }
+        return !empty($conds) ? (' WHERE ' . implode(' AND ', $conds)) : '';
+    }
+
+    public function get_repair_status_stats(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
+    {
+        $types = "";
+        $params = [];
+        $whereSql = $this->buildRepairPeriodFilter($start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params, 'r');
+
+        $sql = "SELECT r.estado, COUNT(*) as total,
+                       GROUP_CONCAT(DISTINCT DATE_FORMAT(r.fecha_ingreso, '%d/%m/%Y %H:%i hs') ORDER BY r.fecha_ingreso DESC SEPARATOR ' · ') AS fechas_detalle
+                FROM reparacion r
+                $whereSql
+                GROUP BY r.estado
+                ORDER BY FIELD(r.estado, 'Recibido','En diagnóstico','En reparación','Listo','Entregado','Cancelado')";
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $labels = [];
         $counts = [];
+        $details = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $labels[] = $row['estado'];
                 $counts[] = (int)$row['total'];
+                $details[] = array_slice(array_filter(explode(' · ', (string)($row['fechas_detalle'] ?? ''))), 0, 5);
             }
         }
-        return ['labels' => $labels, 'counts' => $counts];
+        $stmt->close();
+        return ['labels' => $labels, 'counts' => $counts, 'details' => $details];
     }
 
-    public function get_repairs_by_brand()
+    public function get_repairs_by_brand(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
-        $sql = "SELECT equipo_marca, COUNT(*) as total
-                FROM reparacion
-                GROUP BY equipo_marca
+        $types = "";
+        $params = [];
+        $whereSql = $this->buildRepairPeriodFilter($start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params, 'r');
+
+        $sql = "SELECT r.equipo_marca, COUNT(*) as total,
+                       GROUP_CONCAT(DISTINCT DATE_FORMAT(r.fecha_ingreso, '%d/%m/%Y %H:%i hs') ORDER BY r.fecha_ingreso DESC SEPARATOR ' · ') AS fechas_detalle
+                FROM reparacion r
+                $whereSql
+                GROUP BY r.equipo_marca
                 ORDER BY total DESC
                 LIMIT 5";
-        $result = $this->conn->query($sql);
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $labels = [];
         $counts = [];
+        $details = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $labels[] = $row['equipo_marca'];
                 $counts[] = (int)$row['total'];
+                $details[] = array_slice(array_filter(explode(' · ', (string)($row['fechas_detalle'] ?? ''))), 0, 5);
             }
         }
-        return ['labels' => $labels, 'counts' => $counts];
+        $stmt->close();
+        return ['labels' => $labels, 'counts' => $counts, 'details' => $details];
     }
 
-    public function get_all_repairs_for_report()
+    public function get_all_repairs_for_report(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
+        $types = "";
+        $params = [];
+        $whereSql = $this->buildRepairPeriodFilter($start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params, 'r');
+
         $sql = "SELECT r.*, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono 
                 FROM reparacion r
                 LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
+                $whereSql
                 ORDER BY r.fecha_ingreso DESC";
-        $result = $this->conn->query($sql);
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $repairs = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $repairs[] = $row;
             }
         }
+        $stmt->close();
         return $repairs;
     }
 }

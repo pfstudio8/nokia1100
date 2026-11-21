@@ -171,15 +171,10 @@ class InventoryModel extends BaseModel
 
     public function toggle_product_status(int $id_producto)
     {
-        // Prepara la sentencia SQL para negar (toggle/invertir) el estado lógico de 'is_active' del producto
         $stmt = $this->conn->prepare("UPDATE producto SET is_active = NOT is_active WHERE id_producto = ?");
-        // Vincula el ID del producto como un entero al parámetro de la consulta
         $stmt->bind_param("i", $id_producto);
-        // Ejecuta la consulta preparada y almacena si fue exitosa
         $success = $stmt->execute();
-        // Cierra la sentencia de base de datos
         $stmt->close();
-        // Retorna el resultado de la ejecución (true en caso de éxito, false en error)
         return $success;
     }
 
@@ -195,28 +190,85 @@ class InventoryModel extends BaseModel
         return true;
     }
 
-    public function get_critical_stock_details()
+    /**
+     * Construye condición SQL para filtrar productos que tuvieron actividad (altas, modificaciones, ventas o compras)
+     * dentro del rango de fecha y hora indicado.
+     */
+    private function buildProductActivityFilter(string $prodAlias, ?string $start_dt, ?string $end_dt, ?string $hora_desde, ?string $hora_hasta, string &$types, array &$params): string
+    {
+        $hasTimeWindow = ((!empty($hora_desde) && $hora_desde !== '00:00') || (!empty($hora_hasta) && $hora_hasta !== '23:59'));
+        if (empty($start_dt) && empty($end_dt) && !$hasTimeWindow) {
+            return '';
+        }
+
+        $buildDateCond = static function (string $col) use ($start_dt, $end_dt, $hora_desde, $hora_hasta, $hasTimeWindow, &$types, &$params): string {
+            $c = [];
+            if (!empty($start_dt)) {
+                $c[] = "$col >= ?";
+                $types .= "s";
+                $params[] = $start_dt;
+            }
+            if (!empty($end_dt)) {
+                $c[] = "$col <= ?";
+                $types .= "s";
+                $params[] = $end_dt;
+            }
+            if ($hasTimeWindow) {
+                $c[] = "TIME($col) >= ? AND TIME($col) <= ?";
+                $types .= "ss";
+                $params[] = (!empty($hora_desde) ? $hora_desde : '00:00') . ':00';
+                $params[] = (!empty($hora_hasta) ? $hora_hasta : '23:59') . ':59';
+            }
+            return implode(' AND ', $c);
+        };
+
+        $auditCond = $buildDateCond('a_f.fecha');
+        $ventaCond = $buildDateCond('v_f.fecha');
+        $compraCond = $buildDateCond('c_f.fecha');
+
+        return " AND (
+            EXISTS (SELECT 1 FROM audit_log a_f WHERE a_f.id_registro = {$prodAlias}.id_producto AND (LOWER(a_f.tabla_afectada) IN ('inventario', 'producto') OR a_f.accion LIKE 'INVENTORY_%') AND $auditCond)
+            OR EXISTS (SELECT 1 FROM detalle_venta dv_f INNER JOIN venta v_f ON dv_f.id_venta = v_f.id_venta WHERE dv_f.id_producto = {$prodAlias}.id_producto AND $ventaCond)
+            OR EXISTS (SELECT 1 FROM detalle_compra dc_f INNER JOIN compra c_f ON dc_f.id_compra = c_f.id_compra WHERE dc_f.id_producto = {$prodAlias}.id_producto AND $compraCond)
+        )";
+    }
+
+    public function get_critical_stock_details(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
         $excludeServices = ServiceProduct::excludeSql('p', 'pd');
+        $types = "";
+        $params = [];
+        $actFilter = $this->buildProductActivityFilter('p', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
         $sql = "SELECT p.nombre, i.cantidad, pd.stock_minimo, pd.marca, pd.modelo 
                 FROM inventario i
                 JOIN producto_detalle pd ON i.id_producto = pd.id_producto
                 JOIN producto p ON i.id_producto = p.id_producto
-                WHERE p.is_active = 1 AND i.cantidad <= pd.stock_minimo AND $excludeServices
+                WHERE p.is_active = 1 AND i.cantidad <= pd.stock_minimo AND $excludeServices $actFilter
                 ORDER BY i.cantidad ASC";
-        $result = $this->conn->query($sql);
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $products = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $products[] = $row;
             }
         }
+        $stmt->close();
         return $products;
     }
 
-    public function get_stock_stats()
+    public function get_stock_stats(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
         $excludeServices = ServiceProduct::excludeSql('p', 'pd');
+        $types = "";
+        $params = [];
+        $actFilter = $this->buildProductActivityFilter('p', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
         $sql = "SELECT 
                 SUM(CASE WHEN i.cantidad > pd.stock_minimo THEN 1 ELSE 0 END) as sano,
                 SUM(CASE WHEN i.cantidad > 0 AND i.cantidad <= pd.stock_minimo THEN 1 ELSE 0 END) as bajo,
@@ -224,30 +276,46 @@ class InventoryModel extends BaseModel
                 FROM inventario i
                 JOIN producto_detalle pd ON i.id_producto = pd.id_producto
                 JOIN producto p ON i.id_producto = p.id_producto
-                WHERE p.is_active = 1 AND $excludeServices";
-        $result = $this->conn->query($sql);
+                WHERE p.is_active = 1 AND $excludeServices $actFilter";
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $resData = ['sano' => 0, 'bajo' => 0, 'agotado' => 0];
         if ($result && $row = $result->fetch_assoc()) {
-            return [
+            $resData = [
                 'sano' => (int)$row['sano'],
                 'bajo' => (int)$row['bajo'],
                 'agotado' => (int)$row['agotado']
             ];
         }
-        return ['sano' => 0, 'bajo' => 0, 'agotado' => 0];
+        $stmt->close();
+        return $resData;
     }
     
-    public function get_stock_by_brand()
+    public function get_stock_by_brand(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
         $excludeServices = ServiceProduct::excludeSql('p', 'pd');
+        $types = "";
+        $params = [];
+        $actFilter = $this->buildProductActivityFilter('p', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
         $sql = "SELECT COALESCE(NULLIF(TRIM(pd.marca), ''), 'Otros') as marca, SUM(i.cantidad) as total_stock
                 FROM inventario i
                 JOIN producto p ON i.id_producto = p.id_producto
                 JOIN producto_detalle pd ON i.id_producto = pd.id_producto
-                WHERE p.is_active = 1 AND $excludeServices
+                WHERE p.is_active = 1 AND $excludeServices $actFilter
                 GROUP BY COALESCE(NULLIF(TRIM(pd.marca), ''), 'Otros')
                 ORDER BY total_stock DESC
                 LIMIT 5";
-        $result = $this->conn->query($sql);
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $labels = [];
         $values = [];
         if ($result) {
@@ -256,23 +324,30 @@ class InventoryModel extends BaseModel
                 $values[] = (int)$row['total_stock'];
             }
         }
+        $stmt->close();
         return ['labels' => $labels, 'values' => $values];
     }
 
-    public function get_top_value_products($limit = 5)
+    public function get_top_value_products($limit = 5, ?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
         $limit = intval($limit);
         $excludeServices = ServiceProduct::excludeSql('p', 'd');
+        $types = "";
+        $params = [];
+        $actFilter = $this->buildProductActivityFilter('p', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
         $sql = "SELECT COALESCE(NULLIF(TRIM(CONCAT(COALESCE(d.marca, ''), ' ', COALESCE(d.modelo, ''))), ''), p.nombre) as product_name,
                        i.cantidad as stock_quantity
                 FROM inventario i
                 JOIN producto p ON i.id_producto = p.id_producto
                 JOIN producto_detalle d ON p.id_producto = d.id_producto
-                WHERE p.is_active = 1 AND i.cantidad > 0 AND $excludeServices
+                WHERE p.is_active = 1 AND i.cantidad > 0 AND $excludeServices $actFilter
                 ORDER BY i.cantidad DESC LIMIT ?";
+        $types .= "i";
+        $params[] = $limit;
         
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $limit);
+        $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $result = $stmt->get_result();
         
@@ -288,5 +363,3 @@ class InventoryModel extends BaseModel
         return ['products' => $products, 'values' => $values];
     }
 }
-
-

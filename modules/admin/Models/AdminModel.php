@@ -421,42 +421,181 @@ class AdminModel extends BaseModel
         return $logs;
     }
 
-    public function get_financial_stats()
+    private function formatDayHourLabel(?string $dt): string
     {
-        $sql = "
-            SELECT 
-                m.mes,
-                COALESCE(v.total_ventas, 0) AS ingresos,
-                COALESCE(c.total_compras, 0) AS gastos
-            FROM (
-                SELECT DATE_FORMAT(DATE_SUB(NOW(), INTERVAL i MONTH), '%Y-%m') AS mes
-                FROM (SELECT 0 as i UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5) temp
-            ) m
-            LEFT JOIN (
-                SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(total) AS total_ventas
-                FROM venta
-                WHERE estado != 'anulada'
-                GROUP BY DATE_FORMAT(fecha, '%Y-%m')
-            ) v ON m.mes = v.mes
-            LEFT JOIN (
-                SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(total) AS total_compras
-                FROM compra
-                WHERE estado = 'Recibido'
-                GROUP BY DATE_FORMAT(fecha, '%Y-%m')
-            ) c ON m.mes = c.mes
-            ORDER BY m.mes ASC;
-        ";
-        $result = $this->conn->query($sql);
+        if (empty($dt)) return '';
+        $ts = strtotime($dt);
+        if ($ts === false) return (string)$dt;
+        $dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        return $dias[(int)date('w', $ts)] . ' ' . date('d/m/Y H:i', $ts) . ' hs';
+    }
+
+    public function get_financial_stats(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
+    {
+        $hasFilter = (!empty($start_dt) || !empty($end_dt) || (!empty($hora_desde) && $hora_desde !== '00:00') || (!empty($hora_hasta) && $hora_hasta !== '23:59'));
+
+        if (!$hasFilter) {
+            $sql = "
+                SELECT 
+                    m.mes,
+                    COALESCE(v.total_ventas, 0) AS ingresos,
+                    COALESCE(c.total_compras, 0) AS gastos
+                FROM (
+                    SELECT DATE_FORMAT(DATE_SUB(NOW(), INTERVAL i MONTH), '%Y-%m') AS mes
+                    FROM (SELECT 0 as i UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5) temp
+                ) m
+                LEFT JOIN (
+                    SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(total) AS total_ventas
+                    FROM venta
+                    WHERE estado != 'anulada'
+                    GROUP BY DATE_FORMAT(fecha, '%Y-%m')
+                ) v ON m.mes = v.mes
+                LEFT JOIN (
+                    SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(total) AS total_compras
+                    FROM compra
+                    WHERE estado = 'Recibido'
+                    GROUP BY DATE_FORMAT(fecha, '%Y-%m')
+                ) c ON m.mes = c.mes
+                ORDER BY m.mes ASC;
+            ";
+            $result = $this->conn->query($sql);
+            $labels = [];
+            $ingresos = [];
+            $gastos = [];
+            if ($result) {
+                while ($row = $result->fetch_assoc()) {
+                    $labels[] = $row['mes'];
+                    $ingresos[] = (float)$row['ingresos'];
+                    $gastos[] = (float)$row['gastos'];
+                }
+            }
+            return ['labels' => $labels, 'ingresos' => $ingresos, 'gastos' => $gastos, 'details_ingresos' => [], 'details_gastos' => []];
+        }
+
+        $whereV = ["estado != 'anulada'"];
+        $whereC = ["estado = 'Recibido'"];
+        $typesV = "";
+        $paramsV = [];
+        $typesC = "";
+        $paramsC = [];
+
+        if (!empty($start_dt)) {
+            $whereV[] = "fecha >= ?";
+            $typesV .= "s";
+            $paramsV[] = $start_dt;
+
+            $whereC[] = "fecha >= ?";
+            $typesC .= "s";
+            $paramsC[] = $start_dt;
+        }
+        if (!empty($end_dt)) {
+            $whereV[] = "fecha <= ?";
+            $typesV .= "s";
+            $paramsV[] = $end_dt;
+
+            $whereC[] = "fecha <= ?";
+            $typesC .= "s";
+            $paramsC[] = $end_dt;
+        }
+        if ((!empty($hora_desde) && $hora_desde !== '00:00') || (!empty($hora_hasta) && $hora_hasta !== '23:59')) {
+            $hStart = (!empty($hora_desde) ? $hora_desde : '00:00') . ':00';
+            $hEnd = (!empty($hora_hasta) ? $hora_hasta : '23:59') . ':59';
+            $whereV[] = "TIME(fecha) >= ? AND TIME(fecha) <= ?";
+            $typesV .= "ss";
+            $paramsV[] = $hStart;
+            $paramsV[] = $hEnd;
+
+            $whereC[] = "TIME(fecha) >= ? AND TIME(fecha) <= ?";
+            $typesC .= "ss";
+            $paramsC[] = $hStart;
+            $paramsC[] = $hEnd;
+        }
+
+        $whereVSql = implode(' AND ', $whereV);
+        $whereCSql = implode(' AND ', $whereC);
+
+        // Cuando hay filtro de tiempo activo, agrupamos por fecha (día) y adjuntamos el día y la hora exacta de cada acción
+        $periodKeys = [];
+        $tsStart = !empty($start_dt) ? strtotime(substr($start_dt, 0, 10)) : false;
+        $tsEnd = !empty($end_dt) ? strtotime(substr($end_dt, 0, 10)) : false;
+
+        $granularity = 'day';
+        if ($tsStart !== false && $tsEnd !== false && $tsEnd >= $tsStart) {
+            $diffDays = (int)round(($tsEnd - $tsStart) / 86400);
+            if ($diffDays <= 31) {
+                for ($cur = $tsStart; $cur <= $tsEnd; $cur += 86400) {
+                    $periodKeys[date('Y-m-d', $cur)] = true;
+                }
+            } elseif ($diffDays > 62) {
+                $granularity = 'month';
+                $curMonth = strtotime(date('Y-m-01', $tsStart));
+                $endMonth = strtotime(date('Y-m-01', $tsEnd));
+                while ($curMonth <= $endMonth) {
+                    $periodKeys[date('Y-m', $curMonth)] = true;
+                    $curMonth = strtotime('+1 month', $curMonth);
+                }
+            }
+        }
+
+        $fmtSql = ($granularity === 'day') ? 'Y-m-d' : 'Y-m';
+
+        $ventasMap = [];
+        $detailsIngresosMap = [];
+        $sqlV = "SELECT id_venta, fecha, total FROM venta WHERE $whereVSql ORDER BY fecha ASC";
+        $stmtV = $this->conn->prepare($sqlV);
+        if ($typesV !== '') {
+            $stmtV->bind_param($typesV, ...$paramsV);
+        }
+        $stmtV->execute();
+        $resV = $stmtV->get_result();
+        while ($row = $resV->fetch_assoc()) {
+            $ts = strtotime($row['fecha']);
+            $p = $ts !== false ? date($fmtSql, $ts) : substr($row['fecha'], 0, 10);
+            $periodKeys[$p] = true;
+            $ventasMap[$p] = ($ventasMap[$p] ?? 0.0) + (float)$row['total'];
+            $detailsIngresosMap[$p][] = $this->formatDayHourLabel($row['fecha']) . ' (Venta #' . $row['id_venta'] . ': $' . number_format((float)$row['total'], 0, ',', '.') . ')';
+        }
+        $stmtV->close();
+
+        $comprasMap = [];
+        $detailsGastosMap = [];
+        $sqlC = "SELECT id_compra, fecha, total FROM compra WHERE $whereCSql ORDER BY fecha ASC";
+        $stmtC = $this->conn->prepare($sqlC);
+        if ($typesC !== '') {
+            $stmtC->bind_param($typesC, ...$paramsC);
+        }
+        $stmtC->execute();
+        $resC = $stmtC->get_result();
+        while ($row = $resC->fetch_assoc()) {
+            $ts = strtotime($row['fecha']);
+            $p = $ts !== false ? date($fmtSql, $ts) : substr($row['fecha'], 0, 10);
+            $periodKeys[$p] = true;
+            $comprasMap[$p] = ($comprasMap[$p] ?? 0.0) + (float)$row['total'];
+            $detailsGastosMap[$p][] = $this->formatDayHourLabel($row['fecha']) . ' (Compra #' . $row['id_compra'] . ': $' . number_format((float)$row['total'], 0, ',', '.') . ')';
+        }
+        $stmtC->close();
+
+        ksort($periodKeys);
         $labels = [];
         $ingresos = [];
         $gastos = [];
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
-                $labels[] = $row['mes'];
-                $ingresos[] = $row['ingresos'];
-                $gastos[] = $row['gastos'];
-            }
+        $detailsIngresos = [];
+        $detailsGastos = [];
+
+        foreach (array_keys($periodKeys) as $pKey) {
+            $labels[] = $pKey;
+            $ingresos[] = round((float)($ventasMap[$pKey] ?? 0), 2);
+            $gastos[] = round((float)($comprasMap[$pKey] ?? 0), 2);
+            $detailsIngresos[] = $detailsIngresosMap[$pKey] ?? [];
+            $detailsGastos[] = $detailsGastosMap[$pKey] ?? [];
         }
-        return ['labels' => $labels, 'ingresos' => $ingresos, 'gastos' => $gastos];
+
+        return [
+            'labels' => $labels,
+            'ingresos' => $ingresos,
+            'gastos' => $gastos,
+            'details_ingresos' => $detailsIngresos,
+            'details_gastos' => $detailsGastos
+        ];
     }
 }

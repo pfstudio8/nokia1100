@@ -4,6 +4,12 @@
 Layout::renderHead('Centro de Reportes - NOKIA1100');
 Layout::renderAdminSidebar('reportes');
 
+$desde = $desde ?? '';
+$hasta = $hasta ?? '';
+$hora_desde = $hora_desde ?? '00:00';
+$hora_hasta = $hora_hasta ?? '23:59';
+$active_tab = $active_tab ?? 'tab-finanzas';
+
 function renderRepairStatusBadge(string $estado): string
 {
     $e = mb_strtolower(trim($estado), 'UTF-8');
@@ -85,26 +91,60 @@ html.dark .glass-card p {
             </div>
         </header>
 
+        <?php // Filtro de fecha y hora ?>
+        <form method="GET" action="index.php" id="report-time-filter-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 mb-6 pb-5 border-b border-[#d3cebf] dark:border-[#2a3035] items-end">
+            <input type="hidden" name="tab" id="report-active-tab-input" value="<?php echo htmlspecialchars($active_tab); ?>">
+
+            <div class="lg:col-span-3">
+                <label for="f-desde" class="block text-[11px] font-mono font-bold uppercase text-[#5c6165] dark:text-[#9ba19f] mb-1">Fecha Desde</label>
+                <input type="date" id="f-desde" name="desde" value="<?php echo htmlspecialchars($desde); ?>" class="w-full bg-[#ffffff] dark:bg-[#121518] border border-[#b5af9c] dark:border-[#3a4248] text-xs font-mono rounded-[3px] px-2.5 py-1.5 text-[#15171a] dark:text-[#f1ede6] focus:border-[#15171a] outline-none">
+            </div>
+
+            <div class="lg:col-span-2">
+                <label for="f-hora-desde" class="block text-[11px] font-mono font-bold uppercase text-[#5c6165] dark:text-[#9ba19f] mb-1">Hora Desde</label>
+                <input type="time" id="f-hora-desde" name="hora_desde" value="<?php echo htmlspecialchars($hora_desde); ?>" class="w-full bg-[#ffffff] dark:bg-[#121518] border border-[#b5af9c] dark:border-[#3a4248] text-xs font-mono rounded-[3px] px-2.5 py-1.5 text-[#15171a] dark:text-[#f1ede6] focus:border-[#15171a] outline-none">
+            </div>
+
+            <div class="lg:col-span-3">
+                <label for="f-hasta" class="block text-[11px] font-mono font-bold uppercase text-[#5c6165] dark:text-[#9ba19f] mb-1">Fecha Hasta</label>
+                <input type="date" id="f-hasta" name="hasta" value="<?php echo htmlspecialchars($hasta); ?>" class="w-full bg-[#ffffff] dark:bg-[#121518] border border-[#b5af9c] dark:border-[#3a4248] text-xs font-mono rounded-[3px] px-2.5 py-1.5 text-[#15171a] dark:text-[#f1ede6] focus:border-[#15171a] outline-none">
+            </div>
+
+            <div class="lg:col-span-2">
+                <label for="f-hora-hasta" class="block text-[11px] font-mono font-bold uppercase text-[#5c6165] dark:text-[#9ba19f] mb-1">Hora Hasta</label>
+                <input type="time" id="f-hora-hasta" name="hora_hasta" value="<?php echo htmlspecialchars($hora_hasta); ?>" class="w-full bg-[#ffffff] dark:bg-[#121518] border border-[#b5af9c] dark:border-[#3a4248] text-xs font-mono rounded-[3px] px-2.5 py-1.5 text-[#15171a] dark:text-[#f1ede6] focus:border-[#15171a] outline-none">
+            </div>
+
+            <div class="lg:col-span-2 flex gap-2">
+                <button type="submit" class="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-[3px] bg-[#15171a] dark:bg-[#c6e24a] text-[#c6e24a] dark:text-[#15171a] font-mono text-xs font-bold hover:opacity-90 transition-opacity">
+                    <span class="material-symbols-outlined text-[15px]">search</span>Filtrar
+                </button>
+                <a href="index.php?tab=<?php echo urlencode($active_tab); ?>" id="report-clear-filter-link" class="no-transition inline-flex items-center justify-center px-2.5 py-1.5 rounded-[3px] border border-[#b5af9c] dark:border-[#3a4248] bg-[#ffffff] dark:bg-[#121518] text-[#5c6165] dark:text-[#9ba19f] hover:text-[#15171a] text-xs font-mono" title="Limpiar filtro">
+                    <span class="material-symbols-outlined text-[15px]">close</span>
+                </a>
+            </div>
+        </form>
+
         <?php // Pestañas de Reportes ?>
         <div class="border-b border-[#d3cebf] mb-7">
             <nav class="flex flex-wrap gap-2 sm:gap-5" aria-label="Pestañas de reportes">
-                <button type="button" class="tab-btn inline-flex items-center gap-2 px-3.5 py-2.5 border-b-2 font-semibold text-sm text-[#15171a] border-[#15171a] transition-colors" data-tab="tab-finanzas">
+                <button type="button" class="tab-btn inline-flex items-center gap-2 px-3.5 py-2.5 border-b-2 font-semibold text-sm <?php echo $active_tab === 'tab-finanzas' ? 'text-[#15171a] border-[#15171a] is-active' : 'text-[#6b7075] border-transparent hover:text-[#15171a] hover:border-[#b5af9c]'; ?> transition-colors" data-tab="tab-finanzas" data-active="<?php echo $active_tab === 'tab-finanzas' ? 'true' : 'false'; ?>">
                     <span class="material-symbols-outlined text-[18px]">monitoring</span>Financiero
                 </button>
-                <button type="button" class="tab-btn inline-flex items-center gap-2 px-3.5 py-2.5 border-b-2 font-semibold text-sm text-[#6b7075] border-transparent hover:text-[#15171a] hover:border-[#b5af9c] transition-colors" data-tab="tab-inventario">
+                <button type="button" class="tab-btn inline-flex items-center gap-2 px-3.5 py-2.5 border-b-2 font-semibold text-sm <?php echo $active_tab === 'tab-inventario' ? 'text-[#15171a] border-[#15171a] is-active' : 'text-[#6b7075] border-transparent hover:text-[#15171a] hover:border-[#b5af9c]'; ?> transition-colors" data-tab="tab-inventario" data-active="<?php echo $active_tab === 'tab-inventario' ? 'true' : 'false'; ?>">
                     <span class="material-symbols-outlined text-[18px]">inventory_2</span>Inventario
                 </button>
-                <button type="button" class="tab-btn inline-flex items-center gap-2 px-3.5 py-2.5 border-b-2 font-semibold text-sm text-[#6b7075] border-transparent hover:text-[#15171a] hover:border-[#b5af9c] transition-colors" data-tab="tab-ventas">
+                <button type="button" class="tab-btn inline-flex items-center gap-2 px-3.5 py-2.5 border-b-2 font-semibold text-sm <?php echo $active_tab === 'tab-ventas' ? 'text-[#15171a] border-[#15171a] is-active' : 'text-[#6b7075] border-transparent hover:text-[#15171a] hover:border-[#b5af9c]'; ?> transition-colors" data-tab="tab-ventas" data-active="<?php echo $active_tab === 'tab-ventas' ? 'true' : 'false'; ?>">
                     <span class="material-symbols-outlined text-[18px]">payments</span>Ventas
                 </button>
-                <button type="button" class="tab-btn inline-flex items-center gap-2 px-3.5 py-2.5 border-b-2 font-semibold text-sm text-[#6b7075] border-transparent hover:text-[#15171a] hover:border-[#b5af9c] transition-colors" data-tab="tab-taller">
+                <button type="button" class="tab-btn inline-flex items-center gap-2 px-3.5 py-2.5 border-b-2 font-semibold text-sm <?php echo $active_tab === 'tab-taller' ? 'text-[#15171a] border-[#15171a] is-active' : 'text-[#6b7075] border-transparent hover:text-[#15171a] hover:border-[#b5af9c]'; ?> transition-colors" data-tab="tab-taller" data-active="<?php echo $active_tab === 'tab-taller' ? 'true' : 'false'; ?>">
                     <span class="material-symbols-outlined text-[18px]">home_repair_service</span>Taller
                 </button>
             </nav>
         </div>
 
         <?php // CONTENIDO: FINANCIERO ?>
-        <div id="tab-finanzas" class="tab-content block">
+        <div id="tab-finanzas" class="tab-content <?php echo $active_tab === 'tab-finanzas' ? 'block' : 'hidden'; ?>">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
                 <div class="lg:col-span-12 bg-[#f8f6f0] p-6 rounded-[4px] border border-[#d3cebf] flex flex-col">
                     <div class="flex flex-wrap items-baseline justify-between gap-2 mb-4">
@@ -143,7 +183,7 @@ html.dark .glass-card p {
         </div>
 
         <?php // CONTENIDO: INVENTARIO ?>
-        <div id="tab-inventario" class="tab-content hidden">
+        <div id="tab-inventario" class="tab-content <?php echo $active_tab === 'tab-inventario' ? 'block' : 'hidden'; ?>">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
                 <div class="lg:col-span-5 bg-[#f8f6f0] p-6 rounded-[4px] border border-[#d3cebf] flex flex-col justify-between">
                     <div class="mb-4">
@@ -268,7 +308,7 @@ html.dark .glass-card p {
         </div>
 
         <?php // CONTENIDO: VENTAS ?>
-        <div id="tab-ventas" class="tab-content hidden">
+        <div id="tab-ventas" class="tab-content <?php echo $active_tab === 'tab-ventas' ? 'block' : 'hidden'; ?>">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
                 <div class="lg:col-span-7 bg-[#f8f6f0] p-6 rounded-[4px] border border-[#d3cebf] flex flex-col">
                     <div class="mb-4">
@@ -303,7 +343,7 @@ html.dark .glass-card p {
         </div>
 
         <?php // CONTENIDO: TALLER ?>
-        <div id="tab-taller" class="tab-content hidden">
+        <div id="tab-taller" class="tab-content <?php echo $active_tab === 'tab-taller' ? 'block' : 'hidden'; ?>">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
                 <div class="lg:col-span-5 bg-[#f8f6f0] p-6 rounded-[4px] border border-[#d3cebf] flex flex-col">
                     <div class="mb-4">
@@ -354,7 +394,7 @@ html.dark .glass-card p {
                                 <?php foreach ($repairs as $rep): ?>
                                     <tr class="border-b border-[#e5e1d6] hover:bg-[#eeebe3]/60 transition-colors">
                                         <td class="py-3 pr-4 font-mono font-semibold text-[#15171a]">#<?php echo htmlspecialchars($rep['codigo_orden']); ?></td>
-                                        <td class="py-3 pr-4 text-[#5c6165]"><?php echo date('d/m/Y', strtotime($rep['fecha_ingreso'])); ?></td>
+                                        <td class="py-3 pr-4 text-[#5c6165] font-mono text-xs"><?php echo date('d/m/Y H:i', strtotime($rep['fecha_ingreso'])); ?> hs</td>
                                         <td class="py-3 pr-4 text-[#15171a] font-medium"><?php echo htmlspecialchars($rep['cliente_nombre']); ?></td>
                                         <td class="py-3 pr-4 text-[#5c6165]"><?php echo htmlspecialchars($rep['equipo_marca'] . ' ' . $rep['equipo_modelo']); ?></td>
                                         <td class="py-3 pr-4">
@@ -380,6 +420,7 @@ html.dark .glass-card p {
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     window.reportsData = {
+        activeTab: <?php echo json_encode($active_tab); ?>,
         financial: <?php echo json_encode($financial ?? []); ?>,
         revenueCategory: <?php echo json_encode($revenue_category ?? []); ?>,
         topProfitable: <?php echo json_encode($top_profitable ?? []); ?>,

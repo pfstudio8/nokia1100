@@ -293,15 +293,46 @@ class SalesModel extends BaseModel
         return $products;
     }
 
-    public function get_sales_daily_totals()
+    private function getDateWhereClause(string $alias, ?string $start_dt, ?string $end_dt, ?string $hora_desde, ?string $hora_hasta, string &$types, array &$params): string
     {
-        $sql = "SELECT DATE(fecha) as sale_date, SUM(total) as daily_total 
-                FROM venta 
-                WHERE estado != 'anulada'
-                GROUP BY DATE(fecha) 
+        $parts = [];
+        if (!empty($start_dt)) {
+            $parts[] = "{$alias}.fecha >= ?";
+            $types .= "s";
+            $params[] = $start_dt;
+        }
+        if (!empty($end_dt)) {
+            $parts[] = "{$alias}.fecha <= ?";
+            $types .= "s";
+            $params[] = $end_dt;
+        }
+        if ((!empty($hora_desde) && $hora_desde !== '00:00') || (!empty($hora_hasta) && $hora_hasta !== '23:59')) {
+            $parts[] = "TIME({$alias}.fecha) >= ? AND TIME({$alias}.fecha) <= ?";
+            $types .= "ss";
+            $params[] = (!empty($hora_desde) ? $hora_desde : '00:00') . ':00';
+            $params[] = (!empty($hora_hasta) ? $hora_hasta : '23:59') . ':59';
+        }
+        return !empty($parts) ? (' AND ' . implode(' AND ', $parts)) : '';
+    }
+
+    public function get_sales_daily_totals(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
+    {
+        $types = "";
+        $params = [];
+        $dateWhere = $this->getDateWhereClause('v', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
+        $sql = "SELECT DATE(v.fecha) as sale_date, SUM(v.total) as daily_total 
+                FROM venta v
+                WHERE v.estado != 'anulada' $dateWhere
+                GROUP BY DATE(v.fecha) 
                 ORDER BY sale_date DESC 
                 LIMIT 30";
-        $result = $this->conn->query($sql);
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $dates = [];
         $totals = [];
         if ($result) {
@@ -310,132 +341,194 @@ class SalesModel extends BaseModel
                 $totals[] = (float)$row['daily_total'];
             }
         }
+        $stmt->close();
         return ['dates' => array_reverse($dates), 'totals' => array_reverse($totals)];
     }
 
-    public function get_sales_by_payment_methods()
+    public function get_sales_by_payment_methods(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
+        $types = "";
+        $params = [];
+        $dateWhere = $this->getDateWhereClause('v', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
         $sql = "SELECT 
                     COALESCE(NULLIF(TRIM(vp.metodo_pago), ''), NULLIF(TRIM(v.metodo_de_pago), ''), 'Otro') AS metodo_de_pago,
-                    SUM(COALESCE(vp.monto, v.total)) AS amount
+                    SUM(COALESCE(vp.monto, v.total)) AS amount,
+                    GROUP_CONCAT(DISTINCT DATE_FORMAT(v.fecha, '%d/%m/%Y %H:%i hs') ORDER BY v.fecha DESC SEPARATOR ' · ') AS fechas_detalle
                 FROM venta v
                 LEFT JOIN venta_pago vp ON v.id_venta = vp.id_venta
-                WHERE v.estado != 'anulada'
+                WHERE v.estado != 'anulada' $dateWhere
                 GROUP BY COALESCE(NULLIF(TRIM(vp.metodo_pago), ''), NULLIF(TRIM(v.metodo_de_pago), ''), 'Otro')";
-        $result = $this->conn->query($sql);
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $methods = [];
         $amounts = [];
+        $details = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $methods[] = empty($row['metodo_de_pago']) ? 'Otro' : $row['metodo_de_pago'];
                 $amounts[] = (float)$row['amount'];
+                $details[] = array_slice(array_filter(explode(' · ', (string)($row['fechas_detalle'] ?? ''))), 0, 5);
             }
         }
-        return ['methods' => $methods, 'amounts' => $amounts];
+        $stmt->close();
+        return ['methods' => $methods, 'amounts' => $amounts, 'details' => $details];
     }
 
-    public function get_top_products($limit = 5)
+    public function get_top_products($limit = 5, ?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
         $limit = (int) $limit;
         $excludeServices = ServiceProduct::excludeSql('p', 'pd');
+        $types = "";
+        $params = [];
+        $dateWhere = $this->getDateWhereClause('v', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
         $sql = "SELECT COALESCE(NULLIF(TRIM(CONCAT(COALESCE(pd.marca, ''), ' ', COALESCE(pd.modelo, ''))), ''), p.nombre) as nombre_real,
-                       SUM(dv.cantidad) as total_vendido 
+                       SUM(dv.cantidad) as total_vendido,
+                       GROUP_CONCAT(DISTINCT DATE_FORMAT(v.fecha, '%d/%m/%Y %H:%i hs') ORDER BY v.fecha DESC SEPARATOR ' · ') AS fechas_detalle
                 FROM detalle_venta dv
                 JOIN venta v ON dv.id_venta = v.id_venta
                 JOIN producto p ON dv.id_producto = p.id_producto
                 JOIN producto_detalle pd ON dv.id_producto = pd.id_producto
-                WHERE v.estado = 'completada' AND $excludeServices
+                WHERE v.estado = 'completada' AND $excludeServices $dateWhere
                 GROUP BY dv.id_producto
                 ORDER BY total_vendido DESC
                 LIMIT ?";
+        $types .= "i";
+        $params[] = $limit;
+
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $limit);
+        $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $result = $stmt->get_result();
         $names = [];
         $quantities = [];
+        $details = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $names[] = $row['nombre_real'];
                 $quantities[] = (int)$row['total_vendido'];
+                $details[] = array_slice(array_filter(explode(' · ', (string)($row['fechas_detalle'] ?? ''))), 0, 5);
             }
         }
         $stmt->close();
-        return ['names' => $names, 'quantities' => $quantities];
+        return ['names' => $names, 'quantities' => $quantities, 'details' => $details];
     }
 
-    public function get_revenue_by_category()
+    public function get_revenue_by_category(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
-        $sql = "SELECT COALESCE(pd.categoria, 'Otros') as categoria, SUM(dv.cantidad * dv.precio_unitario) as total_ingresos
+        $types = "";
+        $params = [];
+        $dateWhere = $this->getDateWhereClause('v', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
+        $sql = "SELECT COALESCE(pd.categoria, 'Otros') as categoria,
+                       SUM(dv.cantidad * dv.precio_unitario) as total_ingresos,
+                       GROUP_CONCAT(DISTINCT DATE_FORMAT(v.fecha, '%d/%m/%Y %H:%i hs') ORDER BY v.fecha DESC SEPARATOR ' · ') AS fechas_detalle
                 FROM detalle_venta dv
                 JOIN venta v ON dv.id_venta = v.id_venta
                 JOIN producto_detalle pd ON dv.id_producto = pd.id_producto
-                WHERE v.estado = 'completada'
+                WHERE v.estado = 'completada' $dateWhere
                 GROUP BY pd.categoria
                 ORDER BY total_ingresos DESC";
-        $result = $this->conn->query($sql);
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $labels = [];
         $values = [];
+        $details = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $labels[] = $row['categoria'];
                 $values[] = (float)$row['total_ingresos'];
+                $details[] = array_slice(array_filter(explode(' · ', (string)($row['fechas_detalle'] ?? ''))), 0, 5);
             }
         }
-        return ['labels' => $labels, 'values' => $values];
+        $stmt->close();
+        return ['labels' => $labels, 'values' => $values, 'details' => $details];
     }
 
-    public function get_top_profitable_products($limit = 5)
+    public function get_top_profitable_products($limit = 5, ?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
         $limit = (int) $limit;
         $excludeServices = ServiceProduct::excludeSql('p', 'pd');
+        $types = "";
+        $params = [];
+        $dateWhere = $this->getDateWhereClause('v', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
         $sql = "SELECT COALESCE(NULLIF(TRIM(CONCAT(COALESCE(pd.marca, ''), ' ', COALESCE(pd.modelo, ''))), ''), p.nombre) as nombre_real, 
-                        SUM((dv.precio_unitario - COALESCE((SELECT AVG(dc.precio_compra) FROM detalle_compra dc JOIN compra c ON dc.id_compra = c.id_compra WHERE dc.id_producto = p.id_producto AND c.estado = 'Recibido'), 0)) * dv.cantidad) as rentabilidad
+                        SUM((dv.precio_unitario - COALESCE((SELECT AVG(dc.precio_compra) FROM detalle_compra dc JOIN compra c ON dc.id_compra = c.id_compra WHERE dc.id_producto = p.id_producto AND c.estado = 'Recibido'), 0)) * dv.cantidad) as rentabilidad,
+                        GROUP_CONCAT(DISTINCT DATE_FORMAT(v.fecha, '%d/%m/%Y %H:%i hs') ORDER BY v.fecha DESC SEPARATOR ' · ') AS fechas_detalle
                 FROM detalle_venta dv
                 JOIN venta v ON dv.id_venta = v.id_venta
                 JOIN producto p ON dv.id_producto = p.id_producto
                 JOIN producto_detalle pd ON p.id_producto = pd.id_producto
-                WHERE v.estado = 'completada' AND $excludeServices
+                WHERE v.estado = 'completada' AND $excludeServices $dateWhere
                 GROUP BY dv.id_producto
                 ORDER BY rentabilidad DESC
                 LIMIT ?";
+        $types .= "i";
+        $params[] = $limit;
+
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $limit);
+        $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $result = $stmt->get_result();
         $names = [];
         $values = [];
+        $details = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $names[] = $row['nombre_real'];
                 $values[] = (float)$row['rentabilidad'];
+                $details[] = array_slice(array_filter(explode(' · ', (string)($row['fechas_detalle'] ?? ''))), 0, 5);
             }
         }
         $stmt->close();
-        return ['names' => $names, 'values' => $values];
+        return ['names' => $names, 'values' => $values, 'details' => $details];
     }
 
-    public function get_sales_by_category()
+    public function get_sales_by_category(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
         $excludeServices = ServiceProduct::excludeSql('p', 'pd');
-        $sql = "SELECT COALESCE(pd.categoria, 'Otros') as categoria, SUM(dv.cantidad) as total_unidades
+        $types = "";
+        $params = [];
+        $dateWhere = $this->getDateWhereClause('v', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
+        $sql = "SELECT COALESCE(pd.categoria, 'Otros') as categoria,
+                       SUM(dv.cantidad) as total_unidades,
+                       GROUP_CONCAT(DISTINCT DATE_FORMAT(v.fecha, '%d/%m/%Y %H:%i hs') ORDER BY v.fecha DESC SEPARATOR ' · ') AS fechas_detalle
                 FROM detalle_venta dv
                 JOIN venta v ON dv.id_venta = v.id_venta
                 JOIN producto p ON dv.id_producto = p.id_producto
                 JOIN producto_detalle pd ON dv.id_producto = pd.id_producto
-                WHERE v.estado = 'completada' AND $excludeServices
+                WHERE v.estado = 'completada' AND $excludeServices $dateWhere
                 GROUP BY pd.categoria
                 ORDER BY total_unidades DESC";
-        $result = $this->conn->query($sql);
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $labels = [];
         $values = [];
+        $details = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $labels[] = $row['categoria'];
                 $values[] = (int)$row['total_unidades'];
+                $details[] = array_slice(array_filter(explode(' · ', (string)($row['fechas_detalle'] ?? ''))), 0, 5);
             }
         }
-        return ['labels' => $labels, 'values' => $values];
+        $stmt->close();
+        return ['labels' => $labels, 'values' => $values, 'details' => $details];
     }
 
     public function create_sale_transaction(array $items, string|array $metodo_o_pagos, int|string $user_id, string $descripcion = '')

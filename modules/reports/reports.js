@@ -95,14 +95,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 titleColor: tc.tooltipTitle,
                 bodyColor: tc.tooltipBody,
                 borderColor: tc.tooltipBorder,
-            borderWidth: 1,
-            cornerRadius: 4,
-            padding: 11,
-            boxPadding: 5,
-            usePointStyle: true,
-            titleFont: { family: FONT_BODY, size: 12, weight: '700' },
-            bodyFont: { family: FONT_MONO, size: 11.5, weight: '500' }
+                borderWidth: 1,
+                cornerRadius: 4,
+                padding: 11,
+                boxPadding: 5,
+                usePointStyle: true,
+                titleFont: { family: FONT_BODY, size: 12, weight: '700' },
+                bodyFont: { family: FONT_MONO, size: 11.5, weight: '500' },
+                footerFont: { family: FONT_MONO, size: 10.5, weight: '400' },
+                footerColor: '#9ba19f'
             };
+        }
+
+        function buildDateFooter(detailsArr, dataIndex) {
+            if (!Array.isArray(detailsArr) || !Array.isArray(detailsArr[dataIndex]) || detailsArr[dataIndex].length === 0) {
+                return [];
+            }
+            return ['Día y hora:', ...detailsArr[dataIndex].map(d => '• ' + d)];
         }
 
         function hasNonZeroData(arr) {
@@ -132,8 +141,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function formatMonthLabel(ym) {
             const parts = String(ym || '').split('-');
-            if (parts.length !== 2) return ym;
             const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+            if (parts.length === 3) {
+                const mIdx = parseInt(parts[1], 10) - 1;
+                return parts[2] + ' ' + (months[mIdx] || parts[1]);
+            }
+            if (parts.length !== 2) return ym;
             const mIdx = parseInt(parts[1], 10) - 1;
             return (months[mIdx] || parts[1]) + ' ' + parts[0].slice(-2);
         }
@@ -147,7 +160,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return PALETTE[idx % PALETTE.length];
         }
 
-        function buildDoughnutOptions({ centerLabel, centerValue, formatValue }) {
+        function buildDoughnutOptions({ centerLabel, centerValue, formatValue, details }) {
             return {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -198,6 +211,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const pct = total > 0 ? ((raw / total) * 100).toFixed(1) : '0.0';
                                 const formatted = typeof formatValue === 'function' ? formatValue(raw) : numFmt.format(raw);
                                 return ` ${context.label}: ${formatted} (${pct}%)`;
+                            },
+                            footer(items) {
+                                const idx = items[0]?.dataIndex;
+                                return idx !== undefined ? buildDateFooter(details, idx) : [];
                             }
                         }
                     }
@@ -216,6 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const fin = data.financial || {};
                 const ingresos = (fin.ingresos || []).map(Number);
                 const gastos = (fin.gastos || []).map(Number);
+                const detIngresos = fin.details_ingresos || [];
+                const detGastos = fin.details_gastos || [];
 
                 if (Array.isArray(fin.labels) && fin.labels.length > 0 && (hasNonZeroData(ingresos) || hasNonZeroData(gastos))) {
                     charts.financialBalance = new Chart(document.getElementById('financialBalanceChart').getContext('2d'), {
@@ -266,7 +285,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                 tooltip: {
                                     ...getBaseTooltip(),
                                     callbacks: {
-                                        label: (ctx) => ` ${ctx.dataset.label}: ${arsFull.format(Number(ctx.raw) || 0)}`
+                                        label: (ctx) => ` ${ctx.dataset.label}: ${arsFull.format(Number(ctx.raw) || 0)}`,
+                                        footer: (items) => {
+                                            const idx = items[0]?.dataIndex;
+                                            if (idx === undefined) return [];
+                                            const lines = [
+                                                ...(Array.isArray(detIngresos[idx]) ? detIngresos[idx] : []),
+                                                ...(Array.isArray(detGastos[idx]) ? detGastos[idx] : [])
+                                            ];
+                                            return lines.length > 0 ? ['Día y hora:', ...lines.slice(0, 6).map(l => '• ' + l)] : [];
+                                        }
                                     }
                                 }
                             },
@@ -300,6 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!charts.revenueCategory && document.getElementById('revenueCategoryChart')) {
                 const labels = data.revenueCategory?.labels || [];
                 const values = (data.revenueCategory?.values || []).map(Number);
+                const details = data.revenueCategory?.details || [];
 
                 if (labels.length > 0 && hasNonZeroData(values)) {
                     charts.revenueCategory = new Chart(document.getElementById('revenueCategoryChart').getContext('2d'), {
@@ -325,7 +354,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 tooltip: {
                                     ...getBaseTooltip(),
                                     callbacks: {
-                                        label: (ctx) => ` Ingresos: ${arsFull.format(Number(ctx.raw) || 0)}`
+                                        label: (ctx) => ` Ingresos: ${arsFull.format(Number(ctx.raw) || 0)}`,
+                                        footer: (items) => buildDateFooter(details, items[0]?.dataIndex)
                                     }
                                 }
                             },
@@ -359,6 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!charts.topProfitable && document.getElementById('topProfitableChart')) {
                 const fullNames = data.topProfitable?.names || [];
                 const values = (data.topProfitable?.values || []).map(Number);
+                const details = data.topProfitable?.details || [];
 
                 if (fullNames.length > 0 && hasNonZeroData(values)) {
                     charts.topProfitable = new Chart(document.getElementById('topProfitableChart').getContext('2d'), {
@@ -386,7 +417,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ...getBaseTooltip(),
                                     callbacks: {
                                         title: (items) => fullNames[items[0]?.dataIndex] || items[0]?.label || '',
-                                        label: (ctx) => ` Margen neto: ${arsFull.format(Number(ctx.raw) || 0)}`
+                                        label: (ctx) => ` Margen neto: ${arsFull.format(Number(ctx.raw) || 0)}`,
+                                        footer: (items) => buildDateFooter(details, items[0]?.dataIndex)
                                     }
                                 }
                             },
@@ -520,6 +552,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!charts.salesCategory && document.getElementById('salesCategoryChart')) {
                 const labels = data.salesCategory?.labels || [];
                 const values = (data.salesCategory?.values || []).map(Number);
+                const details = data.salesCategory?.details || [];
 
                 if (labels.length > 0 && hasNonZeroData(values)) {
                     charts.salesCategory = new Chart(document.getElementById('salesCategoryChart').getContext('2d'), {
@@ -545,7 +578,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 tooltip: {
                                     ...getBaseTooltip(),
                                     callbacks: {
-                                        label: (ctx) => ` Vendidas: ${numFmt.format(Number(ctx.raw) || 0)} unidades`
+                                        label: (ctx) => ` Vendidas: ${numFmt.format(Number(ctx.raw) || 0)} unidades`,
+                                        footer: (items) => buildDateFooter(details, items[0]?.dataIndex)
                                     }
                                 }
                             },
@@ -579,6 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!charts.salesMethods && document.getElementById('methodsChart')) {
                 const methods = data.salesMethods?.methods || [];
                 const amounts = (data.salesMethods?.amounts || []).map(Number);
+                const details = data.salesMethods?.details || [];
 
                 if (methods.length > 0 && hasNonZeroData(amounts)) {
                     const totalAmount = amounts.reduce((a, b) => a + b, 0);
@@ -602,7 +637,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         options: buildDoughnutOptions({
                             centerLabel: 'Facturado',
                             centerValue: arsCompact.format(totalAmount),
-                            formatValue: (v) => arsFull.format(v)
+                            formatValue: (v) => arsFull.format(v),
+                            details
                         })
                     });
                 } else {
@@ -613,6 +649,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!charts.salesTop && document.getElementById('topSalesChart')) {
                 const fullNames = data.topSales?.names || [];
                 const quantities = (data.topSales?.quantities || []).map(Number);
+                const details = data.topSales?.details || [];
 
                 if (fullNames.length > 0 && hasNonZeroData(quantities)) {
                     charts.salesTop = new Chart(document.getElementById('topSalesChart').getContext('2d'), {
@@ -640,7 +677,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ...getBaseTooltip(),
                                     callbacks: {
                                         title: (items) => fullNames[items[0]?.dataIndex] || items[0]?.label || '',
-                                        label: (ctx) => ` Unidades vendidas: ${numFmt.format(Number(ctx.raw) || 0)}`
+                                        label: (ctx) => ` Unidades vendidas: ${numFmt.format(Number(ctx.raw) || 0)}`,
+                                        footer: (items) => buildDateFooter(details, items[0]?.dataIndex)
                                     }
                                 }
                             },
@@ -677,6 +715,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!charts.workshopStatus && document.getElementById('repairStatusChart')) {
                 const labels = data.repairStatus?.labels || [];
                 const counts = (data.repairStatus?.counts || []).map(Number);
+                const details = data.repairStatus?.details || [];
 
                 if (labels.length > 0 && hasNonZeroData(counts)) {
                     const statusColors = {
@@ -708,7 +747,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         options: buildDoughnutOptions({
                             centerLabel: 'Órdenes',
                             centerValue: numFmt.format(totalOrders),
-                            formatValue: (v) => `${numFmt.format(v)} órd.`
+                            formatValue: (v) => `${numFmt.format(v)} órd.`,
+                            details
                         })
                     });
                 } else {
@@ -719,6 +759,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!charts.workshopBrand && document.getElementById('repairByBrandChart')) {
                 const labels = data.repairBrand?.labels || [];
                 const counts = (data.repairBrand?.counts || []).map(Number);
+                const details = data.repairBrand?.details || [];
 
                 if (labels.length > 0 && hasNonZeroData(counts)) {
                     charts.workshopBrand = new Chart(document.getElementById('repairByBrandChart').getContext('2d'), {
@@ -744,7 +785,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 tooltip: {
                                     ...getBaseTooltip(),
                                     callbacks: {
-                                        label: (ctx) => ` Órdenes ingresadas: ${numFmt.format(Number(ctx.raw) || 0)}`
+                                        label: (ctx) => ` Órdenes ingresadas: ${numFmt.format(Number(ctx.raw) || 0)}`,
+                                        footer: (items) => buildDateFooter(details, items[0]?.dataIndex)
                                     }
                                 }
                             },
@@ -776,34 +818,51 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        function activateTab(targetId) {
+            tabBtns.forEach(b => {
+                const isTarget = b.getAttribute('data-tab') === targetId;
+                b.classList.toggle('text-[#15171a]', isTarget);
+                b.classList.toggle('border-[#15171a]', isTarget);
+                b.classList.toggle('is-active', isTarget);
+                b.classList.toggle('text-[#6b7075]', !isTarget);
+                b.classList.toggle('border-transparent', !isTarget);
+                b.setAttribute('data-active', isTarget ? 'true' : 'false');
+            });
+
+            tabContents.forEach(content => {
+                if (content.id === targetId) {
+                    content.classList.remove('hidden');
+                    content.classList.add('block');
+                } else {
+                    content.classList.add('hidden');
+                    content.classList.remove('block');
+                }
+            });
+
+            if (targetId === 'tab-finanzas') renderFinancial();
+            if (targetId === 'tab-inventario') renderInventory();
+            if (targetId === 'tab-ventas') renderSales();
+            if (targetId === 'tab-taller') renderWorkshop();
+
+            const tabInput = document.getElementById('report-active-tab-input');
+            if (tabInput) {
+                tabInput.value = targetId;
+            }
+            const clearLink = document.getElementById('report-clear-filter-link');
+            if (clearLink) {
+                clearLink.href = 'index.php?tab=' + encodeURIComponent(targetId);
+            }
+        }
+
         tabBtns.forEach(btn => {
             btn.addEventListener('click', () => {
-                tabBtns.forEach(b => {
-                    b.classList.remove('text-[#15171a]', 'border-[#15171a]');
-                    b.classList.add('text-[#6b7075]', 'border-transparent');
-                });
-                btn.classList.add('text-[#15171a]', 'border-[#15171a]');
-                btn.classList.remove('text-[#6b7075]', 'border-transparent');
-
                 const targetId = btn.getAttribute('data-tab');
-                tabContents.forEach(content => {
-                    if (content.id === targetId) {
-                        content.classList.remove('hidden');
-                        content.classList.add('block');
-
-                        if (targetId === 'tab-finanzas') renderFinancial();
-                        if (targetId === 'tab-inventario') renderInventory();
-                        if (targetId === 'tab-ventas') renderSales();
-                        if (targetId === 'tab-taller') renderWorkshop();
-                    } else {
-                        content.classList.add('hidden');
-                        content.classList.remove('block');
-                    }
-                });
+                if (targetId) {
+                    activateTab(targetId);
+                }
             });
         });
 
-        
         function updateAllChartsTheme() {
             const tc = getThemeColors();
 
@@ -851,7 +910,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const themeObserver = new MutationObserver(() => updateAllChartsTheme());
         themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class', 'data-theme'] });
 
-        renderFinancial();
+        const initialTab = data.activeTab || 'tab-finanzas';
+        activateTab(initialTab);
     } catch (error) {
         console.error('Error inicializando los gráficos de reportes:', error);
     }
