@@ -4,7 +4,7 @@
 
 function apply_system_migrations(mysqli $conn): void
 {
-    $lockFile = __DIR__ . '/.schema_v5_clean_der.lock';
+    $lockFile = __DIR__ . '/.schema_v6_remove_compra_iva.lock';
     if (file_exists($lockFile)) {
         return;
     }
@@ -171,6 +171,14 @@ function apply_system_migrations(mysqli $conn): void
             }
         } catch (Throwable $e) {}
 
+        // 6c. Eliminar compra.iva
+        try {
+            $resIva = $conn->query("SHOW COLUMNS FROM `compra` LIKE 'iva'");
+            if ($resIva && $resIva->num_rows > 0) {
+                $conn->query("ALTER TABLE `compra` DROP COLUMN `iva`");
+            }
+        } catch (Throwable $e) {}
+
         // 6c. Consolidar producto_compra_historial dentro de detalle_compra
         try {
             $dcCols = [
@@ -241,6 +249,7 @@ function apply_system_migrations(mysqli $conn): void
 
         @unlink(__DIR__ . '/.schema_v3_immutable_caja.lock');
         @unlink(__DIR__ . '/.schema_v4_immutable_caja.lock');
+        @unlink(__DIR__ . '/.schema_v5_clean_der.lock');
         @file_put_contents($lockFile, date('c'));
     } catch (Throwable $e) {
         error_log("Migration warning: " . $e->getMessage());

@@ -248,7 +248,6 @@ class SuppliersController extends BaseController
                 $items = $input['items'] ?? [];
                 $descripcion = trim((string)($input['descripcion'] ?? ''));
                 $tiempo_entrega = trim((string)($input['tiempo_entrega'] ?? ''));
-                $iva = (float)($input['iva'] ?? 0);
                 $autorizado_por = trim((string)($input['autorizado_por'] ?? ($_SESSION['username'] ?? 'Admin')));
 
                 if ($id_proveedor <= 0 || empty($items)) {
@@ -257,7 +256,7 @@ class SuppliersController extends BaseController
                 }
 
                 try {
-                    $id_compra = $this->supplier_model->create_purchase_transaction($id_proveedor, $items, $descripcion, $tiempo_entrega, $iva, $autorizado_por);
+                    $id_compra = $this->supplier_model->create_purchase_transaction($id_proveedor, $items, $descripcion, $tiempo_entrega, $autorizado_por);
                     audit_log($this->conn, 'PURCHASE_CREATE', $_SESSION['user_id'] ?? null, 'compra', $id_compra, "Registrada orden de compra #$id_compra para proveedor #$id_proveedor");
                     $details = $this->supplier_model->get_purchase_details($id_compra);
                     $sup = $this->supplier_model->find_supplier_by_id($id_proveedor);

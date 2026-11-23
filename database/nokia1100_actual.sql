@@ -185,7 +185,6 @@ CREATE TABLE `compra` (
   `total` decimal(10,2) NOT NULL,
   `descripcion` text DEFAULT NULL,
   `tiempo_entrega` varchar(100) DEFAULT NULL,
-  `iva` decimal(5,2) DEFAULT 0.00,
   `autorizado_por` varchar(100) DEFAULT NULL,
   `estado` enum('Pendiente','Recibido','Cancelado') NOT NULL DEFAULT 'Pendiente',
   PRIMARY KEY (`id_compra`),
@@ -200,7 +199,7 @@ CREATE TABLE `compra` (
 
 LOCK TABLES `compra` WRITE;
 /*!40000 ALTER TABLE `compra` DISABLE KEYS */;
-INSERT INTO `compra` VALUES (1,3,'2026-10-30 20:20:38',275000.00,'','',0.00,'','Recibido'),(2,3,'2026-10-30 21:39:30',8000000.00,'','',0.00,'','Cancelado'),(3,3,'2026-10-30 22:09:29',5150000.00,'Lote mensual','15',0.00,'Enzo','Recibido'),(4,3,'2026-11-03 17:01:18',60000.00,'Reposición automática de stock crítico','A coordinar',0.00,'facuE','Cancelado'),(5,7,'2026-11-04 12:18:03',1170000.00,'Reposición automática de stock crítico','A coordinar',0.00,'facuE','Recibido'),(6,9,'2026-11-04 12:19:35',920000.00,'Orden de compra manual','A coordinar',0.00,'facuE','Cancelado'),(7,7,'2026-11-18 15:23:55',8650000.00,'Reposición automática de stock crítico','A coordinar',0.00,'facuE','Pendiente');
+INSERT INTO `compra` VALUES (1,3,'2026-10-30 20:20:38',275000.00,'','','','Recibido'),(2,3,'2026-10-30 21:39:30',8000000.00,'','','','Cancelado'),(3,3,'2026-10-30 22:09:29',5150000.00,'Lote mensual','15','Enzo','Recibido'),(4,3,'2026-11-03 17:01:18',60000.00,'Reposición automática de stock crítico','A coordinar','facuE','Cancelado'),(5,7,'2026-11-04 12:18:03',1170000.00,'Reposición automática de stock crítico','A coordinar','facuE','Recibido'),(6,9,'2026-11-04 12:19:35',920000.00,'Orden de compra manual','A coordinar','facuE','Cancelado'),(7,7,'2026-11-18 15:23:55',8650000.00,'Reposición automática de stock crítico','A coordinar','facuE','Pendiente');
 /*!40000 ALTER TABLE `compra` ENABLE KEYS */;
 UNLOCK TABLES;
 

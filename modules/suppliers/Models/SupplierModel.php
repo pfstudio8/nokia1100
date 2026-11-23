@@ -17,7 +17,7 @@ class SupplierModel extends BaseModel
         return $suppliers;
     }
 
-    public function find_supplier_by_id($id)
+    public function find_supplier_by_id(int $id)
     {
         $stmt = $this->conn->prepare("SELECT id_proveedor, nombre, domicilio, telefono, atencion, email FROM proveedor WHERE id_proveedor = ?");
         $stmt->bind_param("i", $id);
@@ -27,7 +27,7 @@ class SupplierModel extends BaseModel
         return $row;
     }
 
-    public function count_supplier_purchases($id)
+    public function count_supplier_purchases(int $id)
     {
         $stmt = $this->conn->prepare("SELECT COUNT(*) as total FROM compra WHERE id_proveedor = ?");
         $stmt->bind_param("i", $id);
@@ -37,7 +37,7 @@ class SupplierModel extends BaseModel
         return $res ? (int) $res['total'] : 0;
     }
 
-    public function create_supplier($nombre, $domicilio, $telefono, $atencion, $email)
+    public function create_supplier(string $nombre, string $domicilio, string $telefono, string $atencion, string $email)
     {
         $stmt = $this->conn->prepare("INSERT INTO proveedor (nombre, domicilio, telefono, atencion, email) VALUES (?, ?, ?, ?, ?)");
         $stmt->bind_param("sssss", $nombre, $domicilio, $telefono, $atencion, $email);
@@ -46,7 +46,7 @@ class SupplierModel extends BaseModel
         return $success;
     }
 
-    public function update_supplier($id, $nombre, $domicilio, $telefono, $atencion, $email)
+    public function update_supplier(int $id, string $nombre, string $domicilio, string $telefono, string $atencion, string $email)
     {
         $stmt = $this->conn->prepare("UPDATE proveedor SET nombre = ?, domicilio = ?, telefono = ?, atencion = ?, email = ? WHERE id_proveedor = ?");
         $stmt->bind_param("sssssi", $nombre, $domicilio, $telefono, $atencion, $email, $id);
@@ -55,7 +55,7 @@ class SupplierModel extends BaseModel
         return $success;
     }
 
-    public function delete_supplier($id)
+    public function delete_supplier(int $id)
     {
         $stmt = $this->conn->prepare("DELETE FROM proveedor WHERE id_proveedor = ?");
         $stmt->bind_param("i", $id);
@@ -81,7 +81,7 @@ class SupplierModel extends BaseModel
         return $purchases;
     }
 
-    public function get_purchase_details($id_compra)
+    public function get_purchase_details(int $id_compra)
     {
         $stmt = $this->conn->prepare("SELECT dc.*, 
                 COALESCE(NULLIF(TRIM(dc.nombre_producto), ''), p.nombre, 'Artículo') AS nombre_producto, 
@@ -103,7 +103,7 @@ class SupplierModel extends BaseModel
         return $items;
     }
 
-    public function get_purchase_details_by_supplier($id_proveedor)
+    public function get_purchase_details_by_supplier(int $id_proveedor)
     {
         $stmt = $this->conn->prepare("SELECT c.*, 
             (SELECT COUNT(*) FROM detalle_compra WHERE id_compra = c.id_compra) as items
@@ -171,7 +171,7 @@ class SupplierModel extends BaseModel
         }
     }
 
-    public function create_purchase_transaction($id_proveedor, $items, $descripcion, $tiempo_entrega, $iva, $autorizado_por)
+    public function create_purchase_transaction(int $id_proveedor, array $items, string $descripcion, string $tiempo_entrega, string $autorizado_por)
     {
         $fecha = date('Y-m-d H:i:s');
         $total_compra = 0;
@@ -185,8 +185,8 @@ class SupplierModel extends BaseModel
                 $total_compra += $cost * $qty;
             }
 
-            $stmt = $this->conn->prepare("INSERT INTO compra (id_proveedor, fecha, total, descripcion, tiempo_entrega, iva, autorizado_por) VALUES (?, ?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("isdssds", $id_proveedor, $fecha, $total_compra, $descripcion, $tiempo_entrega, $iva, $autorizado_por);
+            $stmt = $this->conn->prepare("INSERT INTO compra (id_proveedor, fecha, total, descripcion, tiempo_entrega, autorizado_por) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("isdsss", $id_proveedor, $fecha, $total_compra, $descripcion, $tiempo_entrega, $autorizado_por);
             if (!$stmt->execute())
                 throw new Exception("Error al crear compra");
             $id_compra = (int) $this->conn->insert_id;
@@ -274,7 +274,7 @@ class SupplierModel extends BaseModel
         }
     }
 
-    public function receive_purchase($id_compra, array $adjusted_items = [])
+    public function receive_purchase(int $id_compra, array $adjusted_items = [])
     {
         $this->conn->begin_transaction();
         try {
@@ -359,7 +359,7 @@ class SupplierModel extends BaseModel
         }
     }
 
-    public function cancel_purchase($id_compra)
+    public function cancel_purchase(int $id_compra)
     {
         $stmt = $this->conn->prepare("UPDATE compra SET estado = 'Cancelado' WHERE id_compra = ? AND estado = 'Pendiente'");
         $stmt->bind_param("i", $id_compra);

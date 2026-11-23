@@ -1184,7 +1184,6 @@
           items: items,
           descripcion: descripcion,
           tiempo_entrega: tiempoEntrega,
-          iva: 0,
           autorizado_por: BOOT.currentUser || 'Admin',
           csrf_token: csrfToken
         })
