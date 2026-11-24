@@ -286,15 +286,21 @@ document.addEventListener('DOMContentLoaded', () => {
                                     ...getBaseTooltip(),
                                     callbacks: {
                                         label: (ctx) => ` ${ctx.dataset.label}: ${arsFull.format(Number(ctx.raw) || 0)}`,
-                                        footer: (items) => {
-                                            const idx = items[0]?.dataIndex;
-                                            if (idx === undefined) return [];
-                                            const lines = [
-                                                ...(Array.isArray(detIngresos[idx]) ? detIngresos[idx] : []),
-                                                ...(Array.isArray(detGastos[idx]) ? detGastos[idx] : [])
-                                            ];
-                                            return lines.length > 0 ? ['Día y hora:', ...lines.slice(0, 6).map(l => '• ' + l)] : [];
-                                        }
+                                        // Detalle propio de cada serie, debajo de su línea (respeta la leyenda).
+                                        afterLabel: (ctx) => {
+                                            const isVentas = ctx.datasetIndex === 0;
+                                            const source = isVentas ? detIngresos : detGastos;
+                                            const lines = Array.isArray(source[ctx.dataIndex]) ? source[ctx.dataIndex] : [];
+                                            if (lines.length === 0) return [];
+                                            const MAX = 4;
+                                            const noun = isVentas
+                                                ? (lines.length === 1 ? 'venta' : 'ventas')
+                                                : (lines.length === 1 ? 'compra' : 'compras');
+                                            const out = [`    ${lines.length} ${noun}`, ...lines.slice(0, MAX).map(l => '    • ' + l)];
+                                            if (lines.length > MAX) out.push(`    … y ${lines.length - MAX} más`);
+                                            return out;
+                                        },
+                                        labelTextColor: (ctx) => (ctx.datasetIndex === 0 ? '#14b8a6' : '#f59e0b')
                                     }
                                 }
                             },
