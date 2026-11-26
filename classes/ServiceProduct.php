@@ -7,12 +7,22 @@ final class ServiceProduct
 {
     public const NAME = 'Servicio Técnico Taller';
 
-    // Fragmento SQL para excluir el producto de servicio de listados físicos.
-    // $alias debe ser el alias de la tabla `producto` en la consulta.
-    public static function excludeSql(string $alias = 'p'): string
+    // Fragmento SQL para excluir el producto contable de servicio de listados, gráficos y métricas de stock físico.
+    // $alias debe ser el alias de `producto`; $detailAlias (opcional) el alias de `producto_detalle`.
+    public static function excludeSql(string $alias = 'p', ?string $detailAlias = null): string
     {
         $alias = preg_replace('/[^a-zA-Z0-9_]/', '', $alias);
-        return "{$alias}.nombre <> '" . self::NAME . "'";
+        $clauses = [
+            "{$alias}.nombre <> '" . self::NAME . "'"
+        ];
+
+        if ($detailAlias !== null && $detailAlias !== '') {
+            $d = preg_replace('/[^a-zA-Z0-9_]/', '', $detailAlias);
+            $clauses[] = "({$d}.categoria IS NULL OR {$d}.categoria <> 'Servicios')";
+            $clauses[] = "NOT (COALESCE({$d}.marca, '') = 'Nokia' AND COALESCE({$d}.modelo, '') = 'Taller')";
+        }
+
+        return '(' . implode(' AND ', $clauses) . ')';
     }
 
     // Devuelve el id del producto de servicio, o null si aún no existe.

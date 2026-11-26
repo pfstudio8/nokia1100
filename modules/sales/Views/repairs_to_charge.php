@@ -44,6 +44,18 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
             </div>
         <?php endif; ?>
 
+        <?php if (isset($has_open_caja) && !$has_open_caja): ?>
+            <div class="mb-6 p-4 rounded-xl border border-amber-500/40 bg-amber-500/10 text-sm flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5 text-text-main">
+                    <span class="material-symbols-outlined text-amber-500">warning</span>
+                    <span><strong>Caja cerrada:</strong> los cobros de reparaciones que incluyan <strong>Efectivo</strong> están bloqueados hasta abrir la caja del día.</span>
+                </div>
+                <a href="<?php echo BASE_URL; ?>/modules/caja/index.php" class="px-3.5 py-1.5 rounded-lg bg-primary text-background text-xs font-bold hover:opacity-90 transition-opacity">
+                    Ir a Abrir Caja
+                </a>
+            </div>
+        <?php endif; ?>
+
         <?php if (isset($_GET['charged_id'])): ?>
             <?php 
                 $charged_id = (int)$_GET['charged_id'];
@@ -58,10 +70,19 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                     <p class="text-text-muted text-sm mb-6">La reparación ha sido cobrada e ingresada a la caja diaria. El equipo figura como <strong class="text-text-main">Entregado</strong>.</p>
                     
                     <div class="flex flex-col gap-3">
+                        <?php if ($id_venta > 0): ?>
+                        <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=invoice&id=<?php echo $id_venta; ?>" target="_blank" class="w-full bg-primary text-background hover:bg-primary-hover font-semibold py-3 px-6 rounded-xl transition-all shadow-lg shadow-primary/20 flex justify-center items-center gap-2">
+                            <span class="material-symbols-outlined text-[20px]">print</span> Imprimir Factura (#TX-<?php echo str_pad($id_venta, 5, '0', STR_PAD_LEFT); ?>)
+                        </a>
+                        <a href="<?php echo BASE_URL; ?>/modules/workshop/index.php?action=delivery_receipt&id=<?php echo $charged_id; ?>" target="_blank" class="w-full bg-surface-hover text-text-main hover:bg-border/50 font-medium py-2.5 px-6 rounded-xl border border-border/50 transition-all flex justify-center items-center gap-2 text-sm">
+                            <span class="material-symbols-outlined text-[18px]">verified</span> Imprimir Comprobante y Garantía
+                        </a>
+                        <?php else: ?>
                         <a href="<?php echo BASE_URL; ?>/modules/workshop/index.php?action=delivery_receipt&id=<?php echo $charged_id; ?>" target="_blank" class="w-full bg-primary text-background hover:bg-primary-hover font-semibold py-3 px-6 rounded-xl transition-all shadow-lg shadow-primary/20 flex justify-center items-center gap-2">
                             <span class="material-symbols-outlined text-[20px]">print</span> Imprimir Comprobante y Garantía
                         </a>
-                        <button type="button" onclick="document.getElementById('modal-charge-success').remove()" class="w-full bg-surface-hover text-text-main hover:bg-border/50 font-medium py-3 px-6 rounded-xl border border-border/50 transition-all">
+                        <?php endif; ?>
+                        <button type="button" onclick="document.getElementById('modal-charge-success').remove()" class="w-full bg-surface text-text-muted hover:text-text-main font-medium py-2 px-6 rounded-xl border border-border/40 hover:bg-surface-hover transition-all text-xs">
                             Continuar en Caja
                         </button>
                     </div>
@@ -102,35 +123,72 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     </div>
                                 </div>
 
-                                <form method="POST" action="" class="space-y-4">
+                                <form method="POST" action="" class="space-y-4 repair-charge-form" data-total="<?php echo number_format($total_a_cobrar, 2, '.', ''); ?>" onsubmit="return validateRepairChargeForm(this)">
                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? ''); ?>">
                                     <input type="hidden" name="action" value="charge_repair">
                                     <input type="hidden" name="id_reparacion" value="<?php echo $rep['id_reparacion']; ?>">
                                     <input type="hidden" name="presupuesto" value="<?php echo $total_a_cobrar; ?>">
+                                    <input type="hidden" name="modo_pago" value="unico" class="input-modo-pago">
                                     
                                     <div>
-                                        <label class="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                                            <span class="material-symbols-outlined text-[16px] text-primary">account_balance_wallet</span>
-                                            Método de Pago
-                                        </label>
-                                        <div class="grid grid-cols-3 gap-2">
-                                            <button type="button" onclick="selectPayMethod('Efectivo', this)" class="pay-method-btn flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl border border-primary bg-primary/15 text-primary transition-all shadow-sm">
-                                                <span class="material-symbols-outlined text-[20px] mb-1">payments</span>
-                                                <span class="text-[11px] font-semibold">Efectivo</span>
-                                            </button>
-                                            <button type="button" onclick="selectPayMethod('Transferencia', this)" class="pay-method-btn flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl border border-border/60 bg-surface hover:bg-surface-hover text-text-muted transition-all">
-                                                <span class="material-symbols-outlined text-[20px] mb-1">qr_code_scanner</span>
-                                                <span class="text-[11px] font-semibold text-center leading-tight">Transf. / QR</span>
-                                            </button>
-                                            <button type="button" onclick="selectPayMethod('Tarjeta', this)" class="pay-method-btn flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl border border-border/60 bg-surface hover:bg-surface-hover text-text-muted transition-all">
-                                                <span class="material-symbols-outlined text-[20px] mb-1">credit_card</span>
-                                                <span class="text-[11px] font-semibold">Tarjeta</span>
+                                        <div class="flex items-center justify-between gap-2 mb-2.5">
+                                            <label class="text-xs font-semibold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                                                <span class="material-symbols-outlined text-[16px] text-primary">account_balance_wallet</span>
+                                                Método de Pago
+                                            </label>
+                                            <button type="button" onclick="toggleRepairComboMode(this)" class="btn-toggle-combo px-2.5 py-1.5 rounded-lg border border-primary/40 bg-primary/10 hover:bg-primary/20 text-xs font-bold text-primary flex items-center gap-1.5 transition-all shadow-sm">
+                                                <span class="material-symbols-outlined text-[15px]">call_split</span> Combinar 2 medios
                                             </button>
                                         </div>
-                                        <input type="hidden" name="metodo_pago" value="Efectivo" class="input-metodo-pago">
+
+                                        <div class="repair-single-pay-block">
+                                            <div class="grid grid-cols-3 gap-2">
+                                                <button type="button" onclick="selectPayMethod('Efectivo', this)" class="pay-method-btn flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl border border-primary bg-primary/15 text-primary transition-all shadow-sm">
+                                                    <span class="material-symbols-outlined text-[20px] mb-1">payments</span>
+                                                    <span class="text-[11px] font-semibold">Efectivo</span>
+                                                </button>
+                                                <button type="button" onclick="selectPayMethod('Transferencia', this)" class="pay-method-btn flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl border border-border/60 bg-surface hover:bg-surface-hover text-text-muted transition-all">
+                                                    <span class="material-symbols-outlined text-[20px] mb-1">qr_code_scanner</span>
+                                                    <span class="text-[11px] font-semibold text-center leading-tight">Transf. / QR</span>
+                                                </button>
+                                                <button type="button" onclick="selectPayMethod('Tarjeta', this)" class="pay-method-btn flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl border border-border/60 bg-surface hover:bg-surface-hover text-text-muted transition-all">
+                                                    <span class="material-symbols-outlined text-[20px] mb-1">credit_card</span>
+                                                    <span class="text-[11px] font-semibold">Tarjeta</span>
+                                                </button>
+                                            </div>
+                                            <input type="hidden" name="metodo_pago" value="Efectivo" class="input-metodo-pago">
+                                        </div>
+
+                                        <div class="repair-combo-pay-block hidden space-y-2.5 bg-surface/90 border border-border/60 rounded-xl p-3">
+                                            <div>
+                                                <span class="block text-[10px] font-bold uppercase text-primary mb-1">Medio 1</span>
+                                                <div class="grid grid-cols-2 gap-1.5">
+                                                    <select name="metodo_pago_1" onchange="onRepairComboChange(this, 1)" class="rep-metodo-1 bg-background border border-border rounded-lg px-2 py-1.5 text-xs font-semibold text-text-main">
+                                                        <option value="Efectivo" selected>Efectivo</option>
+                                                        <option value="Transferencia">Transferencia</option>
+                                                        <option value="Tarjeta">Tarjeta</option>
+                                                    </select>
+                                                    <input type="number" name="monto_pago_1" step="0.01" min="0.01" oninput="onRepairComboAmount(this, 1)" class="rep-monto-1 bg-background border border-border rounded-lg px-2 py-1.5 text-xs font-mono font-bold text-text-main" placeholder="$ Monto 1">
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <span class="block text-[10px] font-bold uppercase text-primary mb-1">Medio 2</span>
+                                                <div class="grid grid-cols-2 gap-1.5">
+                                                    <select name="metodo_pago_2" onchange="onRepairComboChange(this, 2)" class="rep-metodo-2 bg-background border border-border rounded-lg px-2 py-1.5 text-xs font-semibold text-text-main">
+                                                        <option value="Efectivo">Efectivo</option>
+                                                        <option value="Transferencia" selected>Transferencia</option>
+                                                        <option value="Tarjeta">Tarjeta</option>
+                                                    </select>
+                                                    <input type="number" name="monto_pago_2" step="0.01" min="0.01" oninput="onRepairComboAmount(this, 2)" class="rep-monto-2 bg-background border border-border rounded-lg px-2 py-1.5 text-xs font-mono font-bold text-text-main" placeholder="$ Monto 2">
+                                                </div>
+                                            </div>
+                                            <p class="rep-combo-hint text-[10px] text-text-muted leading-tight pt-1 border-t border-border/40">
+                                                Solo la parte en Efectivo ingresa al conteo de caja.
+                                            </p>
+                                        </div>
                                     </div>
                                     
-                                    <button type="submit" data-confirm="¿Confirmas el cobro de $<?php echo number_format($total_a_cobrar, 2); ?> y la entrega del equipo al cliente?" data-confirm-title="Cobrar y Entregar Equipo" class="w-full bg-primary hover:bg-primary-hover text-background font-bold py-3.5 px-4 rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/25 hover:shadow-primary/40 active:scale-[0.98]">
+                                    <button type="submit" data-confirm="¿Confirmas el cobro de $<?php echo number_format($total_a_cobrar, 2); ?> y la entrega del equipo al cliente?" data-confirm-title="Cobrar y Entregar Equipo" class="btn-submit-repair w-full bg-primary hover:bg-primary-hover text-background font-bold py-3.5 px-4 rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/25 hover:shadow-primary/40 active:scale-[0.98]">
                                         <span class="material-symbols-outlined text-[20px] pointer-events-none">point_of_sale</span>
                                         Cobrar y Entregar
                                     </button>
@@ -316,6 +374,102 @@ function selectPayMethod(method, btn) {
     btn.className = 'pay-method-btn flex flex-col items-center justify-center py-2.5 px-1.5 rounded-xl border border-primary bg-primary/15 text-primary transition-all shadow-sm';
     const hidden = form.querySelector('.input-metodo-pago');
     if (hidden) hidden.value = method;
+}
+
+function toggleRepairComboMode(btn) {
+    const form = btn.closest('form');
+    if (!form) return;
+    const modoInput = form.querySelector('.input-modo-pago');
+    const singleBlock = form.querySelector('.repair-single-pay-block');
+    const comboBlock = form.querySelector('.repair-combo-pay-block');
+    const total = parseFloat(form.dataset.total || '0');
+
+    if (modoInput.value === 'unico') {
+        modoInput.value = 'combinado';
+        singleBlock.classList.add('hidden');
+        comboBlock.classList.remove('hidden');
+        btn.innerHTML = '<span class="material-symbols-outlined text-[15px]">payments</span> Pago único';
+        const half1 = Math.round((total / 2) * 100) / 100;
+        const half2 = Math.round((total - half1) * 100) / 100;
+        form.querySelector('.rep-monto-1').value = half1.toFixed(2);
+        form.querySelector('.rep-monto-2').value = half2.toFixed(2);
+        updateRepairComboStatus(form);
+    } else {
+        modoInput.value = 'unico';
+        comboBlock.classList.add('hidden');
+        singleBlock.classList.remove('hidden');
+        btn.innerHTML = '<span class="material-symbols-outlined text-[15px]">call_split</span> Combinar 2 medios';
+    }
+}
+
+function onRepairComboChange(el, which) {
+    const form = el.closest('form');
+    if (!form) return;
+    const m1 = form.querySelector('.rep-metodo-1');
+    const m2 = form.querySelector('.rep-metodo-2');
+    if (m1.value === m2.value) {
+        const opts = ['Efectivo', 'Transferencia', 'Tarjeta'];
+        const alt = opts.find(o => o !== m1.value) || 'Transferencia';
+        if (which === 1) m2.value = alt;
+        else m1.value = alt;
+    }
+    updateRepairComboStatus(form);
+}
+
+function onRepairComboAmount(el, which) {
+    const form = el.closest('form');
+    if (!form) return;
+    const total = parseFloat(form.dataset.total || '0');
+    const i1 = form.querySelector('.rep-monto-1');
+    const i2 = form.querySelector('.rep-monto-2');
+    const v1 = parseFloat(i1.value);
+    const v2 = parseFloat(i2.value);
+
+    if (which === 1 && !isNaN(v1) && v1 > 0 && v1 < total) {
+        i2.value = (Math.round((total - v1) * 100) / 100).toFixed(2);
+    } else if (which === 2 && !isNaN(v2) && v2 > 0 && v2 < total) {
+        i1.value = (Math.round((total - v2) * 100) / 100).toFixed(2);
+    }
+    updateRepairComboStatus(form);
+}
+
+function updateRepairComboStatus(form) {
+    const total = parseFloat(form.dataset.total || '0');
+    const m1 = form.querySelector('.rep-metodo-1').value;
+    const m2 = form.querySelector('.rep-metodo-2').value;
+    const v1 = Math.round((parseFloat(form.querySelector('.rep-monto-1').value) || 0) * 100) / 100;
+    const v2 = Math.round((parseFloat(form.querySelector('.rep-monto-2').value) || 0) * 100) / 100;
+    const sum = Math.round((v1 + v2) * 100) / 100;
+    const hint = form.querySelector('.rep-combo-hint');
+
+    if (m1 === m2) {
+        hint.textContent = 'Elija 2 medios de pago distintos.';
+        hint.className = 'rep-combo-hint text-[10px] text-red-400 font-semibold leading-tight pt-1 border-t border-border/40';
+        return false;
+    }
+    if (v1 <= 0 || v2 <= 0 || Math.abs(sum - total) > 0.01) {
+        hint.textContent = `Suma: $${sum.toFixed(2)} (debe ser exactamente $${total.toFixed(2)})`;
+        hint.className = 'rep-combo-hint text-[10px] text-red-400 font-semibold leading-tight pt-1 border-t border-border/40';
+        return false;
+    }
+
+    const cash = (m1 === 'Efectivo' ? v1 : 0) + (m2 === 'Efectivo' ? v2 : 0);
+    hint.textContent = cash > 0
+        ? `Suma exacta ✓ · Entra a caja (Efectivo): $${cash.toFixed(2)}`
+        : `Suma exacta ✓ · Sin efectivo (no suma al arqueo de caja)`;
+    hint.className = 'rep-combo-hint text-[10px] text-emerald-400 font-semibold leading-tight pt-1 border-t border-border/40';
+    return true;
+}
+
+function validateRepairChargeForm(form) {
+    const modo = form.querySelector('.input-modo-pago')?.value || 'unico';
+    if (modo === 'combinado' && !updateRepairComboStatus(form)) {
+        if (typeof showToast === 'function') {
+            showToast('La suma de ambos medios de pago debe ser exactamente igual al total a cobrar.', 'error');
+        }
+        return false;
+    }
+    return true;
 }
 
 // Monitoreo en vivo de la bandeja de Cobrar Reparaciones

@@ -3,11 +3,11 @@
 require_once __DIR__ . '/Controllers/SuppliersController.php';
 $controller = new SuppliersController();
 
-$action = $_POST['action'] ?? ($_GET['action'] ?? 'suppliers');
+$action = $_GET['action'] ?? ($_POST['action'] ?? 'suppliers');
 
 switch ($action) {
-    case 'edit_supplier':
-        $controller->edit_supplier();
+    case 'save_supplier':
+        $controller->save_supplier();
         break;
     case 'new_purchase':
         $controller->new_purchase();
@@ -21,7 +21,11 @@ switch ($action) {
     case 'cancel_purchase':
         $controller->cancel_purchase();
         break;
+    case 'quick_product':
+        $controller->quick_product();
+        break;
     case 'suppliers':
+    case 'delete_supplier':
         $controller->suppliers();
         break;
     default:

@@ -17,7 +17,7 @@ if ($_SESSION['role'] === 'admin') {
                 <h2 class="text-2xl font-display font-medium text-text-main">Editar Cliente</h2>
                 <p class="text-text-muted text-sm mt-1">Actualizar los datos de contacto del cliente</p>
             </div>
-            <a href="clients.php"
+            <a href="index.php"
                 class="px-4 py-2 rounded-xl border border-border bg-surface hover:bg-surface-hover text-sm font-medium text-text-main transition-colors flex items-center gap-2">
                 <span class="material-symbols-outlined text-[18px]">arrow_back</span> Volver
             </a>

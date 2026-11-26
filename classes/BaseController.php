@@ -1,5 +1,6 @@
 <?php
 // classes/BaseController.php
+require_once __DIR__ . '/../config/audit.php';
 
 class BaseController
 {
@@ -7,12 +8,12 @@ class BaseController
 
     public function __construct()
     {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
         global $conn;
         if (!isset($conn)) {
             require_once __DIR__ . '/../config/db.php';
+        }
+        if (session_status() === PHP_SESSION_NONE) {
+            session_start();
         }
         $this->conn = $conn;
     }
@@ -20,6 +21,7 @@ class BaseController
     protected function check_auth(bool $json = false): void
     {
         if (session_status() === PHP_SESSION_NONE) {
+            require_once __DIR__ . '/../config/bootstrap.php';
             session_start();
         }
         if (!isset($_SESSION['user_id'])) {
@@ -116,9 +118,28 @@ class BaseController
         $this->redirect(BASE_URL . "/modules/employee/index.php?error=" . urlencode("No tiene permiso para acceder a ese módulo"));
     }
 
+    protected function require_primary_admin(bool $json = false): void
+    {
+        $this->check_auth($json);
+        require_once __DIR__ . '/Layout.php';
+        if (!Layout::isPrimaryAdmin()) {
+            if ($json) {
+                http_response_code(403);
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode(['success' => false, 'error' => 'Solo el administrador principal del sistema puede realizar esta acción.']);
+                exit();
+            }
+            $target = (($_SESSION['role'] ?? '') === 'admin')
+                ? BASE_URL . "/modules/admin/index.php?error=" . urlencode("Solo el administrador principal del sistema puede gestionar usuarios y permisos.")
+                : BASE_URL . "/modules/employee/index.php?error=" . urlencode("No tiene permiso para acceder a ese módulo");
+            $this->redirect($target);
+        }
+    }
+
     protected function render_view(string $view_path, array $data = []): void
     {
         if (session_status() === PHP_SESSION_NONE) {
+            require_once __DIR__ . '/../config/bootstrap.php';
             session_start();
         }
         require_once __DIR__ . '/Layout.php';
@@ -144,6 +165,9 @@ class BaseController
         if (!preg_match('/[a-z]/', $password)) {
             return "La contraseña debe contener al menos una letra minúscula.";
         }
+        if (!preg_match('/[0-9]/', $password)) {
+            return "La contraseña debe contener al menos un carácter numérico (0-9).";
+        }
         if (!preg_match('/[^a-zA-Z0-9]/', $password)) {
             return "La contraseña debe contener al menos un carácter especial (ej. @, $, !, %, *, ?, &).";
         }
@@ -154,5 +178,13 @@ class BaseController
     {
         $session_token = $_SESSION['session_token'] ?? '';
         return !empty($session_token) && !empty($token) && hash_equals($session_token, (string)$token);
+    }
+
+    protected function is_ajax(): bool
+    {
+        return (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+            || (isset($_SERVER['HTTP_ACCEPT']) && str_contains($_SERVER['HTTP_ACCEPT'], 'application/json'))
+            || (isset($_POST['ajax']) && $_POST['ajax'] === '1')
+            || (isset($_GET['ajax']) && $_GET['ajax'] === '1');
     }
 }

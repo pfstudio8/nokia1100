@@ -3,9 +3,156 @@
 
 require_once __DIR__ . '/../../../classes/BaseModel.php';
 require_once __DIR__ . '/../../../classes/ServiceProduct.php';
+require_once __DIR__ . '/../../caja/Models/CajaModel.php';
 
 class SalesModel extends BaseModel
 {
+    public const METODOS_PAGO = ['Efectivo', 'Transferencia', 'Tarjeta'];
+
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
+    /**
+     * Valida y normaliza hasta 2 medios de pago combinados contra el total exacto de la venta.
+     *
+     * @param array  $pagos_raw       Lista de pagos [['metodo' => string, 'monto' => float], ...]
+     * @param string $metodo_fallback Método único si no se envía arreglo de pagos
+     * @param float  $total_esperado  Monto total exacto de la venta
+     * @return array{pagos: array<int, array{metodo: string, monto: float}>, metodo_resumen: string, monto_efectivo: float, es_combinado: bool}
+     */
+    public static function validate_and_normalize_payments(array $pagos_raw, string $metodo_fallback, float $total_esperado): array
+    {
+        $total_esperado = round($total_esperado, 2);
+        if ($total_esperado <= 0) {
+            throw new Exception("El total de la venta debe ser mayor a cero.");
+        }
+
+        $pagos_limpios = [];
+        if (!empty($pagos_raw)) {
+            foreach ($pagos_raw as $p) {
+                if (!is_array($p)) {
+                    continue;
+                }
+                $metodo = trim((string)($p['metodo'] ?? $p['metodo_pago'] ?? ''));
+                $monto_raw = isset($p['monto']) ? str_replace(',', '.', (string)$p['monto']) : '';
+                $monto = is_numeric($monto_raw) ? round((float)$monto_raw, 2) : 0.0;
+                $pagos_limpios[] = [
+                    'metodo' => $metodo,
+                    'monto'  => $monto
+                ];
+            }
+        } elseif ($metodo_fallback !== '') {
+            $pagos_limpios[] = [
+                'metodo' => trim($metodo_fallback),
+                'monto'  => $total_esperado
+            ];
+        }
+
+        if (empty($pagos_limpios)) {
+            throw new Exception("Debe especificar al menos un medio de pago.");
+        }
+
+        if (count($pagos_limpios) > 2) {
+            throw new Exception("Solo se permiten hasta 2 medios de pago combinados por venta.");
+        }
+
+        // Si es pago único y no se especificó monto explícito, asume el total de la venta
+        if (count($pagos_limpios) === 1 && $pagos_limpios[0]['monto'] <= 0) {
+            $pagos_limpios[0]['monto'] = $total_esperado;
+        }
+
+        $metodos_vistos = [];
+        $suma_pagos = 0.0;
+        $monto_efectivo = 0.0;
+
+        foreach ($pagos_limpios as $idx => $pago) {
+            $num = $idx + 1;
+            if (!in_array($pago['metodo'], self::METODOS_PAGO, true)) {
+                throw new Exception("El medio de pago #$num ('{$pago['metodo']}') no es válido.");
+            }
+            if ($pago['monto'] <= 0) {
+                throw new Exception("El monto del medio de pago '{$pago['metodo']}' debe ser mayor a cero.");
+            }
+            if (in_array($pago['metodo'], $metodos_vistos, true)) {
+                throw new Exception("No puede seleccionar dos veces el mismo medio de pago ('{$pago['metodo']}') en un pago combinado.");
+            }
+            $metodos_vistos[] = $pago['metodo'];
+            $suma_pagos = round($suma_pagos + $pago['monto'], 2);
+
+            if ($pago['metodo'] === 'Efectivo') {
+                $monto_efectivo = round($monto_efectivo + $pago['monto'], 2);
+            }
+        }
+
+        if (abs($suma_pagos - $total_esperado) > 0.01) {
+            throw new Exception(
+                "La suma de los pagos ($" . number_format($suma_pagos, 2, '.', '') .
+                ") debe ser exactamente igual al total de la venta ($" . number_format($total_esperado, 2, '.', '') . ")."
+            );
+        }
+
+        // Ajuste de centavo por redondeo flotante si está dentro de 0.01
+        $diff = round($total_esperado - $suma_pagos, 2);
+        if ($diff !== 0.0) {
+            $lastIdx = count($pagos_limpios) - 1;
+            $pagos_limpios[$lastIdx]['monto'] = round($pagos_limpios[$lastIdx]['monto'] + $diff, 2);
+            if ($pagos_limpios[$lastIdx]['metodo'] === 'Efectivo') {
+                $monto_efectivo = round($monto_efectivo + $diff, 2);
+            }
+        }
+
+        $es_combinado = count($pagos_limpios) === 2;
+        $metodo_resumen = $es_combinado
+            ? ($pagos_limpios[0]['metodo'] . ' + ' . $pagos_limpios[1]['metodo'])
+            : $pagos_limpios[0]['metodo'];
+
+        return [
+            'pagos'          => $pagos_limpios,
+            'metodo_resumen' => $metodo_resumen,
+            'monto_efectivo' => $monto_efectivo,
+            'es_combinado'   => $es_combinado
+        ];
+    }
+
+    /**
+     * Obtiene los pagos individuales asociados a una venta.
+     */
+    public function get_sale_payments(int $id_venta): array
+    {
+        $stmt = $this->conn->prepare("SELECT id_pago, metodo_pago, monto FROM venta_pago WHERE id_venta = ? ORDER BY id_pago ASC");
+        $stmt->bind_param("i", $id_venta);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        $pagos = [];
+        while ($row = $res->fetch_assoc()) {
+            $pagos[] = [
+                'id_pago'     => (int)$row['id_pago'],
+                'metodo_pago' => $row['metodo_pago'],
+                'monto'       => (float)$row['monto']
+            ];
+        }
+        $stmt->close();
+
+        if (empty($pagos)) {
+            $stmtV = $this->conn->prepare("SELECT metodo_de_pago, total FROM venta WHERE id_venta = ? LIMIT 1");
+            $stmtV->bind_param("i", $id_venta);
+            $stmtV->execute();
+            $v = $stmtV->get_result()->fetch_assoc();
+            $stmtV->close();
+            if ($v) {
+                $pagos[] = [
+                    'id_pago'     => 0,
+                    'metodo_pago' => trim((string)($v['metodo_de_pago'] ?? '')) ?: 'Efectivo',
+                    'monto'       => (float)($v['total'] ?? 0)
+                ];
+            }
+        }
+
+        return $pagos;
+    }
+
     public function get_sales($limit = 50, $offset = 0)
     {
         $limit = (int)$limit;
@@ -14,14 +161,33 @@ class SalesModel extends BaseModel
                     v.id_venta, 
                     v.fecha, 
                     v.total, 
-                    v.metodo_de_pago,
+                    COALESCE(
+                        (SELECT CASE 
+                            WHEN COUNT(*) > 1 THEN GROUP_CONCAT(CONCAT(vp.metodo_pago, ' ($', FORMAT(vp.monto, 2), ')') ORDER BY vp.id_pago ASC SEPARATOR ' + ')
+                            WHEN COUNT(*) = 1 THEN MAX(vp.metodo_pago)
+                            ELSE NULL
+                         END
+                         FROM venta_pago vp WHERE vp.id_venta = v.id_venta),
+                        NULLIF(TRIM(v.metodo_de_pago), ''), 
+                        'N/A'
+                    ) AS metodo_de_pago,
                     v.estado,
-                    COALESCE(dv.nombre_producto, p.nombre) AS producto,
-                    dv.cantidad
+                    COALESCE(
+                        NULLIF(GROUP_CONCAT(
+                            CASE WHEN dv.id_detalle_venta IS NOT NULL THEN
+                                CONCAT(dv.cantidad, 'x ', COALESCE(NULLIF(TRIM(dv.nombre_producto), ''), p.nombre, 'Producto'))
+                            ELSE NULL END
+                            ORDER BY dv.id_detalle_venta ASC SEPARATOR ' · '
+                        ), ''),
+                        NULLIF(TRIM(v.descripcion), ''),
+                        'Venta directa'
+                    ) AS producto,
+                    COALESCE(SUM(dv.cantidad), 1) AS cantidad
                 FROM venta v
-                INNER JOIN detalle_venta dv ON v.id_venta = dv.id_venta
+                LEFT JOIN detalle_venta dv ON v.id_venta = dv.id_venta
                 LEFT JOIN producto p ON dv.id_producto = p.id_producto
-                ORDER BY v.fecha DESC
+                GROUP BY v.id_venta
+                ORDER BY v.fecha DESC, v.id_venta DESC
                 LIMIT ? OFFSET ?";
         $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("ii", $limit, $offset);
@@ -39,9 +205,7 @@ class SalesModel extends BaseModel
 
     public function get_sales_count()
     {
-        $sql = "SELECT COUNT(*) as total
-                FROM venta v
-                INNER JOIN detalle_venta dv ON v.id_venta = dv.id_venta";
+        $sql = "SELECT COUNT(*) as total FROM venta";
         $res = $this->conn->query($sql);
         if ($res && $row = $res->fetch_assoc()) {
             return (int)$row['total'];
@@ -51,11 +215,42 @@ class SalesModel extends BaseModel
 
     public function find_sale_by_id(int $id)
     {
-        $stmt = $this->conn->prepare("SELECT id_venta, fecha, total, metodo_de_pago, estado FROM venta WHERE id_venta = ?");
+        $stmt = $this->conn->prepare("SELECT v.id_venta, v.fecha, v.total, COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), 'N/A') AS metodo_de_pago, v.estado, v.descripcion FROM venta v WHERE v.id_venta = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
+
+        if ($row) {
+            $pagos = $this->get_sale_payments($id);
+            $row['pagos'] = $pagos;
+            if (count($pagos) > 1) {
+                $partes = array_map(fn($p) => $p['metodo_pago'] . ' ($' . number_format((float)$p['monto'], 2) . ')', $pagos);
+                $row['metodo_de_pago_detalle'] = implode(' + ', $partes);
+            } elseif (count($pagos) === 1) {
+                $row['metodo_de_pago_detalle'] = $pagos[0]['metodo_pago'];
+            } else {
+                $row['metodo_de_pago_detalle'] = $row['metodo_de_pago'];
+            }
+        }
+
+        if ($row && !empty($row['descripcion']) && preg_match('/Cobro de Reparaci[oó]n #([^\s-]+)/iu', $row['descripcion'], $matches)) {
+            $codigo_orden = trim($matches[1]);
+            $stmt_c = $this->conn->prepare("SELECT c.nombre AS cliente_nombre, c.telefono AS cliente_telefono FROM reparacion r LEFT JOIN cliente c ON r.id_cliente = c.id_cliente WHERE r.codigo_orden = ? LIMIT 1");
+            if ($stmt_c) {
+                $stmt_c->bind_param("s", $codigo_orden);
+                $stmt_c->execute();
+                $res_c = $stmt_c->get_result()->fetch_assoc();
+                $stmt_c->close();
+                if (!empty($res_c['cliente_nombre'])) {
+                    $row['cliente_nombre'] = $res_c['cliente_nombre'];
+                }
+                if (!empty($res_c['cliente_telefono'])) {
+                    $row['cliente_telefono'] = $res_c['cliente_telefono'];
+                }
+            }
+        }
+
         return $row;
     }
 
@@ -77,12 +272,17 @@ class SalesModel extends BaseModel
 
     public function get_active_products_in_stock()
     {
-        $sql = "SELECT p.id_producto, p.nombre, d.marca, d.modelo, p.precio, i.cantidad
+        $sql = "SELECT p.id_producto, p.nombre, p.precio, i.cantidad,
+                       COALESCE(d.marca, '') AS marca,
+                       COALESCE(d.modelo, '') AS modelo,
+                       COALESCE(d.categoria, '') AS categoria,
+                       COALESCE(d.tipo_repuesto, '') AS tipo_repuesto,
+                       COALESCE(d.codigo, '') AS codigo
                 FROM producto p
                 JOIN inventario i ON p.id_producto = i.id_producto
                 JOIN producto_detalle d ON p.id_producto = d.id_producto
-                WHERE i.cantidad > 0 AND p.is_active = 1 AND " . ServiceProduct::excludeSql('p') . "
-                ORDER BY p.nombre ASC";
+                WHERE i.cantidad > 0 AND p.is_active = 1 AND " . ServiceProduct::excludeSql('p', 'd') . "
+                ORDER BY d.categoria ASC, p.nombre ASC, d.marca ASC, d.modelo ASC";
         $result = $this->conn->query($sql);
         $products = [];
         if ($result && $result->num_rows > 0) {
@@ -93,167 +293,245 @@ class SalesModel extends BaseModel
         return $products;
     }
 
-    public function get_sales_daily_totals()
+    private function getDateWhereClause(string $alias, ?string $start_dt, ?string $end_dt, ?string $hora_desde, ?string $hora_hasta, string &$types, array &$params): string
     {
-        $sql = "SELECT DATE(fecha) as sale_date, SUM(total) as daily_total 
-                FROM venta 
-                WHERE estado != 'anulada'
-                GROUP BY DATE(fecha) 
+        $parts = [];
+        if (!empty($start_dt)) {
+            $parts[] = "{$alias}.fecha >= ?";
+            $types .= "s";
+            $params[] = $start_dt;
+        }
+        if (!empty($end_dt)) {
+            $parts[] = "{$alias}.fecha <= ?";
+            $types .= "s";
+            $params[] = $end_dt;
+        }
+        if ((!empty($hora_desde) && $hora_desde !== '00:00') || (!empty($hora_hasta) && $hora_hasta !== '23:59')) {
+            $parts[] = "TIME({$alias}.fecha) >= ? AND TIME({$alias}.fecha) <= ?";
+            $types .= "ss";
+            $params[] = (!empty($hora_desde) ? $hora_desde : '00:00') . ':00';
+            $params[] = (!empty($hora_hasta) ? $hora_hasta : '23:59') . ':59';
+        }
+        return !empty($parts) ? (' AND ' . implode(' AND ', $parts)) : '';
+    }
+
+    public function get_sales_daily_totals(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
+    {
+        $types = "";
+        $params = [];
+        $dateWhere = $this->getDateWhereClause('v', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
+        $sql = "SELECT DATE(v.fecha) as sale_date, SUM(v.total) as daily_total 
+                FROM venta v
+                WHERE v.estado != 'anulada' $dateWhere
+                GROUP BY DATE(v.fecha) 
                 ORDER BY sale_date DESC 
                 LIMIT 30";
-        $result = $this->conn->query($sql);
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $dates = [];
         $totals = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $dates[] = $row['sale_date'];
-                $totals[] = $row['daily_total'];
+                $totals[] = (float)$row['daily_total'];
             }
         }
+        $stmt->close();
         return ['dates' => array_reverse($dates), 'totals' => array_reverse($totals)];
     }
 
-    public function get_sales_by_payment_methods()
+    public function get_sales_by_payment_methods(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
-        $sql = "SELECT metodo_de_pago, SUM(total) as amount 
-                FROM venta 
-                WHERE estado != 'anulada'
-                GROUP BY metodo_de_pago";
-        $result = $this->conn->query($sql);
+        $types = "";
+        $params = [];
+        $dateWhere = $this->getDateWhereClause('v', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
+        $sql = "SELECT 
+                    COALESCE(NULLIF(TRIM(vp.metodo_pago), ''), NULLIF(TRIM(v.metodo_de_pago), ''), 'Otro') AS metodo_de_pago,
+                    SUM(COALESCE(vp.monto, v.total)) AS amount,
+                    GROUP_CONCAT(DISTINCT DATE_FORMAT(v.fecha, '%d/%m/%Y %H:%i hs') ORDER BY v.fecha DESC SEPARATOR ' · ') AS fechas_detalle
+                FROM venta v
+                LEFT JOIN venta_pago vp ON v.id_venta = vp.id_venta
+                WHERE v.estado != 'anulada' $dateWhere
+                GROUP BY COALESCE(NULLIF(TRIM(vp.metodo_pago), ''), NULLIF(TRIM(v.metodo_de_pago), ''), 'Otro')";
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $methods = [];
         $amounts = [];
+        $details = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $methods[] = empty($row['metodo_de_pago']) ? 'Otro' : $row['metodo_de_pago'];
-                $amounts[] = $row['amount'];
+                $amounts[] = (float)$row['amount'];
+                $details[] = array_slice(array_filter(explode(' · ', (string)($row['fechas_detalle'] ?? ''))), 0, 5);
             }
         }
-        return ['methods' => $methods, 'amounts' => $amounts];
+        $stmt->close();
+        return ['methods' => $methods, 'amounts' => $amounts, 'details' => $details];
     }
 
-    public function get_top_products($limit = 5)
+    public function get_top_products($limit = 5, ?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
         $limit = (int) $limit;
-        $sql = "SELECT CONCAT(pd.marca, ' ', pd.modelo) as nombre_real, SUM(dv.cantidad) as total_vendido 
+        $excludeServices = ServiceProduct::excludeSql('p', 'pd');
+        $types = "";
+        $params = [];
+        $dateWhere = $this->getDateWhereClause('v', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
+        $sql = "SELECT COALESCE(NULLIF(TRIM(CONCAT(COALESCE(pd.marca, ''), ' ', COALESCE(pd.modelo, ''))), ''), p.nombre) as nombre_real,
+                       SUM(dv.cantidad) as total_vendido,
+                       GROUP_CONCAT(DISTINCT DATE_FORMAT(v.fecha, '%d/%m/%Y %H:%i hs') ORDER BY v.fecha DESC SEPARATOR ' · ') AS fechas_detalle
                 FROM detalle_venta dv
                 JOIN venta v ON dv.id_venta = v.id_venta
+                JOIN producto p ON dv.id_producto = p.id_producto
                 JOIN producto_detalle pd ON dv.id_producto = pd.id_producto
-                WHERE v.estado = 'completada'
+                WHERE v.estado = 'completada' AND $excludeServices $dateWhere
                 GROUP BY dv.id_producto
                 ORDER BY total_vendido DESC
                 LIMIT ?";
+        $types .= "i";
+        $params[] = $limit;
+
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $limit);
+        $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $result = $stmt->get_result();
         $names = [];
         $quantities = [];
+        $details = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $names[] = $row['nombre_real'];
                 $quantities[] = (int)$row['total_vendido'];
+                $details[] = array_slice(array_filter(explode(' · ', (string)($row['fechas_detalle'] ?? ''))), 0, 5);
             }
         }
         $stmt->close();
-        return ['names' => $names, 'quantities' => $quantities];
+        return ['names' => $names, 'quantities' => $quantities, 'details' => $details];
     }
 
-    public function get_revenue_by_category()
+    public function get_revenue_by_category(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
-        $sql = "SELECT COALESCE(pd.categoria, 'Otros') as categoria, SUM(dv.cantidad * dv.precio_unitario) as total_ingresos
+        $types = "";
+        $params = [];
+        $dateWhere = $this->getDateWhereClause('v', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
+        $sql = "SELECT COALESCE(pd.categoria, 'Otros') as categoria,
+                       SUM(dv.cantidad * dv.precio_unitario) as total_ingresos,
+                       GROUP_CONCAT(DISTINCT DATE_FORMAT(v.fecha, '%d/%m/%Y %H:%i hs') ORDER BY v.fecha DESC SEPARATOR ' · ') AS fechas_detalle
                 FROM detalle_venta dv
                 JOIN venta v ON dv.id_venta = v.id_venta
                 JOIN producto_detalle pd ON dv.id_producto = pd.id_producto
-                WHERE v.estado = 'completada'
+                WHERE v.estado = 'completada' $dateWhere
                 GROUP BY pd.categoria
                 ORDER BY total_ingresos DESC";
-        $result = $this->conn->query($sql);
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $labels = [];
         $values = [];
+        $details = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $labels[] = $row['categoria'];
                 $values[] = (float)$row['total_ingresos'];
+                $details[] = array_slice(array_filter(explode(' · ', (string)($row['fechas_detalle'] ?? ''))), 0, 5);
             }
         }
-        return ['labels' => $labels, 'values' => $values];
+        $stmt->close();
+        return ['labels' => $labels, 'values' => $values, 'details' => $details];
     }
 
-    public function get_top_profitable_products($limit = 5)
+    public function get_top_profitable_products($limit = 5, ?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
         $limit = (int) $limit;
-        $sql = "SELECT CONCAT(pd.marca, ' ', pd.modelo) as nombre_real, 
-                        SUM((dv.precio_unitario - COALESCE((SELECT AVG(precio_compra) FROM detalle_compra WHERE id_producto = p.id_producto), 0)) * dv.cantidad) as rentabilidad
+        $excludeServices = ServiceProduct::excludeSql('p', 'pd');
+        $types = "";
+        $params = [];
+        $dateWhere = $this->getDateWhereClause('v', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
+        $sql = "SELECT COALESCE(NULLIF(TRIM(CONCAT(COALESCE(pd.marca, ''), ' ', COALESCE(pd.modelo, ''))), ''), p.nombre) as nombre_real, 
+                        SUM((dv.precio_unitario - COALESCE((SELECT AVG(dc.precio_compra) FROM detalle_compra dc JOIN compra c ON dc.id_compra = c.id_compra WHERE dc.id_producto = p.id_producto AND c.estado = 'Recibido'), 0)) * dv.cantidad) as rentabilidad,
+                        GROUP_CONCAT(DISTINCT DATE_FORMAT(v.fecha, '%d/%m/%Y %H:%i hs') ORDER BY v.fecha DESC SEPARATOR ' · ') AS fechas_detalle
                 FROM detalle_venta dv
                 JOIN venta v ON dv.id_venta = v.id_venta
                 JOIN producto p ON dv.id_producto = p.id_producto
                 JOIN producto_detalle pd ON p.id_producto = pd.id_producto
-                WHERE v.estado = 'completada'
+                WHERE v.estado = 'completada' AND $excludeServices $dateWhere
                 GROUP BY dv.id_producto
                 ORDER BY rentabilidad DESC
                 LIMIT ?";
+        $types .= "i";
+        $params[] = $limit;
+
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $limit);
+        $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $result = $stmt->get_result();
         $names = [];
         $values = [];
+        $details = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $names[] = $row['nombre_real'];
                 $values[] = (float)$row['rentabilidad'];
+                $details[] = array_slice(array_filter(explode(' · ', (string)($row['fechas_detalle'] ?? ''))), 0, 5);
             }
         }
         $stmt->close();
-        return ['names' => $names, 'values' => $values];
+        return ['names' => $names, 'values' => $values, 'details' => $details];
     }
 
-    public function get_sales_by_category()
+    public function get_sales_by_category(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
-        $sql = "SELECT COALESCE(pd.categoria, 'Otros') as categoria, SUM(dv.cantidad) as total_unidades
+        $excludeServices = ServiceProduct::excludeSql('p', 'pd');
+        $types = "";
+        $params = [];
+        $dateWhere = $this->getDateWhereClause('v', $start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params);
+
+        $sql = "SELECT COALESCE(pd.categoria, 'Otros') as categoria,
+                       SUM(dv.cantidad) as total_unidades,
+                       GROUP_CONCAT(DISTINCT DATE_FORMAT(v.fecha, '%d/%m/%Y %H:%i hs') ORDER BY v.fecha DESC SEPARATOR ' · ') AS fechas_detalle
                 FROM detalle_venta dv
                 JOIN venta v ON dv.id_venta = v.id_venta
+                JOIN producto p ON dv.id_producto = p.id_producto
                 JOIN producto_detalle pd ON dv.id_producto = pd.id_producto
-                WHERE v.estado = 'completada'
+                WHERE v.estado = 'completada' AND $excludeServices $dateWhere
                 GROUP BY pd.categoria
                 ORDER BY total_unidades DESC";
-        $result = $this->conn->query($sql);
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $labels = [];
         $values = [];
+        $details = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $labels[] = $row['categoria'];
                 $values[] = (int)$row['total_unidades'];
+                $details[] = array_slice(array_filter(explode(' · ', (string)($row['fechas_detalle'] ?? ''))), 0, 5);
             }
         }
-        return ['labels' => $labels, 'values' => $values];
+        $stmt->close();
+        return ['labels' => $labels, 'values' => $values, 'details' => $details];
     }
 
-    public function get_sales_export_data()
-    {
-        $sql = "SELECT 
-                    v.id_venta, 
-                    v.fecha, 
-                    v.total, 
-                    v.metodo_de_pago,
-                    v.estado,
-                    COALESCE(dv.nombre_producto, p.nombre) AS producto,
-                    dv.cantidad
-                FROM venta v
-                LEFT JOIN detalle_venta dv ON v.id_venta = dv.id_venta
-                LEFT JOIN producto p ON dv.id_producto = p.id_producto
-                ORDER BY v.fecha DESC";
-        $result = $this->conn->query($sql);
-        $data = [];
-        if ($result && $result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                $data[] = $row;
-            }
-        }
-        return $data;
-    }
-
-    public function create_sale_transaction(array $items, string $metodo_pago, int|string $user_id, string $descripcion = '')
+    public function create_sale_transaction(array $items, string|array $metodo_o_pagos, int|string $user_id, string $descripcion = '')
     {
         require_once __DIR__ . '/../../../config/audit.php';
         
@@ -327,11 +605,34 @@ class SalesModel extends BaseModel
                 $total_venta += $prod['precio'] * $item['cantidad'];
             }
 
+            $total_venta = round((float)$total_venta, 2);
+
+            // Validar y normalizar el pago (único o combinado de hasta 2 medios) contra el total exacto de la venta
+            $pagos_raw = is_array($metodo_o_pagos) ? $metodo_o_pagos : [];
+            $metodo_fallback = is_string($metodo_o_pagos) ? $metodo_o_pagos : '';
+            $pago_info = self::validate_and_normalize_payments($pagos_raw, $metodo_fallback, $total_venta);
+            $metodo_pago_resumen = $pago_info['metodo_resumen'];
+            $pagos_validados = $pago_info['pagos'];
+            $monto_efectivo = $pago_info['monto_efectivo'];
+            $es_combinado = $pago_info['es_combinado'];
+
             $stmt = $this->conn->prepare("INSERT INTO venta (fecha, total, metodo_de_pago, id_usuario, descripcion) VALUES (?, ?, ?, ?, ?)");
-            $stmt->bind_param("sdsis", $fecha, $total_venta, $metodo_pago, $user_id, $descripcion);
+            $stmt->bind_param("sdsis", $fecha, $total_venta, $metodo_pago_resumen, $user_id, $descripcion);
             if (!$stmt->execute()) throw new Exception("Error al crear venta");
             $id_venta = $this->conn->insert_id;
             $stmt->close();
+
+            // Guardar cada pago por separado (medio y monto) asociado a la venta
+            $stmtPago = $this->conn->prepare("INSERT INTO venta_pago (id_venta, metodo_pago, monto) VALUES (?, ?, ?)");
+            foreach ($pagos_validados as $pItem) {
+                $mNombre = $pItem['metodo'];
+                $mMonto = (float)$pItem['monto'];
+                $stmtPago->bind_param("isd", $id_venta, $mNombre, $mMonto);
+                if (!$stmtPago->execute()) {
+                    throw new Exception("Error al registrar el desglose de pago de la venta.");
+                }
+            }
+            $stmtPago->close();
 
             $nombres_vendidos = [];
             foreach ($items as $item) {
@@ -351,10 +652,10 @@ class SalesModel extends BaseModel
                 $nombres_vendidos[] = $item['cantidad'] . "x " . $nombre_producto;
 
                 $stmt = $this->conn->prepare(
-                    "INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, nombre_producto, precio_copiado)
-                     VALUES (?, ?, ?, ?, ?, ?)"
+                    "INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, nombre_producto)
+                     VALUES (?, ?, ?, ?, ?)"
                 );
-                $stmt->bind_param("iiidsd", $id_venta, $item['id'], $item['cantidad'], $precio_unitario, $nombre_producto, $precio_unitario);
+                $stmt->bind_param("iiids", $id_venta, $item['id'], $item['cantidad'], $precio_unitario, $nombre_producto);
                 if (!$stmt->execute()) throw new Exception("Error al crear detalle");
                 $stmt->close();
 
@@ -368,12 +669,26 @@ class SalesModel extends BaseModel
                     "Stock de '$nombre_producto' reducido en {$item['cantidad']} unidades por venta (Usuario: $username_audit)");
             }
 
-            $this->conn->commit();
-
             $productos_str = implode(", ", $nombres_vendidos);
 
-            audit_log($this->conn, 'SALE_CREATE', $user_id, 'venta', $id_venta,
-                "Usuario $username_audit registró venta. Total: \$$total_venta. Método: $metodo_pago. Productos: $productos_str");
+            // Libro de Caja inmutable dentro de la misma transacción:
+            // - Bloquea la venta si hay efectivo ($monto_efectivo > 0) y no existe caja abierta.
+            // - Registra los pagos con su `medio_pago` e `id_venta` (el arqueo físico filtra medio_pago = 'efectivo').
+            $uid_int = is_numeric($user_id) && (int)$user_id > 0 ? (int)$user_id : null;
+            CajaModel::recordSaleMovementsInTransaction(
+                $this->conn,
+                (int)$id_venta,
+                null,
+                $pagos_validados,
+                $monto_efectivo,
+                $total_venta,
+                $es_combinado,
+                'Venta',
+                $productos_str,
+                $uid_int
+            );
+
+            $this->conn->commit();
 
             return $id_venta;
         } catch (Exception $e) {
@@ -387,7 +702,7 @@ class SalesModel extends BaseModel
         $this->conn->begin_transaction();
         try {
             // Verificar estado actual
-            $stmt = $this->conn->prepare("SELECT estado, descripcion FROM venta WHERE id_venta = ? FOR UPDATE");
+            $stmt = $this->conn->prepare("SELECT estado, descripcion, total, metodo_de_pago FROM venta WHERE id_venta = ? FOR UPDATE");
             $stmt->bind_param("i", $id_venta);
             $stmt->execute();
             $res = $stmt->get_result();
@@ -405,20 +720,6 @@ class SalesModel extends BaseModel
             if (!$stmt->execute()) throw new Exception("Error al actualizar el estado de la venta");
             $stmt->close();
 
-            // Fetch username
-            $username_audit = "Desconocido";
-            if ($user_id !== 'guest' && $user_id > 0) {
-                $stmt = $this->conn->prepare("SELECT nombre_usuario FROM usuario WHERE id_usuario = ?");
-                $stmt->bind_param("i", $user_id);
-                $stmt->execute();
-                $res_u = $stmt->get_result();
-                if ($res_u->num_rows > 0) {
-                    $username_audit = $res_u->fetch_assoc()['nombre_usuario'];
-                }
-                $stmt->close();
-            } elseif ($user_id === 'guest') {
-                $username_audit = "Invitado";
-            }
             $audit_user = ($user_id === 'guest') ? null : $user_id;
             $service_id = ServiceProduct::findId($this->conn);
 
@@ -450,6 +751,29 @@ class SalesModel extends BaseModel
             }
             $stmt->close();
 
+            // Revertir en Caja ÚNICAMENTE la parte que fue abonada en Efectivo
+            $stmtPagos = $this->conn->prepare("SELECT metodo_pago, monto FROM venta_pago WHERE id_venta = ?");
+            $stmtPagos->bind_param("i", $id_venta);
+            $stmtPagos->execute();
+            $resPagos = $stmtPagos->get_result();
+            $monto_efectivo_revertir = 0.0;
+            $tiene_pagos_tabla = false;
+            while ($pRow = $resPagos->fetch_assoc()) {
+                $tiene_pagos_tabla = true;
+                if (mb_strtolower(trim((string)$pRow['metodo_pago']), 'UTF-8') === 'efectivo') {
+                    $monto_efectivo_revertir += (float)$pRow['monto'];
+                }
+            }
+            $stmtPagos->close();
+
+            if (!$tiene_pagos_tabla && mb_strtolower(trim((string)($venta['metodo_de_pago'] ?? '')), 'UTF-8') === 'efectivo') {
+                $monto_efectivo_revertir = (float)($venta['total'] ?? 0);
+            }
+
+            // Registrar contra-asiento inmutable en Caja dentro de la misma transacción (vinculado por id_venta)
+            $uid_int = is_numeric($audit_user) && (int)$audit_user > 0 ? (int)$audit_user : null;
+            CajaModel::reverseSaleMovementsInTransaction($this->conn, $id_venta, $monto_efectivo_revertir, $uid_int);
+
             // Si la venta corresponde al cobro de una reparación, registrar nota en historial sin devolver a la cola de cobro
             $reparacion_afectada = null;
             $prefijo = 'Cobro de Reparación #';
@@ -480,86 +804,10 @@ class SalesModel extends BaseModel
 
             $this->conn->commit();
 
-            $extra = $reparacion_afectada ? " Reparación #$reparacion_afectada con nota de cobro anulado." : '';
-            audit_log($this->conn, 'SALE_ROLLBACK', $audit_user, 'venta', $id_venta,
-                "Venta anulada por usuario $username_audit. Stock devuelto para $items_revertidos producto(s).$extra");
-
             return true;
         } catch (Exception $e) {
             $this->conn->rollback();
             throw $e;
         }
-    }
-
-    public function get_sales_daily($days = 7)
-    {
-        $days = intval($days);
-        $sql = "SELECT DATE(fecha) as dia, SUM(total) as total_ventas 
-                FROM venta 
-                WHERE estado != 'anulada' AND fecha >= DATE(NOW()) - INTERVAL ? DAY 
-                GROUP BY DATE(fecha) 
-                ORDER BY dia ASC";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $days);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        $labels = [];
-        $data = [];
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
-                $labels[] = $row['dia'];
-                $data[] = $row['total_ventas'];
-            }
-        }
-        $stmt->close();
-        return ['labels' => $labels, 'data' => $data];
-    }
-
-    public function get_sales_methods()
-    {
-        $sql = "SELECT COALESCE(m.metodo, v.metodo_de_pago, 'Otro') as metodo, SUM(v.total) as total_ventas 
-                FROM venta v
-                LEFT JOIN metodos_pago m ON v.id_metodo_pago = m.id_metodo_pago
-                WHERE v.estado != 'anulada' AND v.fecha >= DATE(NOW()) - INTERVAL 30 DAY
-                GROUP BY metodo";
-        $result = $this->conn->query($sql);
-        
-        $labels = [];
-        $data = [];
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
-                $labels[] = $row['metodo'];
-                $data[] = $row['total_ventas'];
-            }
-        }
-        return ['labels' => $labels, 'data' => $data];
-    }
-
-    public function get_top_sales_products($limit = 5)
-    {
-        $limit = intval($limit);
-        $sql = "SELECT COALESCE(dv.nombre_producto, p.nombre) as nombre, SUM(dv.cantidad) as total_vendido
-                FROM detalle_venta dv
-                LEFT JOIN producto p ON dv.id_producto = p.id_producto
-                JOIN venta v ON dv.id_venta = v.id_venta
-                WHERE v.estado != 'anulada' AND v.fecha >= DATE(NOW()) - INTERVAL 30 DAY
-                GROUP BY dv.id_producto, COALESCE(dv.nombre_producto, p.nombre)
-                ORDER BY total_vendido DESC LIMIT ?";
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("i", $limit);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        $labels = [];
-        $data = [];
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
-                $labels[] = $row['nombre'];
-                $data[] = (int)$row['total_vendido'];
-            }
-        }
-        $stmt->close();
-        return ['labels' => $labels, 'data' => $data];
     }
 }

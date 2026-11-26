@@ -1,37 +1,43 @@
 // session-cache.js - Nokia 1100 System
-// Maneja el caché de la sesión usando localStorage para mostrar
-// el nombre del usuario en la parte superior derecha.
+// Maneja el caché de la sesión usando localStorage para almacenar, leer y mostrar
+// el nombre del usuario en la barra superior derecha y limpiarlo al cerrar sesión.
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Si la sesión de PHP dice que estamos logueados, guardamos en localStorage
+    const STORAGE_KEY = 'nokia1100_user';
     const phpUserMeta = document.querySelector('meta[name="current-user"]');
-    if (phpUserMeta && phpUserMeta.content.trim() !== '') {
-        localStorage.setItem('nokia1100_user', phpUserMeta.content.trim());
-    }
+    const serverUser = phpUserMeta ? phpUserMeta.content.trim() : '';
 
-    const savedUser = localStorage.getItem('nokia1100_user');
     const trUser = document.getElementById('top-right-user');
     const trUsername = document.getElementById('tr-username');
     const trInitial = document.getElementById('tr-initial');
 
-    // Si estamos en la página de login (index.php) o de reset de contraseña, podemos limpiar el storage
-    // si PHP no nos envió un user y la url incluye logout o es el index principal
-    const isLoginScreen = window.location.pathname.endsWith('index.php') && window.location.pathname.split('/').length <= 3;
-    
-    if (savedUser && trUser && !isLoginScreen) {
-        trUsername.textContent = savedUser;
-        trInitial.textContent = savedUser.charAt(0).toUpperCase();
-        
-        // Mostrar la cajita con animación
+    // 1. Sincronizar localStorage con el estado de sesión reportado por el servidor
+    if (serverUser !== '') {
+        if (localStorage.getItem(STORAGE_KEY) !== serverUser) {
+            localStorage.setItem(STORAGE_KEY, serverUser);
+        }
+    } else if (phpUserMeta !== null) {
+        // Si la página declaró meta[name="current-user"] vacío (login/logout/sesión expirada), limpiar caché
+        localStorage.removeItem(STORAGE_KEY);
+    }
+
+    // 2. Leer el usuario desde localStorage para hidratar el indicador superior derecho
+    const cachedUser = localStorage.getItem(STORAGE_KEY);
+    if (cachedUser && trUser && trUsername && trInitial) {
+        trUsername.textContent = cachedUser;
+        trInitial.textContent = cachedUser.charAt(0).toUpperCase();
         requestAnimationFrame(() => {
             trUser.classList.remove('opacity-0');
             trUser.classList.add('opacity-100');
         });
-    } else if (isLoginScreen) {
-        // Limpiamos el storage si estamos en la pantalla de login principal
-        // a menos que estemos en un proceso de auth interno
-        if (!phpUserMeta || phpUserMeta.content.trim() === '') {
-            localStorage.removeItem('nokia1100_user');
-        }
+    } else if (trUser) {
+        trUser.classList.add('hidden');
     }
+
+    // 3. Limpiar inmediatamente localStorage al hacer clic en Cerrar Sesión
+    document.querySelectorAll('a[href*="action=logout"], [data-nk-loader="logout"]').forEach((link) => {
+        link.addEventListener('click', () => {
+            localStorage.removeItem(STORAGE_KEY);
+        });
+    });
 });

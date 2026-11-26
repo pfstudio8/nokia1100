@@ -1,5 +1,11 @@
 *.sql
-database/
+database/*
+!database/nokia1100_actual.sql
+!database/migration_caja.sql
+!database/migration_pago_combinado.sql
+!database/run_migrations.php
+*.lock
+GUIA_PRUEBAS_*.md
 *.bak
 *.dump
 *.log
@@ -8,6 +14,7 @@ database/
 .env
 .env.*
 !.env.example
+config/*.local.php
 
 # Dependencias
 /vendor/
@@ -23,3 +30,6 @@ Thumbs.db
 .vscode/
 .idea/
 
+
+# Librerias descargadas manualmente
+PHPMailer-master/

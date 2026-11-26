@@ -5,7 +5,7 @@ $limit = $limit ?? 100;
 $modulo = $modulo ?? '';
 $logs = $logs ?? [];
 
-Layout::renderHead('Registro de Auditoría - NOKIA1100');
+Layout::renderHead('Auditoría de Inventario - NOKIA1100');
 Layout::renderAdminSidebar('auditoria');
 ?>
 
@@ -14,14 +14,14 @@ Layout::renderAdminSidebar('auditoria');
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-4 border-b border-border/50">
             <div>
                 <h2 class="text-2xl font-display font-medium text-text-main flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary">security</span> Registro de Auditoría
+                    <span class="material-symbols-outlined text-primary">inventory_2</span> Auditoría de Inventario
                 </h2>
-                <p class="text-text-muted text-sm mt-1">Historial de acciones críticas y eventos de seguridad</p>
+                <p class="text-text-muted text-sm mt-1">Historial exclusivo de movimientos, altas, modificaciones y ajustes de stock</p>
             </div>
             <div class="flex flex-wrap items-center gap-4">
                 <div class="relative w-full sm:w-auto">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[20px]">search</span>
-                    <input type="text" id="search-input" placeholder="Buscar en auditoría..." class="w-full sm:w-64 bg-surface border border-border pl-10 pt-2 pb-2 pr-4 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
+                    <input type="text" id="search-input" placeholder="Buscar en auditoría de inventario..." class="w-full sm:w-64 bg-surface border border-border pl-10 pt-2 pb-2 pr-4 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
                 </div>
                 <div class="flex gap-2">
                     <a href="<?php echo BASE_URL; ?>/modules/admin/index.php?action=audit&limit=100" class="px-4 py-2 rounded-xl border border-border <?php echo $limit == 100 ? 'bg-primary/20 text-primary' : 'bg-surface text-text-muted hover:text-text-main hover:bg-surface-hover'; ?> transition-colors text-sm font-medium">Últimos 100</a>
@@ -31,7 +31,7 @@ Layout::renderAdminSidebar('auditoria');
         </div>
 
         <div class="table-container overflow-x-auto rounded-xl border border-border/50">
-            <table class="w-full text-left border-collapse" id="auditTable">
+            <table class="w-full text-left border-collapse" id="auditTable" data-paginate="10" data-entity-singular="registro" data-entity-plural="registros">
                 <thead>
                     <tr class="bg-surface/50 text-text-muted text-xs uppercase tracking-wider font-semibold border-b border-border/50">
                         <th class="p-4 rounded-tl-xl">ID</th>
@@ -48,7 +48,7 @@ Layout::renderAdminSidebar('auditoria');
                         <tr>
                             <td colspan="7" class="p-8 text-center text-text-muted bg-surface/20">
                                 <span class="material-symbols-outlined text-4xl mb-2 opacity-50">history</span>
-                                <p>No hay registros de auditoría disponibles.</p>
+                                <p>No hay registros de auditoría de inventario disponibles.</p>
                             </td>
                         </tr>
                     <?php else: ?>

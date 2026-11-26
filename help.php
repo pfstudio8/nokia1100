@@ -1,12 +1,43 @@
 <?php
 // help.php - Nokia 1100 Ayuda Rápida & Manual de Uso
-session_start();
 require_once __DIR__ . '/config/db.php';
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once __DIR__ . '/classes/Layout.php';
+require_once __DIR__ . '/classes/ServiceProduct.php';
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: " . BASE_URL . "/index.php");
     exit();
+}
+
+// Verificar cuenta activa y sesión única en BD (equivalente a BaseController::check_auth)
+if ($_SESSION['user_id'] !== 'guest' && is_numeric($_SESSION['user_id']) && isset($conn)) {
+    $stmtAuth = $conn->prepare("SELECT session_token, is_active, rol FROM usuario WHERE id_usuario = ?");
+    $uidHelp = (int)$_SESSION['user_id'];
+    $stmtAuth->bind_param("i", $uidHelp);
+    $stmtAuth->execute();
+    $resAuth = $stmtAuth->get_result()->fetch_assoc();
+    $stmtAuth->close();
+
+    if (!$resAuth || (int)($resAuth['is_active'] ?? 0) !== 1) {
+        session_unset();
+        session_destroy();
+        header("Location: " . BASE_URL . "/index.php?error=" . urlencode("Tu cuenta ha sido desactivada. Comunícate con el administrador."));
+        exit();
+    }
+
+    if (($resAuth['session_token'] ?? null) !== ($_SESSION['session_token'] ?? null)) {
+        session_unset();
+        session_destroy();
+        header("Location: " . BASE_URL . "/index.php?error=" . urlencode("Se ha iniciado sesión en otro dispositivo. Tu sesión actual ha sido cerrada."));
+        exit();
+    }
+
+    if (!empty($resAuth['rol'])) {
+        $_SESSION['role'] = $resAuth['rol'];
+    }
 }
 
 // 1. Inicializar variables con datos por defecto
@@ -16,15 +47,17 @@ $realSales = [];
 $totalProds = 0;
 
 if (isset($conn)) {
-    $resCount = $conn->query("SELECT COUNT(*) as c FROM producto WHERE is_active = 1");
+    $excludeServices = ServiceProduct::excludeSql('p', 'pd');
+    $resCount = $conn->query("SELECT COUNT(*) as c FROM producto p LEFT JOIN producto_detalle pd ON p.id_producto = pd.id_producto WHERE p.is_active = 1 AND $excludeServices");
     if ($resCount) {
         $totalProds = (int)$resCount->fetch_assoc()['c'];
     }
 
     $queryProds = "SELECT p.id_producto, p.nombre, p.precio, COALESCE(i.cantidad, 0) as cantidad 
                    FROM producto p 
+                   LEFT JOIN producto_detalle pd ON p.id_producto = pd.id_producto
                    LEFT JOIN inventario i ON p.id_producto = i.id_producto 
-                   WHERE p.is_active = 1 
+                   WHERE p.is_active = 1 AND $excludeServices
                    ORDER BY i.cantidad DESC 
                    LIMIT 4";
     $resProds = $conn->query($queryProds);
@@ -102,9 +135,6 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
         
         <?php // HERO HEADER: Ayuda Rápida ?>
         <div class="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-b from-card to-surface p-6 md:p-10 shadow-lg">
-            <div class="absolute -right-20 -top-20 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="absolute right-40 bottom-0 w-64 h-64 bg-secondary/10 rounded-full blur-2xl pointer-events-none"></div>
-            
             <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <div class="space-y-3 max-w-3xl">
                     <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/30 text-primary text-xs font-bold uppercase tracking-wider">
@@ -124,29 +154,34 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
         <?php // MODULES FILTER TABS ?>
         <div class="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none" id="help-tabs-bar">
             <?php // Tab 1: Inventario ?>
-            <button onclick="switchTab('inventario')" id="tab-btn-inventario" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-primary/10 border border-primary/40 text-primary shadow-[0_0_12px_rgba(14,165,160,0.15)] font-display" type="button">
+            <button onclick="switchTab('inventario')" id="tab-btn-inventario" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-primary border border-primary text-white dark:text-[#111417] shadow-sm font-display" type="button">
                 <span class="material-symbols-outlined text-[18px]">inventory_2</span>
                 <span>1. Inventario y Stock</span>
             </button>
             <?php // Tab 2: Taller ?>
-            <button onclick="switchTab('taller')" id="tab-btn-taller" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-border/80 font-display" type="button">
+            <button onclick="switchTab('taller')" id="tab-btn-taller" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-primary font-display" type="button">
                 <span class="material-symbols-outlined text-[18px]">home_repair_service</span>
                 <span>2. Taller y Reparaciones</span>
             </button>
             <?php // Tab 3: Ventas ?>
-            <button onclick="switchTab('ventas')" id="tab-btn-ventas" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-border/80 font-display" type="button">
+            <button onclick="switchTab('ventas')" id="tab-btn-ventas" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-primary font-display" type="button">
                 <span class="material-symbols-outlined text-[18px]">point_of_sale</span>
                 <span>3. Ventas y Cobros</span>
             </button>
             <?php // Tab 4: Clientes ?>
-            <button onclick="switchTab('clientes')" id="tab-btn-clientes" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-border/80 font-display" type="button">
+            <button onclick="switchTab('clientes')" id="tab-btn-clientes" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-primary font-display" type="button">
                 <span class="material-symbols-outlined text-[18px]">group</span>
                 <span>4. Clientes y Cuentas</span>
             </button>
             <?php // Tab 5: Proveedores ?>
-            <button onclick="switchTab('proveedores')" id="tab-btn-proveedores" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-border/80 font-display" type="button">
+            <button onclick="switchTab('proveedores')" id="tab-btn-proveedores" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-primary font-display" type="button">
                 <span class="material-symbols-outlined text-[18px]">local_shipping</span>
                 <span>5. Proveedores y Reportes</span>
+            </button>
+            <?php // Tab 6: Caja ?>
+            <button onclick="switchTab('caja')" id="tab-btn-caja" class="help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-primary font-display" type="button">
+                <span class="material-symbols-outlined text-[18px]">account_balance_wallet</span>
+                <span>6. Caja y Arqueo</span>
             </button>
         </div>
 
@@ -162,7 +197,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                         <?php // Step Header Bar ?>
                         <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl shadow-[0_0_16px_rgba(14,165,160,0.15)]">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl">
                                     01
                                 </div>
                                 <div>
@@ -198,9 +233,9 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     </div>
                                 </div>
 
-                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-secondary/40 transition-colors">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-[#9db82a] transition-colors">
                                     <div class="flex items-start gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                        <div class="w-9 h-9 rounded-xl bg-[#eef6cf] border border-[#c6e24a] flex items-center justify-center text-[#4d5e0a] shrink-0">
                                             <span class="material-symbols-outlined text-[20px]">edit_note</span>
                                         </div>
                                         <div>
@@ -212,9 +247,9 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     </div>
                                 </div>
 
-                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-yellow-500/40 transition-colors">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-[#d4b54a] transition-colors">
                                     <div class="flex items-start gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-yellow-500/10 border border-yellow-500/20 flex items-center justify-center text-yellow-400 shrink-0">
+                                        <div class="w-9 h-9 rounded-xl bg-[#fcf3cf] border border-[#e6cf7a] flex items-center justify-center text-[#7a5600] shrink-0">
                                             <span class="material-symbols-outlined text-[20px]">toggle_on</span>
                                         </div>
                                         <div>
@@ -268,8 +303,8 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             </div>
 
                             <?php // MOCKUP PREVIEW CONTAINER ?>
-                            <div class="rounded-2xl border border-border bg-[#0f141c] overflow-hidden shadow-inner">
-                                <div class="px-4 py-3 bg-[#151b24] border-b border-border flex items-center justify-between">
+                            <div class="rounded-2xl border border-border-dark bg-background overflow-hidden shadow-inner">
+                                <div class="px-4 py-3 bg-sunk border-b border-border-dark flex items-center justify-between">
                                     <div class="flex items-center gap-2">
                                         <span class="w-2.5 h-2.5 rounded-full bg-error"></span>
                                         <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
@@ -291,19 +326,19 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                         <?php foreach ($realProducts as $idx => $p): 
                                             $cant = (int)$p['cantidad'];
                                             if ($cant > 5) {
-                                                $badgeClass = 'bg-primary/10 border-primary/30 text-primary';
+                                                $badgeClass = 'bg-[#e3f6ea] border-[#9adbb3] text-[#156835]';
                                                 $badgeText = 'Disponible';
                                             } elseif ($cant > 0) {
-                                                $badgeClass = 'bg-yellow-500/10 border-yellow-500/30 text-yellow-400';
+                                                $badgeClass = 'bg-[#fcf3cf] border-[#e6cf7a] text-[#7a5600]';
                                                 $badgeText = 'Crítico';
                                             } else {
                                                 $badgeClass = 'bg-error/10 border-error/30 text-error';
                                                 $badgeText = 'Agotado';
                                             }
                                         ?>
-                                        <div class="flex items-center justify-between p-3 rounded-xl bg-surface/60 border border-border/70 hover:border-primary/40 transition-colors">
+                                        <div class="flex items-center justify-between p-3 rounded-xl bg-surface border border-border hover:border-primary/40 transition-colors">
                                             <div class="flex items-center gap-3">
-                                                <div class="w-8 h-8 rounded-lg bg-card flex items-center justify-center text-primary text-xs font-mono font-bold">
+                                                <div class="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center text-primary text-xs font-mono font-bold">
                                                     #<?php echo htmlspecialchars($p['id_producto']); ?>
                                                 </div>
                                                 <div>
@@ -331,7 +366,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
                                 <span>Tip: Presiona <kbd class="px-1.5 py-0.5 rounded bg-card border border-border text-[11px] font-mono text-text-main">F3</kbd> en cualquier pantalla para saltar al inventario.</span>
                             </div>
-                            <a href="<?php echo BASE_URL; ?>/modules/inventory/index.php" class="px-4 py-2 rounded-xl bg-primary text-[#0c141b] font-bold text-xs hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                            <a href="<?php echo BASE_URL; ?>/modules/inventory/index.php" class="px-4 py-2 rounded-xl bg-primary text-white dark:text-[#111417] font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
                                 <span>Ir al Inventario</span>
                                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </a>
@@ -369,7 +404,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                     <article class="rounded-3xl border border-border bg-card overflow-hidden shadow-lg transition-all">
                         <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl shadow-[0_0_16px_rgba(14,165,160,0.15)]">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl">
                                     02
                                 </div>
                                 <div>
@@ -389,33 +424,187 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
 
                         <div class="p-6 md:p-8 space-y-6">
                             <p class="text-sm md:text-base text-text-muted leading-relaxed">
-                                Controla cada orden con código único de seguimiento, asociando el cliente, modelo del teléfono, repuestos necesarios y presupuesto acordado.
+                                Controla el flujo integral de servicio técnico: registro en mostrador, derivación con notificación inmediata al taller, diagnóstico técnico, presupuesto, control de repuestos y <strong class="text-text-main">seguimiento en vivo para el cliente mediante boleta con código QR</strong>.
                             </p>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div class="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-colors">
                                     <div class="flex items-start gap-3">
                                         <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
-                                            <span class="material-symbols-outlined text-[20px]">assignment_turned_in</span>
+                                            <span class="material-symbols-outlined text-[20px]">add_to_home_screen</span>
                                         </div>
                                         <div>
-                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Boleta y Estados</h3>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Registro de Equipos</h3>
                                             <p class="text-xs text-text-muted leading-relaxed">
-                                                Emite el comprobante para el cliente y avanza el estado: <strong class="text-text-main">Recibido</strong>, <strong class="text-text-main">En reparación</strong> y <strong class="text-text-main">Listo</strong>.
+                                                Carga rápida en mostrador con datos del cliente, falla, presupuesto estimativo y fotos del estado físico de recepción.
                                             </p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-secondary/40 transition-colors">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-[#9db82a] transition-colors">
                                     <div class="flex items-start gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                        <div class="w-9 h-9 rounded-xl bg-[#eef6cf] border border-[#c6e24a] flex items-center justify-center text-[#4d5e0a] shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">qr_code_scanner</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Seguimiento en Vivo (QR)</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                Comprobante oficial con código QR y enlace a WhatsApp para que el cliente siga el avance en tiempo real desde su celular.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-[#d4b54a] transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-[#fcf3cf] border border-[#e6cf7a] flex items-center justify-center text-[#7a5600] shrink-0">
                                             <span class="material-symbols-outlined text-[20px]">extension</span>
                                         </div>
                                         <div>
-                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Asignación de Repuestos</h3>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Repuestos &amp; Diagnóstico</h3>
                                             <p class="text-xs text-text-muted leading-relaxed">
-                                                Descuenta del inventario los componentes utilizados (módulos, pines, baterías) sumándolos al costo del trabajo.
+                                                Asignación de repuestos con descuento automático de inventario, registro de notas técnicas y fotos de progreso.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <?php // ACORDEÓN 1: PASO A PASO PARA AGREGAR UN NUEVO EQUIPO ?>
+                            <div class="rounded-2xl border border-primary/30 bg-surface/80 overflow-hidden shadow-sm">
+                                <button onclick="toggleAccordion('acc-step-nuevo-equipo')" class="w-full p-4 md:p-5 flex items-center justify-between text-left hover:bg-card/50 transition-colors" type="button">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary">
+                                            <span class="material-symbols-outlined text-[20px]">add_to_home_screen</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-sm md:text-base font-display font-bold text-text-main">¿Cómo registrar un nuevo equipo paso a paso?</span>
+                                            <span class="block text-xs text-text-muted">Guía completa de ingreso en mostrador y derivación automática al taller</span>
+                                        </div>
+                                    </div>
+                                    <span id="acc-icon-acc-step-nuevo-equipo" class="material-symbols-outlined text-text-muted text-[22px] transition-transform duration-200" style="transform: rotate(180deg);">expand_more</span>
+                                </button>
+                                
+                                <div id="acc-step-nuevo-equipo" class="p-5 pt-3 border-t border-border space-y-4">
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-primary text-primary flex items-center justify-center text-xs font-bold shrink-0 z-10">1</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Acceder a "Registrar Nuevo Equipo"</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                • <strong>Empleado:</strong> Desde el menú lateral pulsa en <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[#15181a] text-[#c6e24a]">Registrar Nuevo Equipo</span> o desde el Centro de Operaciones pulsa en el botón <strong class="text-text-main">"Nueva Orden de Equipo"</strong>.<br>
+                                                • <strong>Administrador:</strong> Puedes ingresar desde el módulo <strong class="text-text-main">Taller</strong> con el botón <span class="px-2 py-0.5 rounded text-[11px] font-bold bg-primary text-white dark:text-[#111417]">+ Nueva Orden</span> o desde la cabecera de la Dashboard de Administración.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-primary text-primary flex items-center justify-center text-xs font-bold shrink-0 z-10">2</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Completar Datos del Cliente</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                En la columna izquierda, elige <strong class="text-text-main">"Cliente Existente"</strong> del menú desplegable (autocompleta nombre y teléfono automáticamente) o deja seleccionada la opción <strong class="text-text-main">"-- Crear Nuevo Cliente --"</strong> e ingresa el Nombre Completo y su número de WhatsApp.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-primary text-primary flex items-center justify-center text-xs font-bold shrink-0 z-10">3</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Indicar Marca, Modelo, IMEI y Falla Declarada</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                Indica la <strong class="text-text-main">Marca</strong> (ej. Samsung, Apple, Motorola), el <strong class="text-text-main">Modelo</strong> (ej. A32, iPhone 11), el número de IMEI o Serie (opcional pero recomendado para garantías) y describe con precisión el motivo de ingreso o problema declarado por el cliente.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-primary text-primary flex items-center justify-center text-xs font-bold shrink-0 z-10">4</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Adjuntar Fotos del Equipo y Detalles Comerciales</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                • <strong>Fotos de Ingreso (Opcional):</strong> Arrastra o selecciona una o varias fotos del equipo para documentar su estado físico inicial (pantalla, bordes, tapa trasera). Incluye visor ampliado en pantalla completa.<br>
+                                                • <strong>Presupuesto Estimado ($):</strong> Ingresa un monto estimativo pactado previamente con el cliente, o déjalo en blanco si requiere evaluación técnica previa.<br>
+                                                • <strong>Observaciones:</strong> Anota detalles como rayones previos, tornillos faltantes, funda, chip SIM o tarjeta microSD que queda en custodia.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-start gap-3.5">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-success text-success flex items-center justify-center text-xs font-bold shrink-0">5</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Guardar y Derivación Automática al Taller</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                Presiona <span class="px-2.5 py-1 rounded text-xs font-bold bg-primary text-white dark:text-[#111417]">Registrar y Enviar al Taller</span>. El sistema genera un código de orden único (ej. <code class="font-mono text-primary font-bold">#26118134</code>), emite la notificación en tiempo real con contador en el menú lateral para los técnicos y habilita la impresión inmediata del recibo con código QR.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <?php // ACORDEÓN 2: SEGUIMIENTO EN VIVO Y CÓDIGO QR ?>
+                            <div class="rounded-2xl border border-[#9db82a]/50 bg-surface/80 overflow-hidden shadow-sm">
+                                <button onclick="toggleAccordion('acc-step-seguimiento-qr')" class="w-full p-4 md:p-5 flex items-center justify-between text-left hover:bg-card/50 transition-colors" type="button">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-[#eef6cf] border border-[#c6e24a] flex items-center justify-center text-[#4d5e0a]">
+                                            <span class="material-symbols-outlined text-[20px]">qr_code_2</span>
+                                        </div>
+                                        <div>
+                                            <span class="text-sm md:text-base font-display font-bold text-text-main">¿Cómo funciona el Seguimiento en Vivo con Código QR?</span>
+                                            <span class="block text-xs text-text-muted">Consulta de estado en tiempo real para clientes sin usuario ni contraseña</span>
+                                        </div>
+                                    </div>
+                                    <span id="acc-icon-acc-step-seguimiento-qr" class="material-symbols-outlined text-text-muted text-[22px] transition-transform duration-200" style="transform: rotate(180deg);">expand_more</span>
+                                </button>
+                                
+                                <div id="acc-step-seguimiento-qr" class="p-5 pt-3 border-t border-border space-y-4">
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-[#9db82a] text-[#4d5e0a] flex items-center justify-center text-xs font-bold shrink-0 z-10">1</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Emisión de la Boleta con Código QR y Botón WhatsApp</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                Al registrar el equipo o en cualquier momento desde el <strong class="text-text-main">Historial de Equipos Registrados</strong> (botón <span class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-[#15181a] text-[#c6e24a]">Imprimir Recibo</span>) o desde el módulo <strong class="text-text-main">Taller</strong> (botón <span class="px-2 py-0.5 rounded text-[11px] font-bold border border-border bg-surface text-text-main">Recibo / QR</span>), se abre el Comprobante Oficial de Ingreso.<br>
+                                                El comprobante cuenta con:
+                                                <br>• <strong>Código QR Vectorial:</strong> Escaneable con la cámara de cualquier teléfono.
+                                                <br>• <strong>Botón "Enviar por WhatsApp":</strong> Abre un chat con el cliente con el mensaje prearmado y su link directo.
+                                                <br>• <strong>Botón "Copiar Enlace":</strong> Para enviar el link de seguimiento por correo o mensaje de texto.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-[#9db82a] text-[#4d5e0a] flex items-center justify-center text-xs font-bold shrink-0 z-10">2</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Acceso Público y Seguro (Sin login)</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                El cliente ingresa al portal mediante la URL pública <code class="px-2 py-0.5 rounded bg-background text-[11px] font-mono text-primary border border-border">/modules/workshop/index.php?action=track&amp;code=CODIGO</code>. No requiere registrarse ni recordar contraseñas: el código único de la orden funciona como llave de consulta exclusiva para su equipo.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-[#9db82a] text-[#4d5e0a] flex items-center justify-center text-xs font-bold shrink-0 z-10">3</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Línea de Tiempo Interactiva (Tracking Line)</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                La pantalla de seguimiento muestra la línea de etapas del servicio técnico con animación secuencial estilo Nokia 1100:
+                                                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-2 font-mono text-[11px] text-center">
+                                                    <div class="p-2 rounded bg-surface border border-border"><span class="block text-primary font-bold">1. Recibido</span>Ingreso en mostrador</div>
+                                                    <div class="p-2 rounded bg-surface border border-border"><span class="block text-primary font-bold">2. En diagnóstico</span>Revisión técnica</div>
+                                                    <div class="p-2 rounded bg-surface border border-border"><span class="block text-primary font-bold">3. En reparación</span>Arreglo y repuestos</div>
+                                                    <div class="p-2 rounded bg-[#eef6cf] border border-[#c6e24a] text-[#4d5e0a] font-bold"><span class="block text-[#4d5e0a]">4. Listo</span>Listo para retirar</div>
+                                                    <div class="p-2 rounded bg-surface border border-border"><span class="block text-text-muted">5. Entregado</span>Retirado por cliente</div>
+                                                </div>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-start gap-3.5">
+                                        <div class="w-7 h-7 rounded-full bg-card border border-success text-success flex items-center justify-center text-xs font-bold shrink-0">4</div>
+                                        <div class="flex-1">
+                                            <p class="text-sm font-semibold text-text-main">Actualizaciones en Tiempo Real sin recargar</p>
+                                            <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
+                                                Si el técnico cambia el estado de la reparación en el taller, modifica el presupuesto estimado o añade una fotografía del progreso, la pantalla del cliente se actualiza automáticamente mediante consulta en segundo plano (Web Polling), reproduciendo una sutil animación de avance en la línea de tiempo.
                                             </p>
                                         </div>
                                     </div>
@@ -423,8 +612,8 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             </div>
 
                             <?php // MOCKUP PREVIEW TALLER ?>
-                            <div class="rounded-2xl border border-border bg-[#0f141c] overflow-hidden shadow-inner">
-                                <div class="px-4 py-3 bg-[#151b24] border-b border-border flex items-center justify-between">
+                            <div class="rounded-2xl border border-border-dark bg-background overflow-hidden shadow-inner">
+                                <div class="px-4 py-3 bg-sunk border-b border-border-dark flex items-center justify-between">
                                     <div class="flex items-center gap-2">
                                         <span class="w-2.5 h-2.5 rounded-full bg-error"></span>
                                         <span class="w-2.5 h-2.5 rounded-full bg-yellow-500"></span>
@@ -437,15 +626,17 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     <?php foreach ($realRepairs as $r): 
                                         $st = $r['estado'];
                                         $color = match($st) {
-                                            'Listo' => 'text-success bg-success/10 border-success/30',
-                                            'Entregado' => 'text-primary bg-primary/10 border-primary/30',
-                                            'En reparación' => 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
-                                            default => 'text-secondary bg-secondary/10 border-secondary/30'
+                                            'Listo' => 'repair-status repair-status-listo',
+                                            'Entregado' => 'repair-status repair-status-entregado',
+                                            'En reparación' => 'repair-status repair-status-reparacion',
+                                            'En diagnóstico' => 'repair-status repair-status-diagnostico',
+                                            'Cancelado' => 'repair-status repair-status-cancelado',
+                                            default => 'repair-status repair-status-recibido'
                                         };
                                     ?>
-                                    <div class="flex items-center justify-between p-3 rounded-xl bg-surface/60 border border-border/70 hover:border-primary/40 transition-colors">
+                                    <div class="flex items-center justify-between p-3 rounded-xl bg-surface border border-border hover:border-primary/40 transition-colors">
                                         <div class="flex items-center gap-3">
-                                            <div class="w-8 h-8 rounded-lg bg-card flex items-center justify-center text-primary text-xs font-mono font-bold">
+                                            <div class="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center text-primary text-xs font-mono font-bold">
                                                 #<?php echo htmlspecialchars(substr($r['codigo_orden'], -4)); ?>
                                             </div>
                                             <div>
@@ -472,7 +663,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
                                 <span>Tip: Presiona <kbd class="px-1.5 py-0.5 rounded bg-card border border-border text-[11px] font-mono text-text-main">F4</kbd> en cualquier pantalla para saltar a Taller.</span>
                             </div>
-                            <a href="<?php echo BASE_URL; ?>/modules/workshop/index.php" class="px-4 py-2 rounded-xl bg-primary text-[#0c141b] font-bold text-xs hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                            <a href="<?php echo BASE_URL; ?>/modules/workshop/index.php" class="px-4 py-2 rounded-xl bg-primary text-white dark:text-[#111417] font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
                                 <span>Ir a Taller</span>
                                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </a>
@@ -485,7 +676,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                     <article class="rounded-3xl border border-border bg-card overflow-hidden shadow-lg transition-all">
                         <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl shadow-[0_0_16px_rgba(14,165,160,0.15)]">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl">
                                     03
                                 </div>
                                 <div>
@@ -520,29 +711,29 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     </div>
                                 </div>
 
-                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-blue-500/40 transition-colors">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-blue-300 transition-colors">
                                     <div class="flex items-start gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
+                                        <div class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700 shrink-0">
                                             <span class="material-symbols-outlined text-[20px]">build</span>
                                         </div>
                                         <div>
                                             <h3 class="text-sm font-display font-bold text-text-main mb-1">¿Dónde está el cobro de Taller?</h3>
                                             <p class="text-xs text-text-muted leading-relaxed">
-                                                En <strong class="text-text-main">Ventas</strong>, botón azul superior <strong class="text-blue-400 font-semibold">"Cobrar Reparaciones"</strong> junto a "+ Nueva Venta".
+                                                En <strong class="text-text-main">Ventas</strong>, botón azul superior <strong class="text-blue-700 font-semibold">"Cobrar Reparaciones"</strong> junto a "+ Nueva Venta".
                                             </p>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-secondary/40 transition-colors">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-[#9db82a] transition-colors">
                                     <div class="flex items-start gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                        <div class="w-9 h-9 rounded-xl bg-[#eef6cf] border border-[#c6e24a] flex items-center justify-center text-[#4d5e0a] shrink-0">
                                             <span class="material-symbols-outlined text-[20px]">payments</span>
                                         </div>
                                         <div>
-                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Medios de Pago</h3>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Medios de Pago y Combinados</h3>
                                             <p class="text-xs text-text-muted leading-relaxed">
-                                                Acepta <strong class="text-text-main">Efectivo</strong>, <strong class="text-text-main">Transferencia</strong> y <strong class="text-text-main">Tarjeta</strong> con balance en el arqueo diario.
+                                                Acepta <strong class="text-text-main">Efectivo</strong>, <strong class="text-text-main">Transferencia</strong> y <strong class="text-text-main">Tarjeta</strong>, o usá <strong class="text-text-main">Combinar 2 Medios</strong>. Solo el efectivo suma al arqueo físico de Caja.
                                             </p>
                                         </div>
                                     </div>
@@ -550,10 +741,10 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             </div>
 
                             <?php // ACCORDION: Cobro de Reparaciones Paso a Paso ?>
-                            <div class="rounded-2xl border border-blue-500/30 bg-surface/80 overflow-hidden shadow-sm">
+                            <div class="rounded-2xl border border-blue-200 bg-surface/80 overflow-hidden shadow-sm">
                                 <button onclick="toggleAccordion('acc-step-ventas-reparacion')" class="w-full p-4 md:p-5 flex items-center justify-between text-left hover:bg-card/50 transition-colors" type="button">
                                     <div class="flex items-center gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                                        <div class="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700">
                                             <span class="material-symbols-outlined text-[20px]">handyman</span>
                                         </div>
                                         <div>
@@ -571,18 +762,18 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                         <div class="flex-1">
                                             <p class="text-sm font-semibold text-text-main">La orden debe estar en estado "Listo" en Taller</p>
                                             <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
-                                                En el módulo <strong class="text-text-main">Taller</strong>, el técnico debe marcar la orden como <span class="px-2 py-0.5 rounded text-[11px] font-bold border border-success/30 bg-success/10 text-success">Listo</span>. Mientras la orden esté en <em>Recibido</em>, <em>En diagnóstico</em> o <em>En reparación</em> no figurará en la bandeja de cobro.
+                                                En el módulo <strong class="text-text-main">Taller</strong>, el técnico debe marcar la orden como <span class="px-2 py-0.5 rounded text-[11px] font-bold border border-[#92d5e8] bg-[#e0f4fa] text-[#0d5c73]">Listo</span>. Mientras la orden esté en <em>Recibido</em>, <em>En diagnóstico</em> o <em>En reparación</em> no figurará en la bandeja de cobro.
                                             </p>
                                         </div>
                                     </div>
 
                                     <?php // Paso 2 ?>
                                     <div class="flex items-start gap-3.5 relative pb-4 before:absolute before:left-3.5 before:top-8 before:bottom-0 before:w-px before:bg-border">
-                                        <div class="w-7 h-7 rounded-full bg-card border border-blue-400 text-blue-400 flex items-center justify-center text-xs font-bold shrink-0 z-10">2</div>
+                                        <div class="w-7 h-7 rounded-full bg-card border border-blue-600 text-blue-700 flex items-center justify-center text-xs font-bold shrink-0 z-10">2</div>
                                         <div class="flex-1">
                                             <p class="text-sm font-semibold text-text-main">Abrir "Cobrar Reparaciones" desde el módulo Ventas</p>
                                             <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
-                                                Ve al menú lateral y haz clic en <strong class="text-text-main">Ventas</strong>. En la esquina superior derecha, junto al botón verde "+ Nueva Venta", pulsa en el botón azul <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border border-blue-500/30 bg-blue-500/10 text-blue-400"><span class="material-symbols-outlined text-[13px]">build</span> Cobrar Reparaciones</span>.
+                                                Ve al menú lateral y haz clic en <strong class="text-text-main">Ventas</strong>. En la esquina superior derecha, junto al botón verde "+ Nueva Venta", pulsa en el botón azul <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold border border-blue-200 bg-blue-50 text-blue-700"><span class="material-symbols-outlined text-[13px]">build</span> Cobrar Reparaciones</span>.
                                             </p>
                                         </div>
                                     </div>
@@ -605,7 +796,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                         <div class="flex-1">
                                             <p class="text-sm font-semibold text-text-main">Seleccionar Método de Pago y confirmar</p>
                                             <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
-                                                Elige el medio de pago acordado (<strong class="text-text-main">Efectivo</strong>, <strong class="text-text-main">Transferencia</strong> o <strong class="text-text-main">Tarjeta</strong>) y haz clic en el botón verde <span class="px-2.5 py-0.5 rounded text-[11px] font-bold bg-primary text-[#0c141b]">Cobrar y Entregar</span>.
+                                                Elige el medio de pago acordado (<strong class="text-text-main">Efectivo</strong>, <strong class="text-text-main">Transferencia</strong> o <strong class="text-text-main">Tarjeta</strong>) y haz clic en el botón verde <span class="px-2.5 py-0.5 rounded text-[11px] font-bold bg-primary text-white dark:text-[#111417]">Cobrar y Entregar</span>.
                                             </p>
                                         </div>
                                     </div>
@@ -616,9 +807,9 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                         <div class="flex-1">
                                             <p class="text-sm font-semibold text-text-main">Entrega y Cierre Contable Automático</p>
                                             <p class="text-xs text-text-muted mt-0.5 leading-relaxed">
-                                                Al confirmar, el sistema asienta el ingreso en el historial de ventas bajo el concepto de <em>Servicio Técnico Taller</em> y cambia automáticamente la orden a <span class="px-2 py-0.5 rounded text-[11px] font-bold border border-primary/30 bg-primary/10 text-primary">Entregado</span> con la fecha y hora exacta del retiro.
+                                                Al confirmar, el sistema asienta el ingreso en el historial de ventas bajo el concepto de <em>Servicio Técnico Taller</em> y cambia automáticamente la orden a <span class="px-2 py-0.5 rounded text-[11px] font-bold border border-[#9adbb3] bg-[#e3f6ea] text-[#156835]">Entregado</span> con la fecha y hora exacta del retiro.
                                             </p>
-                                            <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=repairs_to_charge" class="inline-flex items-center gap-1.5 mt-3 px-3.5 py-1.5 rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-xs font-bold transition-colors">
+                                            <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=repairs_to_charge" class="inline-flex items-center gap-1.5 mt-3 px-3.5 py-1.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold transition-colors">
                                                 <span class="material-symbols-outlined text-[16px]">build</span>
                                                 <span>Ir directo a la Bandeja de Cobrar Reparaciones</span>
                                             </a>
@@ -628,7 +819,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             </div>
 
                             <?php // MOCKUP LISTADO DE VENTAS ?>
-                            <div class="rounded-2xl border border-border bg-[#0f141c] overflow-hidden p-4 space-y-3">
+                            <div class="rounded-2xl border border-border-dark bg-background overflow-hidden p-4 space-y-3">
                                 <div class="flex items-center justify-between pb-2 border-b border-border/50">
                                     <span class="text-xs font-semibold text-text-main flex items-center gap-2">
                                         <span class="material-symbols-outlined text-primary text-[18px]">receipt</span>
@@ -637,14 +828,17 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 </div>
                                 <div class="space-y-2">
                                     <?php foreach ($realSales as $s): ?>
-                                    <div class="flex items-center justify-between p-3 rounded-xl bg-surface/60 border border-border/70">
+                                    <div class="flex items-center justify-between p-3 rounded-xl bg-surface border border-border">
                                         <div class="flex items-center gap-3">
-                                            <div class="w-8 h-8 rounded-lg bg-card flex items-center justify-center text-primary text-xs font-mono font-bold">
+                                            <div class="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center text-primary text-xs font-mono font-bold">
                                                 #<?php echo $s['id_venta']; ?>
                                             </div>
                                             <div>
-                                                <p class="text-xs font-medium text-text-main">Venta Registrada • <?php echo htmlspecialchars($s['metodo_de_pago']); ?></p>
-                                                <p class="text-[11px] text-text-muted"><?php echo htmlspecialchars($s['fecha']); ?></p>
+                                                <div class="flex items-center gap-2 flex-wrap">
+                                                    <span class="text-xs font-medium text-text-main">Venta Registrada</span>
+                                                    <?php echo Layout::renderPaymentBadge($s['metodo_de_pago'] ?? 'N/A'); ?>
+                                                </div>
+                                                <p class="text-[11px] text-text-muted mt-0.5"><?php echo htmlspecialchars($s['fecha']); ?></p>
                                             </div>
                                         </div>
                                         <span class="text-xs md:text-sm font-mono font-bold text-primary">$<?php echo number_format((float)$s['total'], 2, ',', '.'); ?></span>
@@ -660,11 +854,11 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <span>Tip: Presiona <kbd class="px-1.5 py-0.5 rounded bg-card border border-border text-[11px] font-mono text-text-main">F2</kbd> en cualquier pantalla para abrir Nueva Venta.</span>
                             </div>
                             <div class="flex items-center gap-2.5">
-                                <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=repairs_to_charge" class="px-3.5 py-2 rounded-xl border border-blue-500/30 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20 text-xs font-bold transition-colors flex items-center gap-1.5">
+                                <a href="<?php echo BASE_URL; ?>/modules/sales/index.php?action=repairs_to_charge" class="px-3.5 py-2 rounded-xl border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold transition-colors flex items-center gap-1.5">
                                     <span class="material-symbols-outlined text-[16px]">build</span>
                                     <span>Cobrar Reparaciones</span>
                                 </a>
-                                <a href="<?php echo BASE_URL; ?>/modules/sales/index.php" class="px-4 py-2 rounded-xl bg-primary text-[#0c141b] font-bold text-xs hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                                <a href="<?php echo BASE_URL; ?>/modules/sales/index.php" class="px-4 py-2 rounded-xl bg-primary text-white dark:text-[#111417] font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
                                     <span>Ir a Ventas</span>
                                     <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                                 </a>
@@ -678,7 +872,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                     <article class="rounded-3xl border border-border bg-card overflow-hidden shadow-lg transition-all">
                         <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl shadow-[0_0_16px_rgba(14,165,160,0.15)]">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl">
                                     04
                                 </div>
                                 <div>
@@ -716,9 +910,9 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     </div>
                                 </div>
 
-                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-secondary/40 transition-colors">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-[#9db82a] transition-colors">
                                     <div class="flex items-start gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                        <div class="w-9 h-9 rounded-xl bg-[#eef6cf] border border-[#c6e24a] flex items-center justify-center text-[#4d5e0a] shrink-0">
                                             <span class="material-symbols-outlined text-[20px]">history</span>
                                         </div>
                                         <div>
@@ -737,7 +931,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
                                 <span>Tip: Presiona <kbd class="px-1.5 py-0.5 rounded bg-card border border-border text-[11px] font-mono text-text-main">Ctrl + B</kbd> para abrir el módulo Clientes.</span>
                             </div>
-                            <a href="<?php echo BASE_URL; ?>/modules/clients/index.php" class="px-4 py-2 rounded-xl bg-primary text-[#0c141b] font-bold text-xs hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                            <a href="<?php echo BASE_URL; ?>/modules/clients/index.php" class="px-4 py-2 rounded-xl bg-primary text-white dark:text-[#111417] font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
                                 <span>Ir a Clientes</span>
                                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </a>
@@ -750,7 +944,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                     <article class="rounded-3xl border border-border bg-card overflow-hidden shadow-lg transition-all">
                         <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
                             <div class="flex items-center gap-4">
-                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl shadow-[0_0_16px_rgba(14,165,160,0.15)]">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl">
                                     05
                                 </div>
                                 <div>
@@ -788,9 +982,9 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     </div>
                                 </div>
 
-                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-secondary/40 transition-colors">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-[#9db82a] transition-colors">
                                     <div class="flex items-start gap-3">
-                                        <div class="w-9 h-9 rounded-xl bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary shrink-0">
+                                        <div class="w-9 h-9 rounded-xl bg-[#eef6cf] border border-[#c6e24a] flex items-center justify-center text-[#4d5e0a] shrink-0">
                                             <span class="material-symbols-outlined text-[20px]">query_stats</span>
                                         </div>
                                         <div>
@@ -809,8 +1003,121 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
                                 <span>Tip: Los administradores pueden consultar el historial de actividades desde el Dashboard de administración.</span>
                             </div>
-                            <a href="<?php echo BASE_URL; ?>/modules/suppliers/index.php" class="px-4 py-2 rounded-xl bg-primary text-[#0c141b] font-bold text-xs hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                            <a href="<?php echo BASE_URL; ?>/modules/suppliers/index.php" class="px-4 py-2 rounded-xl bg-primary text-white dark:text-[#111417] font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
                                 <span>Ir a Proveedores</span>
+                                <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                            </a>
+                        </div>
+                    </article>
+                </div>
+
+                <?php // ==================== PESTAÑA 6: CAJA Y ARQUEO ==================== ?>
+                <div id="tab-pane-caja" class="help-pane space-y-6 hidden">
+                    <article class="rounded-3xl border border-border bg-card overflow-hidden shadow-lg transition-all">
+                        <div class="p-6 md:p-8 border-b border-border flex items-start justify-between gap-4 bg-surface/40">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-center text-primary font-display font-bold text-xl">
+                                    06
+                                </div>
+                                <div>
+                                    <h2 class="text-xl md:text-2xl font-display font-bold text-text-main tracking-tight">
+                                        Caja, Libro Inmutable y Cierre Ciego
+                                    </h2>
+                                    <p class="text-xs md:text-sm text-text-muted">
+                                        Control diario del efectivo físico, trazabilidad completa de movimientos y arqueo sin alteraciones.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-6 md:p-8 space-y-6">
+                            <p class="text-sm md:text-base text-text-muted leading-relaxed">
+                                El módulo <strong class="text-text-main">Caja</strong> centraliza el dinero del turno: exige tener una caja abierta para cobrar en efectivo, registra automáticamente las ventas y reparaciones cobradas, y protege el conteo final mediante <strong class="text-text-main">cierre ciego</strong>.
+                            </p>
+
+                            <?php // Feature Points ?>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">payments</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Solo Efectivo en Arqueo</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                El arqueo físico cuenta únicamente movimientos en <strong class="text-text-main">Efectivo</strong>. Transferencias y Tarjetas se muestran aparte como <em>Otros medios</em>.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">history_edu</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Libro Inmutable</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                Nada se borra ni se edita. Si hubo un error, un supervisor registra un <strong class="text-text-main">Contra-asiento</strong> con motivo obligatorio.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-surface border border-border hover:border-primary/40 transition-colors">
+                                    <div class="flex items-start gap-3">
+                                        <div class="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary shrink-0">
+                                            <span class="material-symbols-outlined text-[20px]">visibility_off</span>
+                                        </div>
+                                        <div>
+                                            <h3 class="text-sm font-display font-bold text-text-main mb-1">Cierre Ciego</h3>
+                                            <p class="text-xs text-text-muted leading-relaxed">
+                                                El saldo esperado permanece oculto mientras la caja está abierta y se revela recién al cargar el conteo físico.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <?php // Guía breve en 4 puntos ?>
+                            <div class="rounded-2xl border border-border bg-surface/60 p-5 space-y-4">
+                                <h3 class="text-sm md:text-base font-display font-bold text-text-main flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-primary text-[19px]">checklist</span>
+                                    Cómo usar la Caja paso a paso
+                                </h3>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs leading-relaxed text-text-muted">
+                                    <div class="p-3.5 rounded-xl bg-card border border-border/70">
+                                        <p class="font-bold text-text-main mb-1">1. Apertura de Caja</p>
+                                        Cargá el efectivo inicial del cajón (o usá <strong class="text-text-main">"Usar como apertura"</strong> del último cierre). Es obligatorio abrir caja antes de cobrar ventas o reparaciones en efectivo.
+                                    </div>
+
+                                    <div class="p-3.5 rounded-xl bg-card border border-border/70">
+                                        <p class="font-bold text-text-main mb-1">2. Movimientos Manuales y Conceptos</p>
+                                        Registrá ingresos o egresos eligiendo concepto y medio de pago. Conceptos físicos como <strong class="text-text-main">Cambio para vuelto</strong> (agregar cambio al cajón) y <strong class="text-text-main">Retiro de efectivo</strong> solo permiten <strong class="text-text-main">Efectivo</strong>.
+                                    </div>
+
+                                    <div class="p-3.5 rounded-xl bg-card border border-border/70">
+                                        <p class="font-bold text-text-main mb-1">3. Ventas, Pagos Combinados y Anulaciones</p>
+                                        Las ventas (incluso con <strong class="text-text-main">2 medios combinados</strong>) se asientan automáticamente en el libro. Si anulás una venta desde Ventas, el sistema genera el contra-asiento automático en Caja.
+                                    </div>
+
+                                    <div class="p-3.5 rounded-xl bg-card border border-border/70">
+                                        <p class="font-bold text-text-main mb-1">4. Permisos y Cierre Ciego</p>
+                                        Los retiros iguales o mayores a <strong class="text-text-main">$50.000</strong>, los contra-asientos y el cierre requieren <strong class="text-text-main">Administrador / Supervisión de Caja</strong>. Si al cerrar hay diferencia entre lo contado y lo esperado, el monto queda fijado y exige una observación obligatoria.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="px-6 md:px-8 py-4 bg-surface/50 border-t border-border flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <div class="flex items-center gap-2 text-xs text-text-muted">
+                                <span class="material-symbols-outlined text-[18px] text-primary">lightbulb</span>
+                                <span>Tip: Podés consultar el detalle y exportar el historial de cajas a Excel o PDF desde el mismo módulo.</span>
+                            </div>
+                            <a href="<?php echo BASE_URL; ?>/modules/caja/index.php" class="px-4 py-2 rounded-xl bg-primary text-white dark:text-[#111417] font-bold text-xs hover:bg-primary-hover transition-colors flex items-center gap-1.5">
+                                <span>Ir a Caja</span>
                                 <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                             </a>
                         </div>
@@ -846,12 +1153,12 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                         </a>
 
                         <?php // F3: Inventario ?>
-                        <a href="<?php echo BASE_URL; ?>/modules/inventory/index.php" class="flex items-center justify-between p-3 rounded-2xl bg-surface border border-border hover:border-secondary/50 transition-all group">
+                        <a href="<?php echo BASE_URL; ?>/modules/inventory/index.php" class="flex items-center justify-between p-3 rounded-2xl bg-surface border border-border hover:border-[#9db82a] transition-all group">
                             <div class="flex items-center gap-2.5">
-                                <span class="material-symbols-outlined text-text-muted group-hover:text-secondary transition-colors text-[18px]">search</span>
-                                <span class="text-xs font-medium text-text-main group-hover:text-secondary transition-colors">Buscar Repuesto / Stock</span>
+                                <span class="material-symbols-outlined text-text-muted group-hover:text-[#4d5e0a] transition-colors text-[18px]">search</span>
+                                <span class="text-xs font-medium text-text-main group-hover:text-[#4d5e0a] transition-colors">Buscar Repuesto / Stock</span>
                             </div>
-                            <kbd class="px-2 py-1 rounded-lg bg-card border border-border font-mono text-xs text-secondary font-bold shadow-sm">F3</kbd>
+                            <kbd class="px-2 py-1 rounded-lg bg-card border border-border font-mono text-xs text-[#4d5e0a] font-bold shadow-sm">F3</kbd>
                         </a>
 
                         <?php // F4: Taller ?>
@@ -877,7 +1184,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                 <?php // CARD: PREGUNTAS FRECUENTES (FAQ) ?>
                 <div class="rounded-3xl border border-border bg-card p-6 space-y-4 shadow-lg">
                     <div class="flex items-center gap-2.5">
-                        <div class="w-8 h-8 rounded-lg bg-secondary/10 border border-secondary/20 flex items-center justify-center text-secondary">
+                        <div class="w-8 h-8 rounded-lg bg-[#eef6cf] border border-[#c6e24a] flex items-center justify-center text-[#4d5e0a]">
                             <span class="material-symbols-outlined text-[18px]">quiz</span>
                         </div>
                         <h3 class="text-base font-display font-bold text-text-main">Preguntas Frecuentes</h3>
@@ -887,15 +1194,27 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                         <?php // FAQ 1 ?>
                         <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
                             <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
-                                <span>¿Cómo reimprimir una orden de taller?</span>
+                                <span>¿Cómo reimprimir la boleta con QR de un equipo?</span>
                                 <span class="material-symbols-outlined text-text-muted text-[18px] group-open:rotate-180 transition-transform">expand_more</span>
                             </summary>
                             <div class="p-3.5 pt-0 text-text-muted border-t border-border/40 mt-1 leading-relaxed">
-                                Ingresa al módulo <strong class="text-text-main">Taller</strong>, localiza el número de ticket o equipo del cliente y presiona el botón <span class="text-primary font-semibold">Imprimir Comprobante</span> para generar la orden en formato térmico o PDF.
+                                • <strong>Empleado:</strong> Ve a <strong class="text-text-main">Registrar Nuevo Equipo</strong> y en la tabla inferior <em>Historial de Equipos Registrados</em> pulsa en <span class="text-primary font-bold">Imprimir Recibo</span>.<br>
+                                • <strong>Taller / Admin:</strong> Desde la tabla principal del módulo <strong class="text-text-main">Taller</strong>, localiza la orden y haz clic en el botón <span class="text-text-main font-semibold">Recibo / QR</span> para abrir el comprobante con código QR y enlace directo a WhatsApp.
                             </div>
                         </details>
 
                         <?php // FAQ 2 ?>
+                        <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
+                            <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
+                                <span>¿Cómo accede el cliente al Seguimiento en Vivo?</span>
+                                <span class="material-symbols-outlined text-text-muted text-[18px] group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <div class="p-3.5 pt-0 text-text-muted border-t border-border/40 mt-1 leading-relaxed">
+                                El cliente solo debe <strong>escanear con la cámara de su celular el código QR</strong> impreso en su boleta o hacer clic en el link recibido por WhatsApp. Accede sin login a la línea de tiempo interactiva que se actualiza en tiempo real con cada diagnóstico y avance del taller.
+                            </div>
+                        </details>
+
+                        <?php // FAQ 3 ?>
                         <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
                             <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
                                 <span>¿Dónde se cobra una reparación finalizada?</span>
@@ -906,7 +1225,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             </div>
                         </details>
 
-                        <?php // FAQ 3 ?>
+                        <?php // FAQ 4 ?>
                         <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
                             <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
                                 <span>¿Qué hacer si un stock queda en nivel crítico?</span>
@@ -917,7 +1236,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             </div>
                         </details>
 
-                        <?php // FAQ 4 ?>
+                        <?php // FAQ 5 ?>
                         <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
                             <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
                                 <span>¿Cómo anular una venta y emitir nota de crédito?</span>
@@ -925,6 +1244,17 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                             </summary>
                             <div class="p-3.5 pt-0 text-text-muted border-t border-border/40 mt-1 leading-relaxed">
                                 Desde el listado de <strong class="text-text-main">Ventas</strong>, busca la transacción y pulsa el botón de anulación (requiere confirmación). Los artículos volverán al stock automáticamente y podrás descargar la <strong class="text-text-main">Nota de Crédito</strong> asociada.
+                            </div>
+                        </details>
+
+                        <?php // FAQ 6 ?>
+                        <details class="group rounded-2xl bg-surface border border-border overflow-hidden">
+                            <summary class="p-3.5 font-medium text-text-main flex items-center justify-between cursor-pointer list-none hover:text-primary transition-colors">
+                                <span>¿Cómo corrijo un movimiento en Caja y qué es el Cierre Ciego?</span>
+                                <span class="material-symbols-outlined text-text-muted text-[18px] group-open:rotate-180 transition-transform">expand_more</span>
+                            </summary>
+                            <div class="p-3.5 pt-0 text-text-muted border-t border-border/40 mt-1 leading-relaxed">
+                                Los movimientos de Caja no se borran ni editan: un supervisor debe pulsar <strong class="text-text-main">Contra-asiento</strong> e indicar el motivo. En el <strong class="text-text-main">Cierre Ciego</strong>, contás los billetes sin ver el saldo esperado; si hay diferencia al confirmar, deberás cargar una observación obligatoria.
                             </div>
                         </details>
                     </div>
@@ -941,14 +1271,14 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
 // Manejador interactivo de cambio de pestañas de ayuda
 function switchTab(tabId) {
     // 1. Actualizar estilos de los botones de pestañas
-    const tabs = ['inventario', 'taller', 'ventas', 'clientes', 'proveedores'];
+    const tabs = ['inventario', 'taller', 'ventas', 'clientes', 'proveedores', 'caja'];
     tabs.forEach(t => {
         const btn = document.getElementById('tab-btn-' + t);
         const pane = document.getElementById('tab-pane-' + t);
         
         if (t === tabId) {
             if (btn) {
-                btn.className = 'help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-primary/10 border border-primary/40 text-primary shadow-[0_0_12px_rgba(14,165,160,0.15)] font-display';
+                btn.className = 'help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-primary border border-primary text-white dark:text-[#111417] shadow-sm font-display';
             }
             if (pane) {
                 pane.classList.remove('hidden');
@@ -956,7 +1286,7 @@ function switchTab(tabId) {
             }
         } else {
             if (btn) {
-                btn.className = 'help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-border/80 font-display';
+                btn.className = 'help-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-200 whitespace-nowrap bg-card border border-border text-text-muted hover:text-text-main hover:border-primary font-display';
             }
             if (pane) {
                 pane.classList.remove('block');
@@ -990,7 +1320,7 @@ function toggleAccordion(id) {
 document.addEventListener('DOMContentLoaded', () => {
     try {
         const saved = sessionStorage.getItem('help_active_tab');
-        if (saved && ['inventario', 'taller', 'ventas', 'clientes', 'proveedores'].includes(saved)) {
+        if (saved && ['inventario', 'taller', 'ventas', 'clientes', 'proveedores', 'caja'].includes(saved)) {
             switchTab(saved);
         }
     } catch(e) {}

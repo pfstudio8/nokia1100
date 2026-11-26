@@ -21,6 +21,14 @@ function audit_log(
     ?string $desc         = null,
     ?string $username_intent = null
 ): void {
+    // La auditoría del sistema está dedicada exclusivamente a movimientos y eventos de inventario
+    $is_inventory = (
+        (is_string($tabla) && in_array(strtolower($tabla), ['inventario', 'producto'], true)) ||
+        str_starts_with($accion, 'INVENTORY_')
+    );
+    if (!$is_inventory) {
+        return; // No registrar inicios de sesión ni acciones ajenas al inventario
+    }
     // Solo IDs enteros positivos: 0, 'guest' o null se guardan como NULL (evita violar la FK hacia usuario)
     $id_user_int = (is_numeric($id_usuario) && (int)$id_usuario > 0) ? (int)$id_usuario : null;
     $ip         = $_SERVER['REMOTE_ADDR']     ?? 'unknown';

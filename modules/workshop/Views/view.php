@@ -35,18 +35,18 @@ if ($_SESSION['role'] === 'admin') {
                         </h2>
                         <?php 
                         $badgeClasses = [
-                            'Recibido' => 'bg-blue-500/10 text-blue-400 border-blue-500/30',
-                            'En diagnóstico' => 'bg-amber-500/10 text-amber-400 border-amber-500/30',
-                            'En reparación' => 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30',
-                            'Listo' => 'bg-primary/20 text-primary border-primary/40 shadow-sm shadow-primary/10',
-                            'Entregado' => 'bg-green-500/10 text-green-400 border-green-500/30',
-                            'Cancelado' => 'bg-red-500/10 text-red-400 border-red-500/30',
+                            'Recibido' => 'repair-status-recibido',
+                            'En diagnóstico' => 'repair-status-diagnostico',
+                            'En reparación' => 'repair-status-reparacion',
+                            'Listo' => 'repair-status-listo',
+                            'Entregado' => 'repair-status-entregado',
+                            'Cancelado' => 'repair-status-cancelado',
                         ];
                         $st = $repair['estado'];
-                        $bClass = $badgeClasses[$st] ?? 'bg-surface text-text-muted border-border';
+                        $bClass = 'repair-status ' . ($badgeClasses[$st] ?? 'repair-status-default');
                         ?>
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border uppercase tracking-wider <?php echo $bClass; ?>">
-                            <span class="w-1.5 h-1.5 rounded-full <?php echo ($st === 'Listo' || $st === 'Entregado') ? 'bg-primary' : 'bg-current'; ?>"></span>
+                            <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
                             <?php echo htmlspecialchars($st); ?>
                         </span>
                     </div>
@@ -57,14 +57,15 @@ if ($_SESSION['role'] === 'admin') {
                 </div>
             </div>
             
-            <div class="flex items-center gap-3">
-                <a href="index.php?action=print_receipt&id=<?php echo $id_reparacion; ?>" target="_blank" class="bg-surface hover:bg-surface-hover border border-border px-4 py-2.5 rounded-xl font-medium text-xs text-text-main transition-all flex items-center gap-2 shadow-sm">
-                    <span class="material-symbols-outlined text-[18px]">print</span> Comprobante Ingreso
+            <div class="flex items-center gap-2.5 flex-wrap">
+                <a href="index.php?action=print_receipt&id=<?php echo $id_reparacion; ?>" target="_blank" class="bg-primary hover:bg-primary-hover px-4 py-2.5 rounded-xl font-semibold text-xs text-background transition-all flex items-center gap-2 shadow-sm">
+                    <span class="material-symbols-outlined text-[18px]">print</span> Comprobante y QR
                 </a>
             </div>
         </div>
 
         <?php // Barra de acción según el estado ?>
+        <div id="repair_action_banner">
         <?php if ($repair['estado'] === 'Listo'): ?>
             <div class="glass-card rounded-xl px-4 py-2.5 mb-5 border border-primary/30 bg-primary/5 flex items-center justify-between gap-3 flex-wrap text-xs">
                 <div class="flex items-center gap-2 flex-wrap">
@@ -136,6 +137,7 @@ if ($_SESSION['role'] === 'admin') {
                 </div>
             </div>
         <?php endif; ?>
+        </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
@@ -229,7 +231,7 @@ if ($_SESSION['role'] === 'admin') {
                                                 <option value="Finalizado">Finalizado</option>
                                                 <option value="Otro">Otro</option>
                                             </select>
-                                            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-text-muted text-[18px]">expand_more</span>
+
                                         </div>
                                         <p class="text-[11px] text-text-muted mt-2 leading-relaxed">Clasifica la foto para el historial.</p>
                                     </div>
@@ -288,7 +290,9 @@ if ($_SESSION['role'] === 'admin') {
                     
                         if (file) {
                             if (!file.type.startsWith('image/')) {
-                                alert('Por favor, selecciona un archivo de imagen válido.');
+                                if (typeof showToast === 'function') {
+                                    showToast('Por favor, selecciona un archivo de imagen válido.', 'warning');
+                                }
                                 this.value = '';
                                 resetImagePreview();
                                 return;
@@ -356,8 +360,6 @@ if ($_SESSION['role'] === 'admin') {
                                 const errorMsg = params.get('error') || 'Ocurrió un error en el servidor.';
                                 if (typeof showToast === 'function') {
                                     showToast(errorMsg, 'error');
-                                } else {
-                                    alert(errorMsg);
                                 }
                                 btnSubmit.innerHTML = originalText;
                                 btnSubmit.disabled = false;
@@ -369,10 +371,13 @@ if ($_SESSION['role'] === 'admin') {
                             const parser = new DOMParser();
                             const doc = parser.parseFromString(html, 'text/html');
                             const newGrid = doc.getElementById('images_grid_container');
-                            if(newGrid) {
+                            if (newGrid) {
                                 document.getElementById('images_grid_container').innerHTML = newGrid.innerHTML;
-                            } else {
-                                if (typeof showToast === 'function') showToast('Error en el servidor al cargar la imagen.', 'error');
+                                if (typeof showToast === 'function') {
+                                    showToast('Foto subida correctamente', 'success');
+                                }
+                            } else if (typeof showToast === 'function') {
+                                showToast('Error en el servidor al cargar la imagen.', 'error');
                             }
                             
                             this.reset();
@@ -380,19 +385,12 @@ if ($_SESSION['role'] === 'admin') {
                             
                             btnSubmit.innerHTML = originalText;
                             btnSubmit.disabled = false;
-                            
-                            if (typeof showToast === 'function' && newGrid) {
-                                showToast('Foto subida correctamente', 'success');
-                            } else {
-                                alert('¡Foto subida correctamente!');
-                            }
                         })
                         .catch(error => {
+                            if (error === 'Backend error') return;
                             console.error('Error:', error);
                             if (typeof showToast === 'function') {
                                 showToast('Ocurrió un error al subir la imagen.', 'error');
-                            } else {
-                                alert('Ocurrió un error al subir la imagen.');
                             }
                             btnSubmit.innerHTML = originalText;
                             btnSubmit.disabled = false;
@@ -405,13 +403,17 @@ if ($_SESSION['role'] === 'admin') {
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <?php foreach($images as $img): ?>
                             <div class="relative group">
-                                <a href="<?php echo BASE_URL; ?>/assets/img/reparaciones/<?php echo htmlspecialchars($img['ruta_archivo']); ?>" target="_blank" class="block aspect-square overflow-hidden rounded-xl border border-border relative">
-                                    <img src="<?php echo BASE_URL; ?>/assets/img/reparaciones/<?php echo htmlspecialchars($img['ruta_archivo']); ?>" alt="Foto" class="w-full h-full object-cover hover:scale-110 transition-transform duration-300">
-                                </a>
-                                <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] p-1 text-center font-medium opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div class="block aspect-square overflow-hidden rounded-xl border border-border relative cursor-pointer bg-black/5 group/img" onclick="openWorkshopLightbox('<?php echo BASE_URL; ?>/assets/img/reparaciones/<?php echo htmlspecialchars($img['ruta_archivo']); ?>', 'Foto de Reparación · <?php echo htmlspecialchars($img['tipo']); ?>')" title="Hacé clic para ver la foto en pantalla completa">
+                                    <img src="<?php echo BASE_URL; ?>/assets/img/reparaciones/<?php echo htmlspecialchars($img['ruta_archivo']); ?>" alt="Foto" class="w-full h-full object-cover select-none transition-transform duration-300 group-hover/img:scale-105">
+                                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 text-white pointer-events-none z-10">
+                                        <span class="material-symbols-outlined text-[24px]">visibility</span>
+                                        <span class="text-[10px] font-medium tracking-wide uppercase">Ver foto</span>
+                                    </div>
+                                </div>
+                                <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-[10px] p-1 text-center font-medium opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                     <?php echo htmlspecialchars($img['tipo']); ?>
                                 </div>
-                                <form method="POST" action="" class="absolute top-2 right-2">
+                                <form method="POST" action="" class="absolute top-2 right-2 z-20">
                                     <input type="hidden" name="action" value="delete_image">
                                     <input type="hidden" name="id_imagen" value="<?php echo $img['id_imagen']; ?>">
                                     <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
@@ -426,6 +428,54 @@ if ($_SESSION['role'] === 'admin') {
                             <p class="text-sm text-text-muted text-center py-4">No hay fotos subidas para esta reparación.</p>
                         <?php endif; ?>
                     </div>
+
+                    <!-- Modal Lightbox para visualización de fotos en view.php -->
+                    <div id="viewPhotoLightbox" class="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md hidden opacity-0 transition-opacity duration-200">
+                        <div class="relative max-w-4xl max-h-[90vh] flex flex-col items-center">
+                            <button type="button" onclick="closeWorkshopLightbox()" class="absolute -top-10 right-0 text-white/80 hover:text-white transition-colors flex items-center gap-1 font-mono text-xs cursor-pointer">
+                                <span>CERRAR</span>
+                                <span class="material-symbols-outlined text-[20px]">close</span>
+                            </button>
+                            <div class="overflow-hidden rounded-xl border border-white/20 shadow-2xl bg-black flex items-center justify-center">
+                                <img id="viewLightboxImg" src="" alt="Foto ampliada" class="max-w-full max-h-[80vh] object-contain select-none">
+                            </div>
+                            <p id="viewLightboxCaption" class="text-xs text-white/70 font-mono mt-3 text-center"></p>
+                        </div>
+                    </div>
+
+                    <script>
+                    function openWorkshopLightbox(src, caption) {
+                        const modal = document.getElementById('viewPhotoLightbox');
+                        const img = document.getElementById('viewLightboxImg');
+                        const cap = document.getElementById('viewLightboxCaption');
+                        if (!modal || !img) return;
+                        img.src = src;
+                        if (cap) cap.textContent = caption || '';
+                        modal.classList.remove('hidden');
+                        setTimeout(() => modal.classList.remove('opacity-0'), 10);
+                    }
+
+                    function closeWorkshopLightbox() {
+                        const modal = document.getElementById('viewPhotoLightbox');
+                        const img = document.getElementById('viewLightboxImg');
+                        if (!modal) return;
+                        modal.classList.add('opacity-0');
+                        setTimeout(() => {
+                            modal.classList.add('hidden');
+                            if (img) img.src = '';
+                        }, 200);
+                    }
+
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'Escape') closeWorkshopLightbox();
+                    });
+                    const viewModal = document.getElementById('viewPhotoLightbox');
+                    if (viewModal) {
+                        viewModal.addEventListener('click', (e) => {
+                            if (e.target === viewModal) closeWorkshopLightbox();
+                        });
+                    }
+                    </script>
                 </div>
 
                 <?php // REPUESTOS ?>
@@ -446,9 +496,41 @@ if ($_SESSION['role'] === 'admin') {
                             <input type="hidden" name="action" value="add_repuesto">
                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
                             <select name="id_producto" required class="flex-1 bg-surface border border-border px-3 py-2 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
-                                <option value="">Seleccionar repuesto del inventario...</option>
-                                <?php foreach($productos_opt as $po): ?>
-                                    <option value="<?php echo $po['id_producto']; ?>"><?php echo htmlspecialchars($po['nombre']); ?> - $<?php echo number_format($po['precio'],2); ?> (Stock: <?php echo $po['cantidad']; ?>)</option>
+                                <option value="">Seleccionar repuesto o pieza del inventario...</option>
+                                <?php 
+                                $grouped_prods = [];
+                                foreach ($productos_opt as $po) {
+                                    $catKey = !empty($po['categoria']) ? trim($po['categoria']) : 'Otros';
+                                    $grouped_prods[$catKey][] = $po;
+                                }
+                                uksort($grouped_prods, function($a, $b) {
+                                    if ($a === 'Repuestos') return -1;
+                                    if ($b === 'Repuestos') return 1;
+                                    return strcasecmp($a, $b);
+                                });
+                                foreach ($grouped_prods as $catTitle => $items): 
+                                ?>
+                                    <optgroup label="── <?php echo htmlspecialchars($catTitle); ?> ──">
+                                        <?php foreach ($items as $po): 
+                                            $marca = trim($po['marca'] ?? '');
+                                            $modelo = trim($po['modelo'] ?? '');
+                                            $marcaModelo = trim($marca . ' ' . $modelo);
+                                            $tipoRep = trim($po['tipo_repuesto'] ?? '');
+                                            
+                                            $labelParts = [];
+                                            $labelParts[] = '[' . $catTitle . ']';
+                                            $labelParts[] = trim($po['nombre'] ?? '');
+                                            if ($marcaModelo !== '') {
+                                                $labelParts[] = '· ' . $marcaModelo;
+                                            }
+                                            if ($tipoRep !== '' && stripos($po['nombre'], $tipoRep) === false) {
+                                                $labelParts[] = '(' . $tipoRep . ')';
+                                            }
+                                            $labelTxt = implode(' ', $labelParts) . ' — $' . number_format($po['precio'], 2) . ' (Stock: ' . $po['cantidad'] . ')';
+                                        ?>
+                                            <option value="<?php echo (int)$po['id_producto']; ?>"><?php echo htmlspecialchars($labelTxt); ?></option>
+                                        <?php endforeach; ?>
+                                    </optgroup>
                                 <?php endforeach; ?>
                             </select>
                             <button type="submit" class="bg-surface hover:bg-surface-hover border border-border px-4 py-2 rounded-lg text-sm font-medium transition-colors text-text-main whitespace-nowrap">Asignar Pieza</button>
@@ -469,7 +551,23 @@ if ($_SESSION['role'] === 'admin') {
                                 <?php if(count($repuestos)>0): ?>
                                     <?php foreach($repuestos as $rep): ?>
                                     <tr class="hover:bg-surface/30 transition-colors">
-                                        <td class="p-3"><?php echo htmlspecialchars($rep['nombre']); ?></td>
+                                        <td class="p-3">
+                                            <div class="font-medium text-text-main"><?php echo htmlspecialchars($rep['nombre']); ?></div>
+                                            <?php 
+                                            $marcaModeloRep = trim(($rep['marca'] ?? '') . ' ' . ($rep['modelo'] ?? ''));
+                                            $catRep = trim($rep['categoria'] ?? '');
+                                            if ($marcaModeloRep !== '' || $catRep !== ''): 
+                                            ?>
+                                                <div class="text-xs text-text-muted flex items-center gap-1.5 mt-0.5">
+                                                    <?php if ($catRep !== ''): ?>
+                                                        <span class="inline-block px-1.5 py-0.2 rounded bg-surface-hover text-[10px] uppercase font-mono text-text-muted border border-border/40"><?php echo htmlspecialchars($catRep); ?></span>
+                                                    <?php endif; ?>
+                                                    <?php if ($marcaModeloRep !== ''): ?>
+                                                        <span><?php echo htmlspecialchars($marcaModeloRep); ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                            <?php endif; ?>
+                                        </td>
                                         <td class="p-3 text-center"><?php echo $rep['cantidad']; ?></td>
                                         <td class="p-3 text-right">$<?php echo number_format($rep['precio_unitario'], 2); ?></td>
                                         <td class="p-3 text-center">
@@ -520,12 +618,9 @@ if ($_SESSION['role'] === 'admin') {
                             
                             const actionInput = this.querySelector('input[name="action"]');
                             if (actionInput && actionInput.value === 'remove_repuesto') {
-                                if (typeof showConfirmModal === 'function') {
-                                    const confirmed = await showConfirmModal('Quitar Repuesto', '¿Seguro que deseas quitar este repuesto de la orden?', 'Sí, quitar', 'Cancelar', true);
-                                    if (!confirmed) return;
-                                } else {
-                                    if (!confirm('¿Quitar este repuesto?')) return;
-                                }
+                                if (typeof showConfirmModal !== 'function') return;
+                                const confirmed = await showConfirmModal('Quitar Repuesto', '¿Seguro que deseas quitar este repuesto de la orden?', 'Sí, quitar', 'Cancelar', true);
+                                if (!confirmed) return;
                             }
 
                             const formData = new FormData(this);
@@ -540,17 +635,19 @@ if ($_SESSION['role'] === 'admin') {
                                 body: formData
                             })
                             .then(response => {
-                                if (response.url.includes('&error=')) {
-                                    const params = new URLSearchParams(response.url.split('?')[1]);
-                                    const errorMsg = params.get('error') || 'Ocurrió un error en el servidor.';
-                                    if (typeof showToast === 'function') {
-                                        showToast(errorMsg, 'error');
-                                    } else {
-                                        alert(errorMsg);
+                                try {
+                                    const urlObj = new URL(response.url, window.location.origin);
+                                    const errorMsg = urlObj.searchParams.get('error');
+                                    if (errorMsg) {
+                                        if (typeof showToast === 'function') {
+                                            showToast(decodeURIComponent(errorMsg), 'error');
+                                        }
+                                        btnSubmit.innerHTML = originalHtml;
+                                        btnSubmit.disabled = false;
+                                        return Promise.reject('Backend error');
                                     }
-                                    btnSubmit.innerHTML = originalHtml;
-                                    btnSubmit.disabled = false;
-                                    return Promise.reject('Backend error');
+                                } catch (e) {
+                                    // fallback
                                 }
                                 return response.text();
                             })
@@ -558,30 +655,34 @@ if ($_SESSION['role'] === 'admin') {
                                 const parser = new DOMParser();
                                 const doc = parser.parseFromString(html, 'text/html');
                                 const newContainer = doc.getElementById('repuestos_container');
+                                const newBanner = doc.getElementById('repair_action_banner');
+                                const newModal = doc.getElementById('modal-send-to-cashier');
                                 
-                                if(newContainer) {
+                                if (newContainer) {
                                     document.getElementById('repuestos_container').innerHTML = newContainer.innerHTML;
-                                    attachRepuestoAjax(); // Re-attach listeners to new elements
-                                } else {
-                                    if (typeof showToast === 'function') showToast('Error en el servidor al cargar los datos.', 'error');
-                                    btnSubmit.innerHTML = originalHtml;
-                                    btnSubmit.disabled = false;
-                                }
-                                
-                                if (typeof showToast === 'function' && newContainer) {
-                                    if (actionInput && actionInput.value === 'remove_repuesto') {
-                                        showToast('Repuesto devuelto al inventario', 'info');
-                                    } else {
-                                        showToast('Repuesto asignado correctamente', 'success');
+                                    if (newBanner && document.getElementById('repair_action_banner')) {
+                                        document.getElementById('repair_action_banner').innerHTML = newBanner.innerHTML;
                                     }
+                                    if (newModal && document.getElementById('modal-send-to-cashier')) {
+                                        document.getElementById('modal-send-to-cashier').innerHTML = newModal.innerHTML;
+                                    }
+                                    attachRepuestoAjax(); // Re-attach listeners to new elements
+                                    if (typeof showToast === 'function') {
+                                        if (actionInput && actionInput.value === 'remove_repuesto') {
+                                            showToast('Repuesto devuelto al inventario', 'info');
+                                        } else {
+                                            showToast('Repuesto asignado correctamente', 'success');
+                                        }
+                                    }
+                                } else {
+                                    window.location.reload();
                                 }
                             })
                             .catch(error => {
+                                if (error === 'Backend error') return;
                                 console.error('Error:', error);
                                 if (typeof showToast === 'function') {
                                     showToast('Ocurrió un error al procesar el repuesto.', 'error');
-                                } else {
-                                    alert('Ocurrió un error al procesar el repuesto.');
                                 }
                                 btnSubmit.innerHTML = originalHtml;
                                 btnSubmit.disabled = false;
@@ -637,7 +738,7 @@ if ($_SESSION['role'] === 'admin') {
                             <label class="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">Presupuesto / Mano de Obra ($)</label>
                             <div class="relative">
                                 <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-text-muted text-sm font-bold">$</span>
-                                <input type="number" step="0.01" min="0" name="presupuesto" id="presupuesto_input" value="<?php echo $repair['presupuesto']; ?>" class="w-full bg-surface border border-border pl-8 pr-3.5 py-2.5 rounded-xl text-sm font-medium text-text-main focus:outline-none focus:border-primary transition-colors">
+                                <input type="number" step="0.01" min="0" name="presupuesto" id="presupuesto_input" value="<?php echo $repair['presupuesto']; ?>" onwheel="this.blur()" class="w-full bg-surface border border-border pl-8 pr-3.5 py-2.5 rounded-xl text-sm font-medium text-text-main focus:outline-none focus:border-primary transition-colors">
                             </div>
                             <p class="text-[11px] text-text-muted mt-1.5">Mano de obra o servicio base. Se conservará al mandar a caja.</p>
                         </div>
@@ -749,7 +850,7 @@ if ($_SESSION['role'] === 'admin') {
 
             <div>
                 <label class="block text-xs font-semibold text-text-muted uppercase tracking-wider mb-1">Presupuesto / Mano de Obra Base ($)</label>
-                <input type="number" step="0.01" min="0" name="presupuesto" id="cashier_presupuesto" value="<?php echo $repair['presupuesto']; ?>" required oninput="recalcCashierTotal(<?php echo floatval($repair['costo_total']); ?>)" class="w-full bg-surface border border-border px-3 py-2.5 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
+                <input type="number" step="0.01" min="0" name="presupuesto" id="cashier_presupuesto" value="<?php echo $repair['presupuesto']; ?>" required oninput="recalcCashierTotal(<?php echo floatval($repair['costo_total']); ?>)" onwheel="this.blur()" class="w-full bg-surface border border-border px-3 py-2.5 rounded-lg text-sm text-text-main focus:outline-none focus:border-primary">
                 <span class="text-[11px] text-text-muted mt-0.5 block">Se conserva el presupuesto fijado previamente en la orden. Podés editarlo aquí si lo deseas antes de enviarlo.</span>
             </div>
 

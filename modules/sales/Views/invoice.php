@@ -5,6 +5,7 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Factura #TX-<?php echo $venta['id_venta']; ?> - NOKIA 1100</title>
     <?php // Incluir iconos Material Symbols ?>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
@@ -36,14 +37,15 @@
             <div class="invoice-details">
                 <div class="details-block">
                     <h3>Facturar A</h3>
-                    <p><strong>Cliente:</strong> Consumidor Final</p>
+                    <p><strong>Cliente:</strong> <?php echo htmlspecialchars($venta['cliente_nombre'] ?? 'Consumidor Final'); ?></p>
+                    <?php if (!empty($venta['cliente_telefono'])): ?><p><strong>Teléfono:</strong> <?php echo htmlspecialchars($venta['cliente_telefono']); ?></p><?php endif; ?>
                     <p><strong>Condición Venta:</strong> Consumidor Final</p>
                 </div>
                 <div class="details-block text-right">
                     <h3>Detalles de Emisión</h3>
                     <p><strong>Fecha:</strong> <?php echo date('d/m/Y', strtotime($venta['fecha'])); ?></p>
                     <p><strong>Hora:</strong> <?php echo date('H:i', strtotime($venta['fecha'])); ?></p>
-                    <p><strong>Método de Pago:</strong> <span style="text-transform: uppercase;"><?php echo htmlspecialchars($venta['metodo_de_pago']); ?></span></p>
+                    <p><strong>Método de Pago:</strong> <span style="text-transform: uppercase;"><?php echo htmlspecialchars($venta['metodo_de_pago_detalle'] ?? $venta['metodo_de_pago']); ?></span></p>
                 </div>
             </div>
 
@@ -84,6 +86,18 @@
                     </div>
                 </div>
             </div>
+
+            <?php if (!empty($venta['pagos']) && count($venta['pagos']) > 1): ?>
+            <div class="description-section" style="margin-top: 16px; padding: 12px 15px; background: #f1f5f9; border-radius: 8px; border-left: 4px solid #0f172a;">
+                <h4 style="margin: 0 0 6px 0; font-size: 11px; color: #334155; text-transform: uppercase;">Desglose de Pago Combinado</h4>
+                <?php foreach ($venta['pagos'] as $pItem): ?>
+                <p style="margin: 2px 0; font-size: 13px; color: #1e293b; display: flex; justify-content: space-between;">
+                    <span><strong><?php echo htmlspecialchars($pItem['metodo_pago']); ?>:</strong></span>
+                    <span>$<?php echo number_format((float)$pItem['monto'], 2); ?></span>
+                </p>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
 
             <?php if (!empty($venta['descripcion'])): ?>
             <div class="description-section" style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid #6c757d;">

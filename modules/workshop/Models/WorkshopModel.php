@@ -26,9 +26,13 @@ class WorkshopModel extends BaseModel
 
         $where_clause = count($where_parts) > 0 ? " WHERE " . implode(" AND ", $where_parts) : "";
 
-        $sql = "SELECT r.id_reparacion, r.codigo_orden, c.nombre AS cliente_nombre, r.equipo_marca, r.equipo_modelo, r.estado, r.fecha_ingreso, r.presupuesto, r.costo_total 
+        $sql = "SELECT r.id_reparacion, r.codigo_orden, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
+                       r.equipo_marca, r.equipo_modelo, r.equipo_imei, r.falla_declarada,
+                       r.estado, r.fecha_ingreso, r.presupuesto, r.costo_total,
+                       COALESCE(u.nombre_usuario, 'Empleado') AS operario_nombre
                 FROM reparacion r
                 LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
+                LEFT JOIN usuario u ON r.id_usuario_recibe = u.id_usuario
                 $where_clause 
                 ORDER BY r.fecha_ingreso DESC
                 LIMIT ? OFFSET ?";
@@ -121,6 +125,37 @@ class WorkshopModel extends BaseModel
             return (int)$row['total'];
         }
         return 0;
+    }
+
+    public function get_received_repairs_count(): int
+    {
+        $sql = "SELECT COUNT(*) as total FROM reparacion WHERE estado = 'Recibido'";
+        $res = $this->conn->query($sql);
+        if ($res && $row = $res->fetch_assoc()) {
+            return (int)$row['total'];
+        }
+        return 0;
+    }
+
+    public function get_received_repairs(): array
+    {
+        $sql = "SELECT r.id_reparacion, r.codigo_orden, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono,
+                       r.equipo_marca, r.equipo_modelo, r.equipo_imei, r.falla_declarada, r.observaciones,
+                       r.presupuesto, r.fecha_ingreso, r.id_usuario_recibe,
+                       COALESCE(u.nombre_usuario, 'Empleado') AS operario_nombre
+                FROM reparacion r
+                LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
+                LEFT JOIN usuario u ON r.id_usuario_recibe = u.id_usuario
+                WHERE r.estado = 'Recibido'
+                ORDER BY r.fecha_ingreso DESC";
+        $result = $this->conn->query($sql);
+        $repairs = [];
+        if ($result && $result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
+                $repairs[] = $row;
+            }
+        }
+        return $repairs;
     }
 
     public function send_repair_to_cashier(int $id_reparacion, float $presupuesto, string $nota, int $id_usuario): bool
@@ -255,10 +290,15 @@ class WorkshopModel extends BaseModel
 
     public function find_repair_by_code(string $code)
     {
-        $sql = "SELECT codigo_orden, equipo_marca, equipo_modelo, estado FROM reparacion WHERE codigo_orden = ?";
+        $cleanCode = ltrim(trim($code), '#');
+        $sql = "SELECT id_reparacion, codigo_orden, equipo_marca, equipo_modelo, equipo_imei,
+                       falla_declarada, observaciones, presupuesto, costo_total, estado,
+                       fecha_ingreso, fecha_entrega
+                FROM reparacion
+                WHERE codigo_orden = ?";
         
         $stmt = $this->conn->prepare($sql);
-        $stmt->bind_param("s", $code);
+        $stmt->bind_param("s", $cleanCode);
         $stmt->execute();
         $result = $stmt->get_result();
         $data = ($result && $result->num_rows > 0) ? $result->fetch_assoc() : null;
@@ -269,9 +309,14 @@ class WorkshopModel extends BaseModel
     public function get_repair_repuestos(int $id_reparacion)
     {
         $id_reparacion = intval($id_reparacion);
-        $sql = "SELECT rr.*, p.nombre 
+        $sql = "SELECT rr.*, p.nombre,
+                       COALESCE(d.marca, '') AS marca,
+                       COALESCE(d.modelo, '') AS modelo,
+                       COALESCE(d.categoria, '') AS categoria,
+                       COALESCE(d.tipo_repuesto, '') AS tipo_repuesto
                 FROM reparacion_repuesto rr 
                 JOIN producto p ON rr.id_producto = p.id_producto 
+                LEFT JOIN producto_detalle d ON p.id_producto = d.id_producto
                 WHERE rr.id_reparacion = ?";
         
         $stmt = $this->conn->prepare($sql);
@@ -310,14 +355,19 @@ class WorkshopModel extends BaseModel
         $stmt->close();
         return $historial;
     }
-
-    public function get_active_products_in_stock()
+public function get_active_products_in_stock()
     {
-        $sql = "SELECT p.id_producto, p.nombre, p.precio, i.cantidad 
+        $sql = "SELECT p.id_producto, p.nombre, p.precio, i.cantidad,
+                       COALESCE(d.marca, '') AS marca,
+                       COALESCE(d.modelo, '') AS modelo,
+                       COALESCE(d.categoria, '') AS categoria,
+                       COALESCE(d.tipo_repuesto, '') AS tipo_repuesto,
+                       COALESCE(d.codigo, '') AS codigo
                 FROM producto p 
                 JOIN inventario i ON p.id_producto = i.id_producto 
-                WHERE p.is_active = 1 AND i.cantidad > 0 AND " . ServiceProduct::excludeSql('p') . "
-                ORDER BY p.nombre ASC";
+                INNER JOIN producto_detalle d ON p.id_producto = d.id_producto
+                WHERE p.is_active = 1 AND i.cantidad > 0 AND " . ServiceProduct::excludeSql('p', 'd') . "
+                ORDER BY (d.categoria = 'Repuestos') DESC, d.categoria ASC, p.nombre ASC, d.marca ASC, d.modelo ASC";
         $result = $this->conn->query($sql);
         $products = [];
         if ($result) {
@@ -345,48 +395,80 @@ class WorkshopModel extends BaseModel
     {
         $id_cliente_existente = intval($id_cliente_existente);
         $user_id = intval($user_id);
-        $codigo_orden = date('ym') . mt_rand(1000, 9999);
+        $budget = max(0.0, round((float)$budget, 2));
 
-        if ($id_cliente_existente > 0) {
-            $id_cliente = $id_cliente_existente;
-        } else {
-            // Buscar cliente existente o crear uno nuevo con sentencia preparada
-            $stmt = $this->conn->prepare("SELECT id_cliente FROM cliente WHERE nombre = ? AND telefono = ? LIMIT 1");
-            $stmt->bind_param("ss", $client_name, $client_phone);
-            $stmt->execute();
-            $res_client = $stmt->get_result();
-            if ($res_client && $row = $res_client->fetch_assoc()) {
-                $id_cliente = (int)$row['id_cliente'];
-            } else {
-                $stmt_insert = $this->conn->prepare("INSERT INTO cliente (nombre, telefono, email) VALUES (?, ?, ?)");
-                $stmt_insert->bind_param("sss", $client_name, $client_phone, $client_email);
-                if (!$stmt_insert->execute()) {
-                    throw new Exception("Error al registrar cliente: " . $stmt_insert->error);
+        $this->conn->begin_transaction();
+        try {
+            // Generar código de orden único verificando colisión en BD
+            $codigo_orden = '';
+            for ($attempt = 0; $attempt < 15; $attempt++) {
+                $candidate = date('ym') . random_int(1000, 9999);
+                $stmtChk = $this->conn->prepare("SELECT id_reparacion FROM reparacion WHERE codigo_orden = ? LIMIT 1");
+                $stmtChk->bind_param("s", $candidate);
+                $stmtChk->execute();
+                $exists = $stmtChk->get_result()->num_rows > 0;
+                $stmtChk->close();
+                if (!$exists) {
+                    $codigo_orden = $candidate;
+                    break;
                 }
-                $id_cliente = (int)$this->conn->insert_id;
-                $stmt_insert->close();
             }
-            $stmt->close();
-        }
+            if ($codigo_orden === '') {
+                $codigo_orden = date('ym') . substr((string)time(), -4) . random_int(10, 99);
+            }
 
-        $stmt_rep = $this->conn->prepare("INSERT INTO reparacion (codigo_orden, id_cliente, equipo_marca, equipo_modelo, equipo_imei, falla_declarada, observaciones, presupuesto, id_usuario_recibe) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-        $stmt_rep->bind_param("sisssssdi", $codigo_orden, $id_cliente, $brand, $model, $imei, $failure, $notes, $budget, $user_id);
+            if ($id_cliente_existente > 0) {
+                $id_cliente = $id_cliente_existente;
+            } else {
+                // Buscar cliente existente o crear uno nuevo con sentencia preparada
+                $stmt = $this->conn->prepare("SELECT id_cliente FROM cliente WHERE nombre = ? AND telefono = ? LIMIT 1");
+                $stmt->bind_param("ss", $client_name, $client_phone);
+                $stmt->execute();
+                $res_client = $stmt->get_result();
+                if ($res_client && $row = $res_client->fetch_assoc()) {
+                    $id_cliente = (int)$row['id_cliente'];
+                    $stmt->close();
+                } else {
+                    $stmt->close();
+                    $stmt_insert = $this->conn->prepare("INSERT INTO cliente (nombre, telefono, email) VALUES (?, ?, ?)");
+                    $stmt_insert->bind_param("sss", $client_name, $client_phone, $client_email);
+                    if (!$stmt_insert->execute()) {
+                        $err = $stmt_insert->error;
+                        $stmt_insert->close();
+                        throw new Exception("Error al registrar cliente: " . $err);
+                    }
+                    $id_cliente = (int)$this->conn->insert_id;
+                    $stmt_insert->close();
+                }
+            }
 
-        if (!$stmt_rep->execute()) {
-            $err = $stmt_rep->error;
+            $stmt_rep = $this->conn->prepare("INSERT INTO reparacion (codigo_orden, id_cliente, equipo_marca, equipo_modelo, equipo_imei, falla_declarada, observaciones, presupuesto, id_usuario_recibe) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt_rep->bind_param("sisssssdi", $codigo_orden, $id_cliente, $brand, $model, $imei, $failure, $notes, $budget, $user_id);
+
+            if (!$stmt_rep->execute()) {
+                $err = $stmt_rep->error;
+                $stmt_rep->close();
+                throw new Exception("Error al crear la orden: " . $err);
+            }
+            $id_reparacion = (int)$this->conn->insert_id;
             $stmt_rep->close();
-            throw new Exception("Error al crear la orden: " . $err);
+
+            // Historial inicial preparado
+            $stmt_hist = $this->conn->prepare("INSERT INTO reparacion_historial (id_reparacion, estado_nuevo, nota, id_usuario) VALUES (?, 'Recibido', 'Ingreso inicial del equipo', ?)");
+            $stmt_hist->bind_param("ii", $id_reparacion, $user_id);
+            if (!$stmt_hist->execute()) {
+                $err = $stmt_hist->error;
+                $stmt_hist->close();
+                throw new Exception("Error al registrar historial inicial: " . $err);
+            }
+            $stmt_hist->close();
+
+            $this->conn->commit();
+            return $id_reparacion;
+        } catch (Throwable $e) {
+            $this->conn->rollback();
+            throw $e;
         }
-        $id_reparacion = (int)$this->conn->insert_id;
-        $stmt_rep->close();
-
-        // Historial inicial preparado
-        $stmt_hist = $this->conn->prepare("INSERT INTO reparacion_historial (id_reparacion, estado_nuevo, nota, id_usuario) VALUES (?, 'Recibido', 'Ingreso inicial del equipo', ?)");
-        $stmt_hist->bind_param("ii", $id_reparacion, $user_id);
-        $stmt_hist->execute();
-        $stmt_hist->close();
-
-        return $id_reparacion;
     }
 
     public function update_repair_status_and_budget(int $id_reparacion, string $status, float $budget, string $note, int $user_id)
@@ -394,47 +476,61 @@ class WorkshopModel extends BaseModel
         $id_reparacion = intval($id_reparacion);
         $user_id = intval($user_id);
 
-        $stmt_old = $this->conn->prepare("SELECT estado, presupuesto FROM reparacion WHERE id_reparacion = ?");
-        $stmt_old->bind_param("i", $id_reparacion);
-        $stmt_old->execute();
-        $res_old = $stmt_old->get_result();
-        if (!$res_old || $res_old->num_rows === 0) {
+        $allowedStatuses = ['Recibido', 'En diagnóstico', 'En reparación', 'Listo', 'Cancelado'];
+        if (!in_array($status, $allowedStatuses, true)) {
+            throw new Exception("Estado de reparación no válido o gestionado exclusivamente por Caja.");
+        }
+
+        $this->conn->begin_transaction();
+        try {
+            $stmt_old = $this->conn->prepare("SELECT estado, presupuesto FROM reparacion WHERE id_reparacion = ? FOR UPDATE");
+            $stmt_old->bind_param("i", $id_reparacion);
+            $stmt_old->execute();
+            $res_old = $stmt_old->get_result();
+            if (!$res_old || $res_old->num_rows === 0) {
+                $stmt_old->close();
+                throw new Exception("Orden de reparación no encontrada");
+            }
+            $row_old = $res_old->fetch_assoc();
+            $old_state = $row_old['estado'];
+            $prev_budget = floatval($row_old['presupuesto'] ?? 0);
             $stmt_old->close();
-            throw new Exception("Orden de reparación no encontrada");
-        }
-        $row_old = $res_old->fetch_assoc();
-        $old_state = $row_old['estado'];
-        $prev_budget = floatval($row_old['presupuesto'] ?? 0);
-        $stmt_old->close();
 
-        // Preservar el presupuesto previo si el valor enviado viene en 0 o vacío
-        $budget_val = round((float)$budget, 2);
-        if ($budget_val <= 0 && $prev_budget > 0) {
-            $budget_val = $prev_budget;
-        }
+            if ($old_state === 'Entregado' || $old_state === 'Cancelado') {
+                throw new Exception("Esta orden ya fue cerrada ($old_state) y no puede reabrirse ni modificarse.");
+            }
 
-        $sql_update = "UPDATE reparacion SET estado = ?, presupuesto = ?";
-        if ($status === 'Entregado' && $old_state !== 'Entregado') {
-            $sql_update .= ", fecha_entrega = CURRENT_TIMESTAMP";
-        }
-        $sql_update .= " WHERE id_reparacion = ?";
+            // Preservar el presupuesto previo si el valor enviado viene en 0 o vacío
+            $budget_val = round((float)$budget, 2);
+            if ($budget_val <= 0 && $prev_budget > 0) {
+                $budget_val = $prev_budget;
+            }
+            if ($budget_val < 0) {
+                throw new Exception("El presupuesto no puede ser negativo.");
+            }
 
-        $stmt_update = $this->conn->prepare($sql_update);
-        $stmt_update->bind_param("sdi", $status, $budget_val, $id_reparacion);
-        
-        if ($stmt_update->execute()) {
+            $stmt_update = $this->conn->prepare("UPDATE reparacion SET estado = ?, presupuesto = ? WHERE id_reparacion = ?");
+            $stmt_update->bind_param("sdi", $status, $budget_val, $id_reparacion);
+
+            if (!$stmt_update->execute()) {
+                $err = $stmt_update->error;
+                $stmt_update->close();
+                throw new Exception("Error al actualizar la orden: " . $err);
+            }
             $stmt_update->close();
+
             if ($old_state !== $status || !empty($note)) {
                 $stmt_hist = $this->conn->prepare("INSERT INTO reparacion_historial (id_reparacion, estado_anterior, estado_nuevo, nota, id_usuario) VALUES (?, ?, ?, ?, ?)");
                 $stmt_hist->bind_param("isssi", $id_reparacion, $old_state, $status, $note, $user_id);
                 $stmt_hist->execute();
                 $stmt_hist->close();
             }
+
+            $this->conn->commit();
             return true;
-        } else {
-            $err = $stmt_update->error;
-            $stmt_update->close();
-            throw new Exception("Error al actualizar la orden: " . $err);
+        } catch (Throwable $e) {
+            $this->conn->rollback();
+            throw $e;
         }
     }
 
@@ -568,8 +664,11 @@ class WorkshopModel extends BaseModel
         }
     }
 
-    public function charge_and_deliver_repair(int $id_reparacion, string $metodo_pago, int $id_usuario): int
+    public function charge_and_deliver_repair(int $id_reparacion, string|array $metodo_o_pagos, int $id_usuario): int
     {
+        require_once __DIR__ . '/../../sales/Models/SalesModel.php';
+        require_once __DIR__ . '/../../caja/Models/CajaModel.php';
+
         $id_reparacion = intval($id_reparacion);
         $id_usuario = intval($id_usuario);
 
@@ -593,8 +692,16 @@ class WorkshopModel extends BaseModel
 
             $presupuesto_base = floatval($repair['presupuesto']);
             $costo_repuestos = floatval($repair['costo_total'] ?? 0);
-            $monto_total = $presupuesto_base + $costo_repuestos;
+            $monto_total = round($presupuesto_base + $costo_repuestos, 2);
             $old_state = $repair['estado'];
+
+            $pagos_raw = is_array($metodo_o_pagos) ? $metodo_o_pagos : [];
+            $metodo_fallback = is_string($metodo_o_pagos) ? $metodo_o_pagos : '';
+            $pago_info = SalesModel::validate_and_normalize_payments($pagos_raw, $metodo_fallback, $monto_total);
+            $metodo_pago_resumen = $pago_info['metodo_resumen'];
+            $pagos_validados = $pago_info['pagos'];
+            $monto_efectivo = $pago_info['monto_efectivo'];
+            $es_combinado = $pago_info['es_combinado'];
 
             // 2. Actualizar estado a Entregado con fecha de entrega
             $stmt_upd = $this->conn->prepare("UPDATE reparacion SET estado = 'Entregado', fecha_entrega = CURRENT_TIMESTAMP WHERE id_reparacion = ?");
@@ -605,7 +712,7 @@ class WorkshopModel extends BaseModel
             $stmt_upd->close();
 
             // 3. Registrar en historial
-            $nota = 'Cobrado y entregado desde Ventas';
+            $nota = 'Cobrado y entregado desde Ventas (' . $metodo_pago_resumen . ')';
             $estado_nuevo = 'Entregado';
             $stmt_hist = $this->conn->prepare("INSERT INTO reparacion_historial (id_reparacion, estado_anterior, estado_nuevo, nota, id_usuario) VALUES (?, ?, ?, ?, ?)");
             $stmt_hist->bind_param("isssi", $id_reparacion, $old_state, $estado_nuevo, $nota, $id_usuario);
@@ -616,20 +723,47 @@ class WorkshopModel extends BaseModel
             $descripcion = "Cobro de Reparación #" . $repair['codigo_orden'] . " - " . $repair['equipo_marca'] . " " . $repair['equipo_modelo'];
             $fecha = date('Y-m-d H:i:s');
             $stmt_vta = $this->conn->prepare("INSERT INTO venta (fecha, total, metodo_de_pago, id_usuario, descripcion) VALUES (?, ?, ?, ?, ?)");
-            $stmt_vta->bind_param("sdsis", $fecha, $monto_total, $metodo_pago, $id_usuario, $descripcion);
+            $stmt_vta->bind_param("sdsis", $fecha, $monto_total, $metodo_pago_resumen, $id_usuario, $descripcion);
             if (!$stmt_vta->execute()) {
                 throw new Exception("Error al registrar la venta del cobro.");
             }
             $id_venta = $stmt_vta->insert_id;
             $stmt_vta->close();
 
-            // 5. Crear Detalle de Venta (Servicio Técnico Taller)
+            // 5. Guardar cada pago por separado (medio y monto) en venta_pago
+            $stmtPago = $this->conn->prepare("INSERT INTO venta_pago (id_venta, metodo_pago, monto) VALUES (?, ?, ?)");
+            foreach ($pagos_validados as $pItem) {
+                $mNombre = $pItem['metodo'];
+                $mMonto = (float)$pItem['monto'];
+                $stmtPago->bind_param("isd", $id_venta, $mNombre, $mMonto);
+                if (!$stmtPago->execute()) {
+                    throw new Exception("Error al registrar el desglose de pago de la reparación.");
+                }
+            }
+            $stmtPago->close();
+
+            // 6. Crear Detalle de Venta (Servicio Técnico Taller)
             $id_producto_servicio = $this->get_or_ensure_service_product();
             $nombre_prod = "Servicio Técnico Taller";
-            $stmt_det = $this->conn->prepare("INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, nombre_producto, precio_copiado) VALUES (?, ?, 1, ?, ?, ?)");
-            $stmt_det->bind_param("iidsd", $id_venta, $id_producto_servicio, $monto_total, $nombre_prod, $monto_total);
+            $stmt_det = $this->conn->prepare("INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, nombre_producto) VALUES (?, ?, 1, ?, ?)");
+            $stmt_det->bind_param("iids", $id_venta, $id_producto_servicio, $monto_total, $nombre_prod);
             $stmt_det->execute();
             $stmt_det->close();
+
+            // 7. Libro de Caja inmutable dentro de la misma transacción (con id_venta e id_reparacion):
+            // - Bloquea el cobro si hay efectivo ($monto_efectivo > 0) y no existe caja abierta.
+            CajaModel::recordSaleMovementsInTransaction(
+                $this->conn,
+                (int)$id_venta,
+                $id_reparacion,
+                $pagos_validados,
+                $monto_efectivo,
+                $monto_total,
+                $es_combinado,
+                'Cobro de reparación',
+                "Orden #" . $repair['codigo_orden'] . " (" . $repair['equipo_marca'] . " " . $repair['equipo_modelo'] . ")",
+                $id_usuario > 0 ? $id_usuario : null
+            );
 
             $this->conn->commit();
             return $id_venta;
@@ -666,44 +800,6 @@ class WorkshopModel extends BaseModel
         $stmt_i->close();
 
         return $new_id;
-    }
-
-    public function register_repair_payment(int $id_reparacion, float $monto, string $metodo_pago, int $id_usuario)
-    {
-        $id_reparacion = intval($id_reparacion);
-        $monto = floatval($monto);
-        $id_usuario = intval($id_usuario);
-        
-        // Obtener detalles de la reparación
-        $repair = $this->find_repair_by_id($id_reparacion);
-        if (!$repair) throw new Exception("Reparación no encontrada");
-
-        $descripcion = "Cobro de Reparación #" . $repair['codigo_orden'] . " - " . $repair['equipo_marca'] . " " . $repair['equipo_modelo'];
-        $fecha = date('Y-m-d H:i:s');
-
-        $this->conn->begin_transaction();
-        try {
-            // 1. Crear Venta
-            $stmt = $this->conn->prepare("INSERT INTO venta (fecha, total, metodo_de_pago, id_usuario, descripcion) VALUES (?, ?, ?, ?, ?)");
-            $stmt->bind_param("sdsis", $fecha, $monto, $metodo_pago, $id_usuario, $descripcion);
-            if (!$stmt->execute()) throw new Exception("Error al registrar el ingreso");
-            $id_venta = $stmt->insert_id;
-            $stmt->close();
-
-            // 2. Crear Detalle de Venta
-            $id_producto_servicio = $this->get_or_ensure_service_product();
-            $stmt = $this->conn->prepare("INSERT INTO detalle_venta (id_venta, id_producto, cantidad, precio_unitario, nombre_producto, precio_copiado) VALUES (?, ?, 1, ?, ?, ?)");
-            $nombre_prod = "Servicio Técnico Taller";
-            $stmt->bind_param("iidsd", $id_venta, $id_producto_servicio, $monto, $nombre_prod, $monto);
-            $stmt->execute();
-            $stmt->close();
-
-            $this->conn->commit();
-            return $id_venta;
-        } catch (Exception $e) {
-            $this->conn->rollback();
-            throw $e;
-        }
     }
 
     public function add_repair_image(int $id_reparacion, string $ruta_archivo, string $tipo = 'Ingreso')
@@ -763,56 +859,117 @@ class WorkshopModel extends BaseModel
         return false;
     }
 
-    public function get_repair_status_stats()
+    private function buildRepairPeriodFilter(?string $start_dt, ?string $end_dt, ?string $hora_desde, ?string $hora_hasta, string &$types, array &$params, string $alias = 'r'): string
     {
-        $sql = "SELECT estado, COUNT(*) as total
-                FROM reparacion
-                GROUP BY estado
-                ORDER BY FIELD(estado, 'Recibido','En diagnóstico','En reparación','Listo','Entregado','Cancelado')";
-        $result = $this->conn->query($sql);
+        $conds = [];
+        if (!empty($start_dt)) {
+            $conds[] = "{$alias}.fecha_ingreso >= ?";
+            $types .= "s";
+            $params[] = $start_dt;
+        }
+        if (!empty($end_dt)) {
+            $conds[] = "{$alias}.fecha_ingreso <= ?";
+            $types .= "s";
+            $params[] = $end_dt;
+        }
+        if ((!empty($hora_desde) && $hora_desde !== '00:00') || (!empty($hora_hasta) && $hora_hasta !== '23:59')) {
+            $conds[] = "TIME({$alias}.fecha_ingreso) >= ? AND TIME({$alias}.fecha_ingreso) <= ?";
+            $types .= "ss";
+            $params[] = (!empty($hora_desde) ? $hora_desde : '00:00') . ':00';
+            $params[] = (!empty($hora_hasta) ? $hora_hasta : '23:59') . ':59';
+        }
+        return !empty($conds) ? (' WHERE ' . implode(' AND ', $conds)) : '';
+    }
+
+    public function get_repair_status_stats(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
+    {
+        $types = "";
+        $params = [];
+        $whereSql = $this->buildRepairPeriodFilter($start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params, 'r');
+
+        $sql = "SELECT r.estado, COUNT(*) as total,
+                       GROUP_CONCAT(DISTINCT DATE_FORMAT(r.fecha_ingreso, '%d/%m/%Y %H:%i hs') ORDER BY r.fecha_ingreso DESC SEPARATOR ' · ') AS fechas_detalle
+                FROM reparacion r
+                $whereSql
+                GROUP BY r.estado
+                ORDER BY FIELD(r.estado, 'Recibido','En diagnóstico','En reparación','Listo','Entregado','Cancelado')";
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $labels = [];
         $counts = [];
+        $details = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $labels[] = $row['estado'];
                 $counts[] = (int)$row['total'];
+                $details[] = array_slice(array_filter(explode(' · ', (string)($row['fechas_detalle'] ?? ''))), 0, 5);
             }
         }
-        return ['labels' => $labels, 'counts' => $counts];
+        $stmt->close();
+        return ['labels' => $labels, 'counts' => $counts, 'details' => $details];
     }
 
-    public function get_repairs_by_brand()
+    public function get_repairs_by_brand(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
-        $sql = "SELECT equipo_marca, COUNT(*) as total
-                FROM reparacion
-                GROUP BY equipo_marca
+        $types = "";
+        $params = [];
+        $whereSql = $this->buildRepairPeriodFilter($start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params, 'r');
+
+        $sql = "SELECT r.equipo_marca, COUNT(*) as total,
+                       GROUP_CONCAT(DISTINCT DATE_FORMAT(r.fecha_ingreso, '%d/%m/%Y %H:%i hs') ORDER BY r.fecha_ingreso DESC SEPARATOR ' · ') AS fechas_detalle
+                FROM reparacion r
+                $whereSql
+                GROUP BY r.equipo_marca
                 ORDER BY total DESC
                 LIMIT 5";
-        $result = $this->conn->query($sql);
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $labels = [];
         $counts = [];
+        $details = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $labels[] = $row['equipo_marca'];
                 $counts[] = (int)$row['total'];
+                $details[] = array_slice(array_filter(explode(' · ', (string)($row['fechas_detalle'] ?? ''))), 0, 5);
             }
         }
-        return ['labels' => $labels, 'counts' => $counts];
+        $stmt->close();
+        return ['labels' => $labels, 'counts' => $counts, 'details' => $details];
     }
 
-    public function get_all_repairs_for_report()
+    public function get_all_repairs_for_report(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
     {
+        $types = "";
+        $params = [];
+        $whereSql = $this->buildRepairPeriodFilter($start_dt, $end_dt, $hora_desde, $hora_hasta, $types, $params, 'r');
+
         $sql = "SELECT r.*, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono 
                 FROM reparacion r
                 LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
+                $whereSql
                 ORDER BY r.fecha_ingreso DESC";
-        $result = $this->conn->query($sql);
+        $stmt = $this->conn->prepare($sql);
+        if ($types !== '') {
+            $stmt->bind_param($types, ...$params);
+        }
+        $stmt->execute();
+        $result = $stmt->get_result();
         $repairs = [];
         if ($result) {
             while ($row = $result->fetch_assoc()) {
                 $repairs[] = $row;
             }
         }
+        $stmt->close();
         return $repairs;
     }
 }

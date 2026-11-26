@@ -39,10 +39,9 @@ function submitClientDelete(id, csrfToken) {
 }
 
 async function confirmDelete(id, nombre, csrfToken) {
+    if (typeof showConfirmModal !== 'function') return;
     const message = `¿Estás seguro de que deseas eliminar al cliente "${nombre}"? Esta acción no se puede deshacer y fallará si posee órdenes de taller activas.`;
-    const confirmed = (typeof showConfirmModal === 'function')
-        ? await showConfirmModal('Eliminar Cliente', message, 'Sí, eliminar', 'Cancelar', true)
-        : confirm(message);
+    const confirmed = await showConfirmModal('Eliminar Cliente', message, 'Sí, eliminar', 'Cancelar', true);
     if (confirmed) {
         submitClientDelete(id, csrfToken);
     }

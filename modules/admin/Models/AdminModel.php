@@ -2,6 +2,7 @@
 // modules/admin/Models/AdminModel.php
 
 require_once __DIR__ . '/../../../classes/BaseModel.php';
+require_once __DIR__ . '/../../../classes/ServiceProduct.php';
 
 class AdminModel extends BaseModel
 {
@@ -13,13 +14,8 @@ class AdminModel extends BaseModel
         return ($res && $res->num_rows > 0) ? (float) $res->fetch_assoc()['total_ventas'] : 0.0;
     }
 
-    public function get_total_transactions(): int
-    {
-        $res = $this->conn->query("SELECT COUNT(*) as total_transacciones FROM venta WHERE estado != 'anulada'");
-        return ($res && $res->num_rows > 0) ? (int) $res->fetch_assoc()['total_transacciones'] : 0;
-    }
 
-    public function get_total_users(): int
+    public function get_total_users()
     {
         $res = $this->conn->query("SELECT COUNT(*) as total_usuarios FROM usuario");
         return ($res && $res->num_rows > 0) ? (int) $res->fetch_assoc()['total_usuarios'] : 0;
@@ -27,14 +23,30 @@ class AdminModel extends BaseModel
 
     public function get_low_stock_count(): int
     {
-        $res = $this->conn->query("SELECT COUNT(*) as bajo_stock FROM inventario i INNER JOIN producto p ON i.id_producto = p.id_producto WHERE i.cantidad <= 5 AND p.is_active = 1");
+        $excludeServices = ServiceProduct::excludeSql('p', 'd');
+        $res = $this->conn->query("SELECT COUNT(*) as bajo_stock FROM inventario i INNER JOIN producto p ON i.id_producto = p.id_producto LEFT JOIN producto_detalle d ON p.id_producto = d.id_producto WHERE i.cantidad <= COALESCE(d.stock_minimo, 5) AND p.is_active = 1 AND $excludeServices");
         return ($res && $res->num_rows > 0) ? (int) $res->fetch_assoc()['bajo_stock'] : 0;
     }
 
     public function get_recent_sales(int $limit = 5): array
     {
         $limit = (int) $limit;
-        $stmt = $this->conn->prepare("SELECT id_venta, fecha, total, metodo_de_pago FROM venta WHERE estado != 'anulada' ORDER BY fecha DESC LIMIT ?");
+        $sql = "SELECT v.id_venta, v.fecha, v.total,
+                       COALESCE(
+                           (SELECT CASE 
+                               WHEN COUNT(*) > 1 THEN GROUP_CONCAT(CONCAT(vp.metodo_pago, ' ($', FORMAT(vp.monto, 2), ')') ORDER BY vp.id_pago ASC SEPARATOR ' + ')
+                               WHEN COUNT(*) = 1 THEN MAX(vp.metodo_pago)
+                               ELSE NULL
+                            END
+                            FROM venta_pago vp WHERE vp.id_venta = v.id_venta),
+                           NULLIF(TRIM(v.metodo_de_pago), ''), 
+                           'N/A'
+                       ) AS metodo_de_pago
+                FROM venta v
+                WHERE v.estado != 'anulada'
+                ORDER BY v.fecha DESC, v.id_venta DESC
+                LIMIT ?";
+        $stmt = $this->conn->prepare($sql);
         $stmt->bind_param("i", $limit);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -50,7 +62,13 @@ class AdminModel extends BaseModel
 
     // --- Gestión de Usuarios ---
 
-    public function count_active_admins(?int $exclude_id = null): int
+    public function get_primary_admin_id(): ?int
+    {
+        require_once __DIR__ . '/../../../classes/Layout.php';
+        return Layout::getPrimaryAdminId();
+    }
+
+    public function count_active_admins($exclude_id = null)
     {
         if ($exclude_id) {
             $stmt = $this->conn->prepare("SELECT COUNT(*) AS total FROM usuario WHERE rol = 'admin' AND is_active = 1 AND id_usuario != ?");
@@ -105,8 +123,9 @@ class AdminModel extends BaseModel
         return $res;
     }
 
-    public function check_username_exists(string $username, ?int $exclude_id = null): bool
-    {
+        //verificar si existe el usuario
+    public function check_username_exists($username, $exclude_id = null)
+        {
         if ($exclude_id) {
             $stmt = $this->conn->prepare("SELECT id_usuario FROM usuario WHERE nombre_usuario = ? AND id_usuario != ?");
             $stmt->bind_param("si", $username, $exclude_id);
@@ -173,7 +192,7 @@ class AdminModel extends BaseModel
             $id_persona = $this->conn->insert_id;
             $stmt->close();
 
-            $modulos_permitidos = ($user_data['rol'] === 'admin') ? null : 'dashboard,venta,inventario,clientes';
+            $modulos_permitidos = ($user_data['rol'] === 'admin') ? null : 'dashboard,venta,caja,inventario,clientes';
             $stmt = $this->conn->prepare(
                 "INSERT INTO usuario (id_persona, nombre_usuario, contrasena, rol, email, verificado, is_active, token_verificacion, token_expira, modulos_permitidos) 
                  VALUES (?, ?, ?, ?, ?, 1, 1, NULL, NULL, ?)"
@@ -221,7 +240,7 @@ class AdminModel extends BaseModel
             }
             $stmt->close();
 
-            $default_modulos = 'dashboard,venta,inventario,clientes';
+            $default_modulos = 'dashboard,venta,caja,inventario,clientes';
             if (!empty($user_data['hashed_password'])) {
                 if ($user_data['rol'] === 'admin') {
                     $stmt = $this->conn->prepare("UPDATE usuario SET nombre_usuario = ?, email = ?, rol = ?, contrasena = ?, modulos_permitidos = NULL WHERE id_usuario = ?");
@@ -292,7 +311,7 @@ class AdminModel extends BaseModel
             $stmt = $this->conn->prepare("UPDATE usuario SET rol = ?, modulos_permitidos = NULL WHERE id_usuario = ?");
             $stmt->bind_param("si", $rol, $id_usuario);
         } else {
-            $default_modules = 'dashboard,venta,inventario,clientes';
+            $default_modules = 'dashboard,venta,caja,inventario,clientes';
             $stmt = $this->conn->prepare("UPDATE usuario SET rol = ?, modulos_permitidos = COALESCE(modulos_permitidos, ?) WHERE id_usuario = ?");
             $stmt->bind_param("ssi", $rol, $default_modules, $id_usuario);
         }
@@ -386,25 +405,19 @@ class AdminModel extends BaseModel
     }
 
     // --- Auditoría ---
-    public function get_audit_logs(int $limit = 100, string $modulo = ''): array
+
+    public function get_audit_logs($limit = 100)
     {
         $limit = (int) $limit;
+        // La auditoría del sistema está dedicada exclusivamente al inventario
         $sql = "SELECT a.*, u.nombre_usuario 
                 FROM audit_log a 
-                LEFT JOIN usuario u ON a.id_usuario = u.id_usuario ";
-                
-        if (!empty($modulo)) {
-            $sql .= "WHERE a.tabla_afectada = ? ";
-        }
-        
-        $sql .= "ORDER BY a.fecha DESC LIMIT ?";
+                LEFT JOIN usuario u ON a.id_usuario = u.id_usuario 
+                WHERE (LOWER(a.tabla_afectada) IN ('inventario', 'producto') OR a.accion LIKE 'INVENTORY_%')
+                ORDER BY a.fecha DESC LIMIT ?";
         
         $stmt = $this->conn->prepare($sql);
-        if (!empty($modulo)) {
-            $stmt->bind_param("si", $modulo, $limit);
-        } else {
-            $stmt->bind_param("i", $limit);
-        }
+        $stmt->bind_param("i", $limit);
         
         $stmt->execute();
         $result = $stmt->get_result();
@@ -419,42 +432,181 @@ class AdminModel extends BaseModel
         return $logs;
     }
 
-    public function get_financial_stats(): array
+    private function formatDayHourLabel(?string $dt): string
     {
-        $sql = "
-            SELECT 
-                m.mes,
-                COALESCE(v.total_ventas, 0) AS ingresos,
-                COALESCE(c.total_compras, 0) AS gastos
-            FROM (
-                SELECT DATE_FORMAT(DATE_SUB(NOW(), INTERVAL i MONTH), '%Y-%m') AS mes
-                FROM (SELECT 0 as i UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5) temp
-            ) m
-            LEFT JOIN (
-                SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(total) AS total_ventas
-                FROM venta
-                WHERE estado != 'anulada'
-                GROUP BY DATE_FORMAT(fecha, '%Y-%m')
-            ) v ON m.mes = v.mes
-            LEFT JOIN (
-                SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(total) AS total_compras
-                FROM compra
-                WHERE estado = 'Recibido'
-                GROUP BY DATE_FORMAT(fecha, '%Y-%m')
-            ) c ON m.mes = c.mes
-            ORDER BY m.mes ASC;
-        ";
-        $result = $this->conn->query($sql);
+        if (empty($dt)) return '';
+        $ts = strtotime($dt);
+        if ($ts === false) return (string)$dt;
+        $dias = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+        return $dias[(int)date('w', $ts)] . ' ' . date('d/m/Y H:i', $ts) . ' hs';
+    }
+
+    public function get_financial_stats(?string $start_dt = null, ?string $end_dt = null, ?string $hora_desde = null, ?string $hora_hasta = null)
+    {
+        $hasFilter = (!empty($start_dt) || !empty($end_dt) || (!empty($hora_desde) && $hora_desde !== '00:00') || (!empty($hora_hasta) && $hora_hasta !== '23:59'));
+
+        if (!$hasFilter) {
+            $sql = "
+                SELECT 
+                    m.mes,
+                    COALESCE(v.total_ventas, 0) AS ingresos,
+                    COALESCE(c.total_compras, 0) AS gastos
+                FROM (
+                    SELECT DATE_FORMAT(DATE_SUB(NOW(), INTERVAL i MONTH), '%Y-%m') AS mes
+                    FROM (SELECT 0 as i UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5) temp
+                ) m
+                LEFT JOIN (
+                    SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(total) AS total_ventas
+                    FROM venta
+                    WHERE estado != 'anulada'
+                    GROUP BY DATE_FORMAT(fecha, '%Y-%m')
+                ) v ON m.mes = v.mes
+                LEFT JOIN (
+                    SELECT DATE_FORMAT(fecha, '%Y-%m') AS mes, SUM(total) AS total_compras
+                    FROM compra
+                    WHERE estado = 'Recibido'
+                    GROUP BY DATE_FORMAT(fecha, '%Y-%m')
+                ) c ON m.mes = c.mes
+                ORDER BY m.mes ASC;
+            ";
+            $result = $this->conn->query($sql);
+            $labels = [];
+            $ingresos = [];
+            $gastos = [];
+            if ($result) {
+                while ($row = $result->fetch_assoc()) {
+                    $labels[] = $row['mes'];
+                    $ingresos[] = (float)$row['ingresos'];
+                    $gastos[] = (float)$row['gastos'];
+                }
+            }
+            return ['labels' => $labels, 'ingresos' => $ingresos, 'gastos' => $gastos, 'details_ingresos' => [], 'details_gastos' => []];
+        }
+
+        $whereV = ["estado != 'anulada'"];
+        $whereC = ["estado = 'Recibido'"];
+        $typesV = "";
+        $paramsV = [];
+        $typesC = "";
+        $paramsC = [];
+
+        if (!empty($start_dt)) {
+            $whereV[] = "fecha >= ?";
+            $typesV .= "s";
+            $paramsV[] = $start_dt;
+
+            $whereC[] = "fecha >= ?";
+            $typesC .= "s";
+            $paramsC[] = $start_dt;
+        }
+        if (!empty($end_dt)) {
+            $whereV[] = "fecha <= ?";
+            $typesV .= "s";
+            $paramsV[] = $end_dt;
+
+            $whereC[] = "fecha <= ?";
+            $typesC .= "s";
+            $paramsC[] = $end_dt;
+        }
+        if ((!empty($hora_desde) && $hora_desde !== '00:00') || (!empty($hora_hasta) && $hora_hasta !== '23:59')) {
+            $hStart = (!empty($hora_desde) ? $hora_desde : '00:00') . ':00';
+            $hEnd = (!empty($hora_hasta) ? $hora_hasta : '23:59') . ':59';
+            $whereV[] = "TIME(fecha) >= ? AND TIME(fecha) <= ?";
+            $typesV .= "ss";
+            $paramsV[] = $hStart;
+            $paramsV[] = $hEnd;
+
+            $whereC[] = "TIME(fecha) >= ? AND TIME(fecha) <= ?";
+            $typesC .= "ss";
+            $paramsC[] = $hStart;
+            $paramsC[] = $hEnd;
+        }
+
+        $whereVSql = implode(' AND ', $whereV);
+        $whereCSql = implode(' AND ', $whereC);
+
+        // Cuando hay filtro de tiempo activo, agrupamos por fecha (día) y adjuntamos el día y la hora exacta de cada acción
+        $periodKeys = [];
+        $tsStart = !empty($start_dt) ? strtotime(substr($start_dt, 0, 10)) : false;
+        $tsEnd = !empty($end_dt) ? strtotime(substr($end_dt, 0, 10)) : false;
+
+        $granularity = 'day';
+        if ($tsStart !== false && $tsEnd !== false && $tsEnd >= $tsStart) {
+            $diffDays = (int)round(($tsEnd - $tsStart) / 86400);
+            if ($diffDays <= 31) {
+                for ($cur = $tsStart; $cur <= $tsEnd; $cur += 86400) {
+                    $periodKeys[date('Y-m-d', $cur)] = true;
+                }
+            } elseif ($diffDays > 62) {
+                $granularity = 'month';
+                $curMonth = strtotime(date('Y-m-01', $tsStart));
+                $endMonth = strtotime(date('Y-m-01', $tsEnd));
+                while ($curMonth <= $endMonth) {
+                    $periodKeys[date('Y-m', $curMonth)] = true;
+                    $curMonth = strtotime('+1 month', $curMonth);
+                }
+            }
+        }
+
+        $fmtSql = ($granularity === 'day') ? 'Y-m-d' : 'Y-m';
+
+        $ventasMap = [];
+        $detailsIngresosMap = [];
+        $sqlV = "SELECT id_venta, fecha, total FROM venta WHERE $whereVSql ORDER BY fecha ASC";
+        $stmtV = $this->conn->prepare($sqlV);
+        if ($typesV !== '') {
+            $stmtV->bind_param($typesV, ...$paramsV);
+        }
+        $stmtV->execute();
+        $resV = $stmtV->get_result();
+        while ($row = $resV->fetch_assoc()) {
+            $ts = strtotime($row['fecha']);
+            $p = $ts !== false ? date($fmtSql, $ts) : substr($row['fecha'], 0, 10);
+            $periodKeys[$p] = true;
+            $ventasMap[$p] = ($ventasMap[$p] ?? 0.0) + (float)$row['total'];
+            $detailsIngresosMap[$p][] = $this->formatDayHourLabel($row['fecha']) . ' (Venta #' . $row['id_venta'] . ': $' . number_format((float)$row['total'], 0, ',', '.') . ')';
+        }
+        $stmtV->close();
+
+        $comprasMap = [];
+        $detailsGastosMap = [];
+        $sqlC = "SELECT id_compra, fecha, total FROM compra WHERE $whereCSql ORDER BY fecha ASC";
+        $stmtC = $this->conn->prepare($sqlC);
+        if ($typesC !== '') {
+            $stmtC->bind_param($typesC, ...$paramsC);
+        }
+        $stmtC->execute();
+        $resC = $stmtC->get_result();
+        while ($row = $resC->fetch_assoc()) {
+            $ts = strtotime($row['fecha']);
+            $p = $ts !== false ? date($fmtSql, $ts) : substr($row['fecha'], 0, 10);
+            $periodKeys[$p] = true;
+            $comprasMap[$p] = ($comprasMap[$p] ?? 0.0) + (float)$row['total'];
+            $detailsGastosMap[$p][] = $this->formatDayHourLabel($row['fecha']) . ' (Compra #' . $row['id_compra'] . ': $' . number_format((float)$row['total'], 0, ',', '.') . ')';
+        }
+        $stmtC->close();
+
+        ksort($periodKeys);
         $labels = [];
         $ingresos = [];
         $gastos = [];
-        if ($result) {
-            while ($row = $result->fetch_assoc()) {
-                $labels[] = $row['mes'];
-                $ingresos[] = $row['ingresos'];
-                $gastos[] = $row['gastos'];
-            }
+        $detailsIngresos = [];
+        $detailsGastos = [];
+
+        foreach (array_keys($periodKeys) as $pKey) {
+            $labels[] = $pKey;
+            $ingresos[] = round((float)($ventasMap[$pKey] ?? 0), 2);
+            $gastos[] = round((float)($comprasMap[$pKey] ?? 0), 2);
+            $detailsIngresos[] = $detailsIngresosMap[$pKey] ?? [];
+            $detailsGastos[] = $detailsGastosMap[$pKey] ?? [];
         }
-        return ['labels' => $labels, 'ingresos' => $ingresos, 'gastos' => $gastos];
+
+        return [
+            'labels' => $labels,
+            'ingresos' => $ingresos,
+            'gastos' => $gastos,
+            'details_ingresos' => $detailsIngresos,
+            'details_gastos' => $detailsGastos
+        ];
     }
 }

@@ -5,21 +5,21 @@ require_once __DIR__ . '/../../../classes/BaseModel.php';
 
 class AuthModel extends BaseModel
 {
-    public function find_by_username($username)
+    public function find_by_username(string $username): ?array
     {
         $stmt = $this->conn->prepare(
-            "SELECT id_usuario, nombre_usuario, contrasena, rol, verificado, is_active
+            "SELECT id_usuario, nombre_usuario, contrasena, rol, verificado, is_active, email
              FROM usuario
-             WHERE nombre_usuario = ?"
+             WHERE nombre_usuario = ? OR email = ?"
         );
-        $stmt->bind_param("s", $username);
+        $stmt->bind_param("ss", $username, $username);
         $stmt->execute();
         $res = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        return $res;
+        return $res ?: null;
     }
 
-    public function username_exists($username)
+    public function username_exists(string $username): bool
     {
         $stmt = $this->conn->prepare("SELECT id_usuario FROM usuario WHERE nombre_usuario = ?");
         $stmt->bind_param("s", $username);
@@ -30,7 +30,7 @@ class AuthModel extends BaseModel
         return $count > 0;
     }
 
-    public function dni_exists($dni)
+    public function dni_exists(string $dni): bool
     {
         $stmt = $this->conn->prepare("SELECT id_persona FROM persona WHERE dni = ?");
         $stmt->bind_param("s", $dni);
@@ -41,7 +41,7 @@ class AuthModel extends BaseModel
         return $count > 0;
     }
 
-    public function email_exists($email)
+    public function email_exists(string $email): bool
     {
         $stmt = $this->conn->prepare("SELECT id_persona FROM persona WHERE email = ?");
         $stmt->bind_param("s", $email);
@@ -52,7 +52,7 @@ class AuthModel extends BaseModel
         return $count > 0;
     }
 
-    public function create_user_transaction($persona_data, $user_data)
+    public function create_user_transaction(array $persona_data, array $user_data): array
     {
         $this->conn->begin_transaction();
         try {
@@ -87,7 +87,7 @@ class AuthModel extends BaseModel
             $token = isset($user_data['token_verificacion']) ? $user_data['token_verificacion'] : null;
             $expira = isset($user_data['token_expira']) ? $user_data['token_expira'] : null;
             
-            $modulos_permitidos = ($rol === 'admin') ? null : 'dashboard,venta,inventario,clientes';
+            $modulos_permitidos = ($rol === 'admin') ? null : 'dashboard,venta,caja,inventario,clientes';
 
             // Insertar datos de usuario
             $stmt = $this->conn->prepare(
@@ -126,22 +126,22 @@ class AuthModel extends BaseModel
         }
     }
 
-    public function find_by_email($email)
+    public function find_by_email(string $email): ?array
     {
         $stmt = $this->conn->prepare("
             SELECT u.id_usuario, p.nombre 
             FROM usuario u 
             JOIN persona p ON u.id_persona = p.id_persona 
-            WHERE p.email = ?
+            WHERE p.email = ? AND u.is_active = 1
         ");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $res = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        return $res;
+        return $res ?: null;
     }
 
-    public function set_reset_token($id_usuario, $token, $expira)
+    public function set_reset_token(int $id_usuario, string $token, string $expira): bool
     {
         $stmt = $this->conn->prepare("UPDATE usuario SET token_verificacion = ?, token_expira = ? WHERE id_usuario = ?");
         $stmt->bind_param("ssi", $token, $expira, $id_usuario);
@@ -150,17 +150,20 @@ class AuthModel extends BaseModel
         return $success;
     }
 
-    public function find_by_valid_token($token)
+    public function find_by_valid_token(string $token): ?array
     {
-        $stmt = $this->conn->prepare("SELECT id_usuario FROM usuario WHERE token_verificacion = ? AND token_expira > NOW()");
+        if (!preg_match('/^[a-f0-9]{64}$/i', $token)) {
+            return null;
+        }
+        $stmt = $this->conn->prepare("SELECT id_usuario FROM usuario WHERE token_verificacion = ? AND CHAR_LENGTH(token_verificacion) = 64 AND token_expira > NOW() AND is_active = 1");
         $stmt->bind_param("s", $token);
         $stmt->execute();
         $res = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        return $res;
+        return $res ?: null;
     }
 
-    public function update_password($id_usuario, $hashed_password)
+    public function update_password(int $id_usuario, string $hashed_password): bool
     {
         $stmt = $this->conn->prepare("UPDATE usuario SET contrasena = ?, token_verificacion = NULL, token_expira = NULL, session_token = NULL WHERE id_usuario = ?");
         $stmt->bind_param("si", $hashed_password, $id_usuario);
@@ -169,10 +172,72 @@ class AuthModel extends BaseModel
         return $success;
     }
 
-    public function update_session_token($id_usuario, $token)
+    public function update_session_token(int $id_usuario, string $token): bool
     {
         $stmt = $this->conn->prepare("UPDATE usuario SET session_token = ? WHERE id_usuario = ?");
         $stmt->bind_param("si", $token, $id_usuario);
+        $success = $stmt->execute();
+        $stmt->close();
+        return $success;
+    }
+
+    public function find_unverified_by_email_or_user(string $identifier): ?array
+    {
+        $stmt = $this->conn->prepare("
+            SELECT u.id_usuario, u.nombre_usuario, u.email, u.verificado, u.token_verificacion, u.token_expira, p.nombre, p.apellido
+            FROM usuario u
+            LEFT JOIN persona p ON u.id_persona = p.id_persona
+            WHERE (u.email = ? OR u.nombre_usuario = ? OR p.email = ?)
+            LIMIT 1
+        ");
+        $stmt->bind_param("sss", $identifier, $identifier, $identifier);
+        $stmt->execute();
+        $res = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $res ?: null;
+    }
+
+    public function verify_otp(string $identifier, string $otp): array
+    {
+        $user = $this->find_unverified_by_email_or_user($identifier);
+        if (!$user) {
+            return ['success' => false, 'message' => 'Usuario no encontrado.'];
+        }
+
+        if ((int)$user['verificado'] === 1) {
+            return ['success' => true, 'already_verified' => true, 'message' => 'Esta cuenta ya se encuentra verificada.'];
+        }
+
+        if (empty($user['token_verificacion']) || !hash_equals((string)$user['token_verificacion'], (string)$otp)) {
+            return ['success' => false, 'message' => 'El código de verificación es incorrecto.'];
+        }
+
+        if (!empty($user['token_expira']) && strtotime($user['token_expira']) < time()) {
+            return ['success' => false, 'expired' => true, 'message' => 'El código ha expirado (validez: 15 minutos). Por favor solicitá uno nuevo.'];
+        }
+
+        // Activar cuenta
+        $stmt = $this->conn->prepare("UPDATE usuario SET verificado = 1, token_verificacion = NULL, token_expira = NULL WHERE id_usuario = ?");
+        $stmt->bind_param("i", $user['id_usuario']);
+        $ok = $stmt->execute();
+        $stmt->close();
+
+        if ($ok) {
+            return [
+                'success' => true,
+                'id_usuario' => $user['id_usuario'],
+                'username' => $user['nombre_usuario'],
+                'message' => '¡Cuenta verificada exitosamente!'
+            ];
+        }
+
+        return ['success' => false, 'message' => 'Error de base de datos al activar la cuenta.'];
+    }
+
+    public function update_otp(int $id_usuario, string $otp, string $expira): bool
+    {
+        $stmt = $this->conn->prepare("UPDATE usuario SET token_verificacion = ?, token_expira = ? WHERE id_usuario = ?");
+        $stmt->bind_param("ssi", $otp, $expira, $id_usuario);
         $success = $stmt->execute();
         $stmt->close();
         return $success;

@@ -15,6 +15,7 @@ function closeAddUserModal() {
     card.classList.add('scale-95');
     modal.classList.add('opacity-0', 'pointer-events-none');
     document.getElementById('add-user-form').reset();
+    updatePasswordRuleIndicators('', 'add-user-password-rules');
 }
 
 // Validación de contraseñas coincidentes
@@ -23,28 +24,105 @@ if (addUserForm) {
     addUserForm.addEventListener('submit', function(e) {
         const pass = document.getElementById('modal-password').value;
         const passConfirm = document.getElementById('modal-password-confirm').value;
+        
+        if (pass.length < 8 || !/[A-Z]/.test(pass) || !/[a-z]/.test(pass) || !/[0-9]/.test(pass) || !/[^a-zA-Z0-9]/.test(pass)) {
+            e.preventDefault();
+            if (typeof showToast === 'function') {
+                showToast('La contraseña debe tener mínimo 8 caracteres e incluir mayúscula, minúscula, número y carácter especial.', 'warning');
+            }
+            return;
+        }
+
         if (pass !== passConfirm) {
             e.preventDefault();
             if (typeof showToast === 'function') {
                 showToast('Las contraseñas no coinciden', 'error');
-            } else {
-                alert('Las contraseñas no coinciden');
             }
+            return;
         }
     });
 }
+
+const editUserForm = document.getElementById('edit-user-form');
+if (editUserForm) {
+    editUserForm.addEventListener('submit', function(e) {
+        const pass = document.getElementById('edit-modal-password').value;
+        if (pass && (pass.length < 8 || !/[A-Z]/.test(pass) || !/[a-z]/.test(pass) || !/[0-9]/.test(pass) || !/[^a-zA-Z0-9]/.test(pass))) {
+            e.preventDefault();
+            if (typeof showToast === 'function') {
+                showToast('La nueva contraseña debe tener mínimo 8 caracteres e incluir mayúscula, minúscula, número y carácter especial.', 'warning');
+            }
+            return;
+        }
+    });
+}
+
+// Actualización dinámica de los indicadores de requisitos de contraseña
+function updatePasswordRuleIndicators(password, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    const rules = {
+        minlength: password.length >= 8,
+        uppercase: /[A-Z]/.test(password),
+        lowercase: /[a-z]/.test(password),
+        number: /[0-9]/.test(password),
+        special: /[^a-zA-Z0-9]/.test(password)
+    };
+
+    for (const [rule, isValid] of Object.entries(rules)) {
+        const item = container.querySelector('[data-rule="' + rule + '"]');
+        if (!item) continue;
+        const icon = item.querySelector('.rule-icon');
+        if (isValid) {
+            item.classList.remove('text-text-muted');
+            item.style.color = '#156835';
+            item.style.fontWeight = '600';
+            if (icon) {
+                icon.textContent = 'check_circle';
+                icon.style.color = '#156835';
+            }
+        } else {
+            item.classList.add('text-text-muted');
+            item.style.color = '';
+            item.style.fontWeight = '';
+            if (icon) {
+                icon.textContent = 'radio_button_unchecked';
+                icon.style.color = '';
+            }
+        }
+    }
+}
+
+// Escuchar escritura en el campo de contraseña de creación
+const addPasswordInput = document.getElementById('modal-password');
+if (addPasswordInput) {
+    addPasswordInput.addEventListener('input', function() {
+        updatePasswordRuleIndicators(this.value, 'add-user-password-rules');
+    });
+}
+
+// Escuchar escritura en el campo de contraseña de edición
+const editPasswordInput = document.getElementById('edit-modal-password');
+if (editPasswordInput) {
+    editPasswordInput.addEventListener('input', function() {
+        updatePasswordRuleIndicators(this.value, 'edit-user-password-rules');
+    });
+}
+
 
 // --- Módulos y Permisos ---
 const allSystemModules = [
     { id: 'dashboard', label: 'Inicio', icon: 'home', desc: 'Panel principal de operaciones' },
     { id: 'venta', label: 'Generar Venta / Ventas', icon: 'payments', desc: 'Punto de venta y registro de transacciones' },
+    { id: 'caja', label: 'Caja', icon: 'point_of_sale', desc: 'Apertura, arqueo, movimientos de efectivo y consulta de caja' },
+    { id: 'cierre_caja', label: 'Supervisión y Cierre de Caja', icon: 'lock_person', desc: 'Autoriza cerrar caja, registrar contra-asientos y retiros mayores a $50.000' },
     { id: 'cobrar_reparaciones', label: 'Cobrar Reparaciones', icon: 'price_check', desc: 'Caja para entrega de reparaciones terminadas' },
     { id: 'taller', label: 'Taller', icon: 'home_repair_service', desc: 'Gestión y servicio técnico de reparaciones' },
     { id: 'inventario', label: 'Consultar Stock / Inventario', icon: 'inventory_2', desc: 'Catálogo de productos, existencias y precios' },
     { id: 'clientes', label: 'Clientes', icon: 'contact_page', desc: 'Directorio e historial de clientes' },
     { id: 'reportes', label: 'Reportes y Estadísticas', icon: 'analytics', desc: 'Métricas financieras, ventas y taller' },
     { id: 'proveedores', label: 'Proveedores y Compras', icon: 'local_shipping', desc: 'Directorio de proveedores y órdenes de compra' },
-    { id: 'usuarios', label: 'Administrar Usuarios', icon: 'group', desc: 'Gestión de personal y cuentas' },
     { id: 'auditoria', label: 'Auditoría del Sistema', icon: 'security', desc: 'Registro de seguridad y eventos' }
 ];
 
@@ -67,8 +145,6 @@ function openModulePermissions(id, fullName, role, modulosStr) {
     if (role === 'admin') {
         if (typeof showToast === 'function') {
             showToast('Los administradores poseen acceso global a todos los módulos por diseño.', 'info');
-        } else {
-            alert('Los administradores poseen acceso global a todos los módulos por diseño.');
         }
         return;
     }
@@ -90,7 +166,7 @@ function openModulePermissions(id, fullName, role, modulosStr) {
         allowed = modulosStr ? modulosStr.split(',').map(s => s.trim()).filter(Boolean) : [];
     } else {
         // Por defecto para operarios/empleados: módulos base iniciales
-        allowed = ['dashboard', 'venta', 'inventario', 'clientes'];
+        allowed = ['dashboard', 'venta', 'caja', 'inventario', 'clientes'];
     }
     
     // Renderizar la lista con checkboxes y selector rápido
@@ -199,4 +275,5 @@ function closeEditUserModal() {
     card.classList.add('scale-95');
     modal.classList.add('opacity-0', 'pointer-events-none');
     document.getElementById('edit-user-form').reset();
+    updatePasswordRuleIndicators('', 'edit-user-password-rules');
 }

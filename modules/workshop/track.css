@@ -1,15 +1,69 @@
-/* assets/css/pages/track.css */
+/* modules/workshop/track.css */
+/* Estética Oficial Nokia 1100 UI Kit · Line Tracking de Precisión */
+
 .material-symbols-outlined {
-    font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-body {
-    background-color: #181E26;
-    color: #FAFAFA;
+/* Contenedor Principal Estilo Ficha Técnica Nokia 1100 */
+.nk-track-card {
+    background-color: var(--surface);
+    color: var(--text-main);
+    border: 1.5px solid var(--ink);
+    border-radius: 4px;
+    box-shadow: var(--nk-shadow-pop);
+    transition: background-color 0.25s ease, border-color 0.25s ease;
 }
 
-.glass-card {
-    background: rgba(31, 41, 55, 0.75);
-    backdrop-filter: blur(16px);
-    border: 1px solid #374151;
+html.dark .nk-track-card,
+html[data-theme="dark"] .nk-track-card {
+    border-color: var(--line-2);
+}
+
+.nk-subcard {
+    background-color: var(--sunk);
+    border: 1px solid var(--border-dark);
+    border-radius: 3px;
+    color: var(--text-main);
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+/* Centrado de cabecera */
+.track-header-center,
+.track-header-center h1,
+.track-header-center h2,
+.track-header-center p {
+    text-align: center !important;
+}
+
+/* Banner sutil de actualización en vivo */
+.nk-live-notice {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transform: translateY(-6px);
+    transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.nk-live-notice.is-open {
+    max-height: 90px;
+    opacity: 1;
+    transform: translateY(0);
+    margin-bottom: 16px;
+}
+
+/* Animación suave para nuevas filas de historial */
+@keyframes historyReveal {
+    0% {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.history-item-new {
+    animation: historyReveal 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }

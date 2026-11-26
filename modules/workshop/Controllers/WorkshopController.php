@@ -18,7 +18,6 @@ class WorkshopController extends BaseController
 
     public function index()
     {
-        $this->check_auth();
         $this->check_access('taller');
 
         $estado_filter = $_GET['estado'] ?? '';
@@ -33,9 +32,11 @@ class WorkshopController extends BaseController
         $total_pages = ceil($total_items / $limit);
 
         $repairs = $this->workshop_model->get_repairs($estado_filter, $search, $limit, $offset);
+        $received_repairs = $this->workshop_model->get_received_repairs();
 
         $this->render_view(__DIR__ . '/../Views/index.php', [
             'repairs' => $repairs,
+            'received_repairs' => $received_repairs,
             'estado_filter' => $estado_filter,
             'search' => $search,
             'page' => $page,
@@ -47,7 +48,6 @@ class WorkshopController extends BaseController
 
     public function history()
     {
-        $this->check_auth();
         $this->check_access('taller');
 
         $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -71,20 +71,19 @@ class WorkshopController extends BaseController
 
     public function add()
     {
-        $this->check_auth();
-        $this->check_access('taller');
-        
-        if ($_SESSION['role'] !== 'admin') {
-            $this->redirect(BASE_URL . "/modules/workshop/index.php");
-        }
+        $this->check_access('registrar_equipo');
 
         $error = '';
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $token = $_POST['csrf_token'] ?? '';
-            if (empty($_SESSION['session_token']) || !hash_equals($_SESSION['session_token'], (string)$token)) {
+            if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
                 $this->redirect("index.php?action=add&error=" . urlencode("Token CSRF inválido"));
             }
             try {
+                $rawBudget = str_replace(',', '.', trim((string)($_POST['presupuesto'] ?? '')));
+                $budgetVal = ($rawBudget !== '' && is_numeric($rawBudget)) ? (float)$rawBudget : 0.0;
+                if ($budgetVal < 0) {
+                    throw new Exception("El presupuesto no puede ser negativo.");
+                }
                 $id_reparacion = $this->workshop_model->create_repair_order(
                     $_POST['id_cliente_existente'] ?? 0,
                     $_POST['cliente_nombre'] ?? '',
@@ -95,7 +94,7 @@ class WorkshopController extends BaseController
                     $_POST['equipo_imei'] ?? '',
                     $_POST['falla_declarada'] ?? '',
                     $_POST['observaciones'] ?? '',
-                    isset($_POST['presupuesto']) && $_POST['presupuesto'] !== '' ? (float)$_POST['presupuesto'] : 0.0,
+                    $budgetVal,
                     $_SESSION['user_id']
                 );
 
@@ -128,23 +127,48 @@ class WorkshopController extends BaseController
                     }
                 }
 
-                $this->redirect("index.php?action=view&id=$id_reparacion&success=created");
+                $created = $this->workshop_model->find_repair_by_id($id_reparacion);
+                $codigo = $created['codigo_orden'] ?? $id_reparacion;
+
+                require_once __DIR__ . '/../../../classes/Layout.php';
+                if (Layout::hasAccess('taller')) {
+                    $this->redirect("index.php?new_intake=" . $id_reparacion . "&success=" . urlencode("¡Tienes un equipo que ha ingresado! Orden #$codigo registrada y derivada al Taller."));
+                } else {
+                    $this->redirect("index.php?action=add&new_intake=" . $id_reparacion . "&success=" . urlencode("¡Equipo #$codigo registrado y enviado al Taller! Podés imprimir su recibo en el historial."));
+                }
             } catch (Exception $e) {
                 $this->redirect("index.php?action=add&error=" . urlencode($e->getMessage()));
             }
         }
 
+        $estado_filter = $_GET['estado'] ?? '';
+        $search = $_GET['search'] ?? '';
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        if ($page < 1) $page = 1;
+        $limit = 10;
+        $offset = ($page - 1) * $limit;
+
+        $total_items = $this->workshop_model->get_repairs_count($estado_filter, $search);
+        $total_pages = (int)max(1, ceil($total_items / $limit));
+        $repairs = $this->workshop_model->get_repairs($estado_filter, $search, $limit, $offset);
+
         $clients = $this->workshop_model->get_all_clients();
 
         $this->render_view(__DIR__ . '/../Views/add.php', [
             'error' => $error,
-            'clients' => $clients
+            'clients' => $clients,
+            'repairs' => $repairs,
+            'estado_filter' => $estado_filter,
+            'search' => $search,
+            'page' => $page,
+            'total_pages' => $total_pages,
+            'total_items' => $total_items,
+            'limit' => $limit
         ]);
     }
 
     public function view()
     {
-        $this->check_auth();
         $this->check_access('taller');
 
         $id_reparacion = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -156,8 +180,7 @@ class WorkshopController extends BaseController
         $success = '';
 
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $token = $_POST['csrf_token'] ?? '';
-            if (empty($_SESSION['session_token']) || !hash_equals($_SESSION['session_token'], (string)$token)) {
+            if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
                 $this->redirect("index.php?action=view&id=$id_reparacion&error=" . urlencode("Token CSRF inválido"));
             }
         }
@@ -192,6 +215,9 @@ class WorkshopController extends BaseController
                 $estado = trim($_POST['estado'] ?? '');
                 $raw_presupuesto = str_replace(',', '.', (string)($_POST['presupuesto'] ?? ''));
                 $presupuesto = is_numeric($raw_presupuesto) ? (float)$raw_presupuesto : 0;
+                if ($presupuesto < 0) {
+                    throw new Exception("El presupuesto no puede ser negativo.");
+                }
                 
                 $this->workshop_model->update_repair_status_and_budget(
                     $id_reparacion,
@@ -318,7 +344,7 @@ class WorkshopController extends BaseController
 
     public function print_receipt()
     {
-        $this->check_access('taller');
+        $this->check_any_access(['registrar_equipo', 'taller', 'cobrar_reparaciones']);
 
         $id_reparacion = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         if (!$id_reparacion) {
@@ -338,28 +364,71 @@ class WorkshopController extends BaseController
     public function track()
     {
         // Página de seguimiento de acceso público
-        $codigo = isset($_GET['code']) ? trim($_GET['code']) : '';
+        $codigo = isset($_GET['code']) ? ltrim(trim($_GET['code']), '#') : '';
         $order_found = false;
         $repair = null;
+        $historial = [];
+        $images = [];
 
         if ($codigo) {
             $repair = $this->workshop_model->find_repair_by_code($codigo);
             if ($repair) {
                 $order_found = true;
+                $id_rep = (int)($repair['id_reparacion'] ?? 0);
+                if ($id_rep > 0) {
+                    $historial = $this->workshop_model->get_repair_historial($id_rep);
+                    $images = $this->workshop_model->get_repair_images($id_rep);
+                }
             }
+        }
+
+        // Endpoint JSON en tiempo real para detectar cambios de estado sin recargar
+        if (isset($_GET['ajax']) && $_GET['ajax'] === '1') {
+            header('Content-Type: application/json; charset=utf-8');
+            if (!$order_found || !$repair) {
+                echo json_encode(['success' => false]);
+                exit();
+            }
+            $total_est = floatval($repair['presupuesto'] ?? 0) + floatval($repair['costo_total'] ?? 0);
+            $hist_formatted = array_map(function ($h) {
+                return [
+                    'estado_nuevo' => (string)($h['estado_nuevo'] ?? ''),
+                    'nota'         => (string)($h['nota'] ?? ''),
+                    'fecha_cambio' => !empty($h['fecha_cambio']) ? date('d/m/Y H:i', strtotime($h['fecha_cambio'])) . ' hs' : '',
+                ];
+            }, $historial);
+
+            $img_formatted = array_map(function ($img) {
+                return [
+                    'url'  => BASE_URL . '/assets/img/reparaciones/' . rawurlencode($img['ruta_archivo']),
+                    'tipo' => (string)($img['tipo'] ?? 'Taller'),
+                ];
+            }, $images);
+
+            echo json_encode([
+                'success'          => true,
+                'estado'           => (string)$repair['estado'],
+                'total_estimado'   => $total_est,
+                'total_formatted'  => $total_est > 0 ? '$ ' . number_format($total_est, 2, ',', '.') : 'En evaluación',
+                'historial'        => $hist_formatted,
+                'images'           => $img_formatted,
+            ]);
+            exit();
         }
 
         $this->render_view(__DIR__ . '/../Views/track.php', [
             'codigo' => $codigo,
             'order_found' => $order_found,
-            'repair' => $repair
+            'repair' => $repair,
+            'historial' => $historial,
+            'images' => $images
         ]);
     }
 
     public function delivery_receipt()
     {
-        // Se imprime desde el taller y también desde la caja (Cobrar Reparaciones)
-        $this->check_any_access(['taller', 'cobrar_reparaciones', 'ventas', 'venta']);
+        // Se imprime desde el taller y también desde la caja (Cobrar Reparaciones / Ventas)
+        $this->check_any_access(['taller', 'cobrar_reparaciones']);
 
         $id_reparacion = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         if (!$id_reparacion) {
@@ -376,14 +445,8 @@ class WorkshopController extends BaseController
 
     public function check_status()
     {
-        $this->check_auth(true);
+        $this->check_any_access(['taller', 'cobrar_reparaciones'], true);
         header('Content-Type: application/json; charset=utf-8');
-
-        if (isset($_SESSION['role']) && $_SESSION['role'] === 'guest') {
-            http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'Acceso denegado']);
-            exit();
-        }
 
         $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
         if (!$id) {

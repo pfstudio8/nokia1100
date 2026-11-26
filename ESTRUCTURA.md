@@ -1,7 +1,7 @@
 # Nokia 1100 — Mapa del Proyecto
 
-Guía de referencia: qué hace cada carpeta, qué archivos contiene y cómo se relacionan entre sí.
-Última actualización: 2026-06-26
+Guía de referencia técnica: qué hace cada carpeta, qué archivos contiene y cómo se relacionan entre sí.
+Última actualización: 2026-11-20
 
 ---
 
@@ -9,259 +9,228 @@ Guía de referencia: qué hace cada carpeta, qué archivos contiene y cómo se r
 
 ```
 nokia1100/
-├── api/                  → Endpoints AJAX (llamados desde JS del frontend)
-├── assets/               → Recursos estáticos globales (compartidos entre módulos)
-│   ├── css/              → CSS global + estilos de páginas standalone
-│   ├── img/              → Imágenes del sistema
-│   └── js/               → JS global + scripts de páginas standalone
-├── classes/              → Clases PHP reutilizables del sistema
-├── config/               → Configuración de conexión a BD y entorno
-├── database/             → Scripts SQL y scripts de migración
-├── includes/             → Middlewares y fragmentos PHP reutilizables
-├── modules/              → Módulos funcionales (arquitectura vertical slicing)
-│   ├── admin/            → Gestión de usuarios y administración
-│   ├── auth/             → Autenticación (login, registro, reset)
+├── api/                  → Endpoints AJAX directos (compatibilidad con JS del frontend)
+├── assets/               → Recursos estáticos globales y de módulos principales
+│   ├── css/              → Hojas de estilo globales, login, OTP, loader, tracker e inventario
+│   ├── img/              → Imágenes subidas de órdenes de reparación (reparaciones/)
+│   └── js/               → Scripts globales (main, theme, export, toaster, loader, tracker, inventory)
+├── auth/                 → Páginas standalone de autenticación (forgot_password.php, verificar.php)
+├── classes/              → Clases base MVC, conexión a BD, Layout, QR SVG y ServiceProduct
+├── config/               → Bootstrap (.env + cookies), conexión MySQLi, SMTP y auditoría de inventario
+├── database/             → Dumps SQL y motor de migración automática en runtime (run_migrations.php)
+├── modules/              → Módulos funcionales (arquitectura MVC por Vertical Slicing)
+│   ├── admin/            → Dashboard gerencial, ABM de usuarios/permisos, perfil y auditoría
+│   ├── auth/             → Controlador y modelo de autenticación, OTP y restablecimiento de clave
+│   ├── caja/             → Apertura de caja, libro inmutable de movimientos, contra-asientos y cierre ciego
 │   ├── clients/          → Gestión de clientes
-│   ├── employee/         → Dashboard del empleado
-│   ├── inventory/        → Inventario de productos
-│   ├── sales/            → Ventas y estadísticas
-│   ├── suppliers/        → Proveedores y compras
-│   └── workshop/         → Taller de reparaciones
-├── PHPMailer-master/     → Librería para envío de emails
-├── forgot_password.php   → Página de recuperación de contraseña
-├── index.php             → Pantalla de login / registro
-└── track.php             → Redirección al portal de seguimiento
+│   ├── employee/         → Centro de operaciones para empleados e invitados
+│   ├── inventory/        → Catálogo e inventario reactivo de productos y repuestos
+│   ├── reports/          → Centro de reportes y estadísticas (10 gráficos Chart.js en 4 pestañas)
+│   ├── sales/            → Terminal POS (pago único/combinado), historial, facturas, notas de crédito y cobro de taller
+│   ├── suppliers/        → Hub unificado de proveedores, asistente de reposición, compra manual y recepción verificada
+│   └── workshop/         → Taller de reparaciones, ingreso de equipos, repuestos, fotos, recibos QR y seguimiento en vivo
+├── help.php              → Manual de uso interactivo en 6 pestañas con datos reales del local
+├── index.php             → Pantalla de acceso (Login / Registro / Invitado / Modal OTP)
+└── track.php             → Punto de entrada público al portal de seguimiento de taller
 ```
 
 ---
 
-## Arquitectura: Vertical Slicing
+## Arquitectura: MVC por Vertical Slicing
 
-El proyecto sigue un patrón de **vertical slicing**: cada módulo contiene todo lo que necesita para funcionar (controladores, modelos, vistas, JS y CSS propios).
+Cada módulo dentro de `modules/<modulo>/` encapsula su propio router (`index.php`), controlador (`Controllers/`), modelo (`Models/`), vistas (`Views/`) y recursos específicos (`*.js`, `*.css`):
 
 ```
 modules/<modulo>/
-├── Controllers/          → Lógica de negocio
-├── Models/               → Consultas a la base de datos
-├── Views/                → HTML/PHP de las vistas
-├── *.js                  → JavaScript específico del módulo
-└── *.css                 → CSS específico del módulo
+├── index.php             → Router del módulo (despacha ?action=... al controlador)
+├── Controllers/          → Validación de entrada, permisos, CSRF y orquestación
+├── Models/               → Consultas SQL preparadas y transacciones atómicas MySQLi
+├── Views/                → Plantillas HTML/PHP renderizadas dentro de Layout
+├── *.js                  → Lógica cliente del módulo
+└── *.css                 → Estilos específicos del módulo
 ```
-
-Los únicos assets que permanecen en `assets/` son los **globales** (compartidos por todo el sistema):
-- `assets/css/style.css` — Estilos base de todo el dashboard
-- `assets/js/tailwind_config.js` — Configuración de Tailwind (global)
-- `assets/js/main.js` — Interacciones generales del sistema
-- `assets/js/export-helper.js` — Exportación a Excel/PDF
-- `assets/js/filtros.js` — Filtros de búsqueda globales
-- `assets/js/framer-toaster.js` — Componente de notificaciones con Framer Motion
-- `assets/css/login.css` — Estilo de la página de login (standalone)
-- `assets/css/forgot_password.css` — Estilo de recuperación de contraseña (standalone)
-- `assets/css/auth_verify.css` — Estilo de verificación (standalone)
 
 ---
 
 ## Detalle por componente
 
-### `api/` — Endpoints AJAX
+### 1. Raíz del proyecto y `auth/` — Páginas de entrada
 
 | Archivo | Función |
 |---|---|
-| `cambiar_estado.php` | Toggle activo/inactivo de productos en inventario |
-| `check_stock.php` | Validar stock disponible en tiempo real (usado en ventas) |
-| `create_product.php` | Crear producto nuevo desde formulario AJAX |
-| `get_purchase_history.php` | Obtener historial de compras de proveedores |
+| `index.php` | Pantalla principal de Login, Registro, Acceso de Invitado y Modal OTP de 6 dígitos |
+| `help.php` | Centro de ayuda interactivo en 6 pestañas con previsualizaciones conectadas a la BD |
+| `track.php` | Punto de entrada público que delega en `WorkshopController::track()` |
+| `auth/forgot_password.php` | Formulario público para solicitar enlace de recuperación de contraseña por correo |
+| `auth/verificar.php` | Vista de verificación de código OTP o redirección al modal OTP de `index.php` |
 
 ---
 
-### `assets/` — Recursos Globales
+### 2. `api/` — Endpoints AJAX
+
+| Archivo | Delega en | Función |
+|---|---|---|
+| `api/change_status.php` | `InventoryController::change_status()` | Alterna el estado lógico (`is_active`) de un producto |
+| `api/check_stock.php` | `InventoryController::check_stock()` | Consulta el stock disponible de un producto en tiempo real (usado en POS) |
+| `api/rollback_sale.php` | `SalesController::rollback()` | Anula una venta, devuelve stock al inventario y registra el contra-asiento en caja |
+
+---
+
+### 3. `classes/` — Clases Globales del Núcleo
+
+| Archivo | Función |
+|---|---|
+| `BaseController.php` | Controlador padre: inicia sesión, valida sesión única (`check_auth`), permisos por módulo (`check_access`, `check_any_access`, `require_primary_admin`), CSRF (`verify_csrf`), detección AJAX (`is_ajax`), política de contraseñas (`validate_password`) y renderizado (`render_view`) |
+| `BaseModel.php` | Modelo padre que inyecta la conexión global `$conn` (`mysqli`) |
+| `Database.php` | Conecta a MySQL con `utf8mb4` y zona horaria `-03:00`, y ejecuta `apply_system_migrations()` |
+| `Layout.php` | Renderiza `<head>`, barra superior, sidebars de Admin/Empleado/Invitado, botones de exportación Excel/PDF, insignias de medios de pago, paginación y control de permisos por rol y `modulos_permitidos` |
+| `QRCodeSVG.php` | Generador nativo autónomo de códigos QR en formato SVG (ISO/IEC 18004, versiones 1 a 10) |
+| `ServiceProduct.php` | Gestiona e identifica por nombre el producto contable `"Servicio Técnico Taller"` y provee `excludeSql()` para ocultarlo de métricas y listados de stock físico |
+
+---
+
+### 4. `config/` — Configuración y Servicios Transversales
+
+| Archivo | Función |
+|---|---|
+| `bootstrap.php` | Fija zona horaria `America/Argentina/Buenos_Aires`, endurece cookies de sesión (`httponly`, `strict_mode`, `samesite=Lax`), carga Composer y valida variables `.env` con `phpdotenv` |
+| `db.php` | Carga `bootstrap.php`, define `BASE_URL` e instancia `Database` (`$conn`) |
+| `config_mail.php` | Normaliza variables `SMTP_*` desde `.env` y verifica disponibilidad de `PHPMailer` |
+| `audit.php` | Define `audit_log()`, dedicada exclusivamente a registrar movimientos y eventos de inventario (`INVENTORY_*` / tablas `inventario` y `producto`) en la tabla `audit_log` |
+
+---
+
+### 5. `database/` — Esquema y Migraciones
+
+| Archivo | Función |
+|---|---|
+| `nokia1100_actual.sql` | Esquema completo actualizado de la base de datos (20 tablas y claves foráneas) |
+| `run_migrations.php` | Migración automática idempotente ejecutada al iniciar conexión (protegida por `.schema_v5_clean_der.lock`) |
+| `migration_caja.sql` | Script SQL de referencia para las tablas `caja` y `caja_movimiento` |
+| `migration_pago_combinado.sql` | Script SQL de referencia para la tabla `venta_pago` |
+
+---
+
+### 6. `assets/` — Recursos Estáticos Globales
 
 #### `assets/css/`
 | Archivo | Usado en |
 |---|---|
-| `style.css` | Todo el dashboard (cargado por `Layout.php`) |
-| `login.css` | `index.php` (login/registro) |
-| `forgot_password.css` | `forgot_password.php` |
-| `auth_verify.css` | Verificación de cuenta |
+| `style.css` | Estilos globales del sistema y tema claro/oscuro Nokia 1100 (cargado por `Layout.php` e `index.php`) |
+| `inventory.css` | Estilos del módulo de inventario (`modules/inventory/Views/inventory.php`) |
+| `login.css` | Estilos del doble panel de acceso (`index.php`) |
+| `forgot_password.css` | Estilos de `auth/forgot_password.php` y `auth/verificar.php` |
+| `one-time-code.css` | Estilos del componente de ingreso de código OTP de 6 dígitos (`index.php`) |
+| `nokia-loader.css` | Estilos de la pantalla de transición/carga Nokia 1100 |
+| `nokia-tracker.css` | Estilos de la línea de seguimiento animada v2.0 (`.nkt`) en `track.php` |
 
 #### `assets/js/`
 | Archivo | Función |
 |---|---|
-| `tailwind_config.js` | Paleta de colores de Tailwind (cargado globalmente) |
-| `main.js` | Interacciones del sistema (sidebar, toasts, confirmaciones) |
-| `export-helper.js` | Exportar tablas a Excel y PDF |
-| `filtros.js` | Filtros de búsqueda en tablas |
-| `framer-toaster.js` | Componente de notificaciones toast |
-| `login.js` | Animación del slider login/registro en `index.php` |
+| `tailwind_config.js` | Configuración de paleta y fuentes de Tailwind CSS |
+| `theme.js` | Conmutador de modo claro/oscuro persistido en `localStorage('nokia1100_theme')` |
+| `session-cache.js` | Sincroniza el usuario activo en `localStorage('nokia1100_user')` y lo limpia al cerrar sesión |
+| `main.js` | Paginación de tablas (`[data-paginate]`), búsqueda difusa (Levenshtein), validación de formularios con Toast, modales de confirmación, atajos de teclado (`F2`, `F3`, `F4`, `Ctrl+B`) y polling en vivo de taller |
+| `framer-toaster.js` | Sistema de notificaciones `window.showToast()` y `window.showConfirmModal()` |
+| `export-helper.js` | Exportación de tablas HTML a Excel (SheetJS) y PDF (jsPDF + AutoTable) con ventana de cancelación |
+| `nokia-loader.js` | Animación de carga al iniciar/cerrar sesión |
+| `one-time-code.js` | Componente interactivo de 6 casillas para el código OTP |
+| `login.js` | Lógica cliente de login, registro AJAX y modal de verificación OTP en `index.php` |
+| `inventory.js` | Motor reactivo del módulo de Inventario (filtros, ordenamiento, KPIs, paginación, modales CRUD AJAX y exportación) |
 
 ---
 
-### `classes/` — Clases Globales
-
-| Archivo | Función |
-|---|---|
-| `Layout.php` | Renderiza `<head>`, sidebars admin/empleado, footer. Incluye control de acceso por módulos. |
-
----
-
-### `config/` — Configuración
-
-| Archivo | Función |
-|---|---|
-| `db.php` | Conexión a la BD (mysqli). Define `BASE_URL` y constantes de entorno. |
-
----
-
-### `database/` — Scripts de BD
-
-| Archivo | Cuándo usar |
-|---|---|
-| `bd_nokia1100.sql` | Importar BD completa con datos de ejemplo |
-| `nokia1100_estructura.sql` | Solo la estructura de tablas (sin datos) |
-| `migration_seguridad.sql` | Migración de columnas de seguridad (`modulos_permitidos`, etc.) |
-| `run_migration.php` | Ejecutar la migración de `modulos_permitidos` vía web |
-| `setup_taller.php` | Crear tablas del módulo Taller si no existen |
-
----
-
-### `includes/` — Middlewares PHP
-
-| Archivo | Función |
-|---|---|
-| `auth.php` | Protege rutas de admin/empleado. Redirige al login si no hay sesión. |
-| `filtros.php` | Funciones de filtrado y sanitización de datos. |
-
----
-
-### `modules/` — Módulos Funcionales
+### 7. `modules/` — Módulos Funcionales
 
 #### `modules/admin/`
 | Archivo | Función |
 |---|---|
-| `Controllers/AdminController.php` | Gestión de usuarios del sistema |
-| `Models/AdminModel.php` | Consultas de usuarios |
-| `Views/users.php` | Listado, alta, edición y desactivación de usuarios |
-| `admin_users.js` | Modal de agregar/editar usuario, permisos de módulos |
-| `admin_users.css` | Estilos de la vista de usuarios |
-| `users.php` | Entrypoint del módulo |
-| `dashboard.php` | Dashboard del administrador |
+| `index.php` | Router (`dashboard`, `users`, `add_user`, `edit_user`, `delete_user`, `save_user_modules`, `update_user_role`, `profile`, `audit`, `get_dashboard_data`) |
+| `Controllers/AdminController.php` | Controlador del panel gerencial, gestión de usuarios (exclusiva del admin principal), perfil y auditoría |
+| `Models/AdminModel.php` | Consultas de KPIs, usuarios/personas, asignación de módulos/roles, auditoría de inventario y estadísticas financieras |
+| `Views/dashboard.php` | Panel principal del administrador con carga asíncrona de métricas y ventas recientes |
+| `Views/users.php` | ABM de usuarios con baja lógica, filtros de estado y drawer de permisos por módulo |
+| `Views/profile.php` | Edición de datos personales y nombre de usuario del administrador |
+| `Views/audit.php` | Historial paginado de auditoría de inventario |
+| `admin_users.js` / `admin_users.css` | Lógica de modales de usuario, validador de reglas de contraseña y estilos de administración |
 
 #### `modules/auth/`
 | Archivo | Función |
 |---|---|
-| `Controllers/AuthController.php` | Login, logout, registro, recuperación de contraseña |
-| `Models/AuthModel.php` | Consultas de autenticación y creación de usuarios |
-| `Views/reset.php` | Formulario de nueva contraseña (con token) |
-| `reset_password.css` | Estilos del formulario de reset |
-| `auth.php` | Procesa el login |
-| `logout.php` | Cierra la sesión |
-| `process_registration.php` | Procesa el registro |
-| `index.php?action=forgot_password` | Envía el email de recuperación |
-| `index.php?action=reset_password` | Guarda la nueva contraseña |
+| `index.php` | Router (`login`, `logout`, `register`, `verify_otp`, `resend_otp`, `forgot_password`, `reset_password_view`, `reset_password`, `guestLogin`) |
+| `Controllers/AuthController.php` | Autenticación, creación de cuenta, envío de emails SMTP (OTP y recuperación) y acceso de invitado |
+| `Models/AuthModel.php` | Consultas de credenciales, registro transaccional (`persona` + `usuario`), tokens OTP y tokens de recuperación |
+| `Views/reset.php` / `reset_password.css` | Vista y estilos para definir una nueva contraseña mediante token válido |
+
+#### `modules/caja/`
+| Archivo | Función |
+|---|---|
+| `index.php` | Router (`index`, `open`, `add_movement`, `remove_movement`, `reverse_movement`, `close`, `detail`, `export_csv`) |
+| `Controllers/CajaController.php` | Apertura de caja, ingresos/egresos manuales, contra-asientos con motivo obligatorio, cierre ciego y exportación CSV |
+| `Models/CajaModel.php` | Libro inmutable `caja_movimiento`, cálculo de efectivo esperado en vivo, bloqueo `FOR UPDATE` e integración transaccional con ventas y cobros de taller |
+| `Views/index.php` | Interfaz del módulo de Caja Diaria y Arqueos |
+| `caja.js` / `caja.css` | Lógica interactiva de apertura, movimientos, contra-asientos, cierre ciego y estilos del módulo |
 
 #### `modules/clients/`
 | Archivo | Función |
 |---|---|
-| `Controllers/ClientsController.php` | CRUD de clientes |
-| `Models/ClientsModel.php` | Consultas de clientes |
-| `Views/list.php` | Listado y alta de clientes |
-| `clients_list.js` | Búsqueda live y modal de eliminación |
-| `clients.php` | Entrypoint del módulo |
-| `edit_client.php` | Formulario de edición |
+| `index.php` | Router (`index`, `add`, `edit`, `delete`) |
+| `Controllers/ClientsController.php` | Listado, búsqueda, alta, edición y eliminación protegida (verifica órdenes de reparación asociadas) |
+| `Models/ClientModel.php` | CRUD sobre la tabla `cliente` |
+| `Views/list.php` / `Views/edit.php` | Listado con modal de alta y formulario de edición de cliente |
+| `clients_list.js` | Apertura de modal y baja por `POST` con confirmación |
 
 #### `modules/employee/`
 | Archivo | Función |
 |---|---|
-| `dashboard.php` | Dashboard del empleado |
+| `index.php` | Router (`dashboard`) |
+| `Controllers/EmployeeController.php` | Carga estadísticas de ventas del día, reparaciones listas para cobrar y catálogo rápido |
+| `Models/EmployeeModel.php` | Consultas de ventas diarias y productos destacados en stock |
+| `Views/dashboard.php` | Centro de operaciones para empleados e invitados |
 
 #### `modules/inventory/`
 | Archivo | Función |
 |---|---|
-| `Controllers/InventoryController.php` | CRUD de productos |
-| `Models/InventoryModel.php` | Consultas de inventario |
-| `Views/inventory.php` | Listado de productos (tabla + grilla) |
-| `inventory.js` | Toggle vista tabla/grilla |
-| `inventory.php` | Entrypoint del módulo |
-| `add_product.php` / `edit_stock.php` | Alta y edición de productos |
-| `change_status.php` | Alias interno (la lógica está en `api/cambiar_estado.php`) |
+| `index.php` | Router (`inventory`, `change_status`, `check_stock`, `ajax_save_product`) |
+| `Controllers/InventoryController.php` | Carga del catálogo completo y endpoints AJAX de alta/edición, cambio de estado y consulta de stock |
+| `Models/InventoryModel.php` | Transacciones sobre `producto`, `producto_detalle` e `inventario`, KPIs y métricas para reportes |
+| `Views/inventory.php` | Interfaz reactiva Nokia 1100 de inventario (alimentada por `assets/js/inventory.js` y `assets/css/inventory.css`) |
+
+#### `modules/reports/`
+| Archivo | Función |
+|---|---|
+| `index.php` | Router (`dashboard`) |
+| `Controllers/ReportsController.php` | Consolida indicadores financieros, de inventario, de ventas y de taller |
+| `Views/reports.php` / `reports.js` | Dashboard analítico con 10 gráficos interactivos Chart.js en 4 pestañas y tablas exportables |
 
 #### `modules/sales/`
 | Archivo | Función |
 |---|---|
-| `Controllers/SalesController.php` | Registro y consulta de ventas |
-| `Models/SalesModel.php` | Consultas de ventas |
-| `Views/new_sale.php` | Terminal POS (punto de venta) |
-| `Views/list.php` | Historial de ventas |
-| `Views/invoice.php` | Factura imprimible de una venta |
-| `Views/sales_charts.php` | Estadísticas con gráficos |
-| `new_sale.js` | Lógica del carrito y envío de la venta |
-| `sales_list.js` | Búsqueda y botón de exportación animado |
-| `sales_charts.js` | Inicialización de Chart.js |
-| `sales_list.css` | Estilos del botón de exportación |
-| `sales_invoice.css` | Estilos de la factura para impresión |
-| `sales.php` | Entrypoint del módulo |
+| `index.php` | Router (`sales`, `new_sale`, `repairs_to_charge`, `charge_repair`, `invoice`, `credit_note`, `rollback`, `check_ready_repairs`) |
+| `Controllers/SalesController.php` | Historial de ventas, terminal POS, cobro de reparaciones, facturas, notas de crédito, anulación y polling de taller |
+| `Models/SalesModel.php` | Validación de pagos (único o combinado de hasta 2 medios), registro transaccional de ventas, anulación con devolución de stock y métricas de ventas |
+| `Views/list.php` / `sales_list.js` / `sales_list.css` | Historial paginado de ventas con anulación y acceso a factura o nota de crédito |
+| `Views/new_sale.php` / `new_sale.js` | Terminal POS con carrito en `localStorage`, cálculo de vuelto y pago único o combinado |
+| `Views/repairs_to_charge.php` | Bandeja de cobro y entrega de equipos finalizados en taller |
+| `Views/invoice.php` / `Views/credit_note.php` / `sales_invoice.css` | Comprobantes imprimibles de factura y nota de crédito |
 
 #### `modules/suppliers/`
 | Archivo | Función |
 |---|---|
-| `Controllers/SuppliersController.php` | CRUD de proveedores y compras |
-| `Models/SuppliersModel.php` | Consultas de proveedores |
-| `Views/list.php` | Directorio de proveedores |
-| `Views/new_purchase.php` | Registrar una orden de compra |
-| `Views/purchase_history.php` | Historial de compras |
-| `suppliers_list.js` | Búsqueda y toggle de historial inline |
-| `new_purchase.js` | Carrito de compra y envío |
-| `purchase_history.js` | Toggle de detalles de compra |
-| `suppliers_list.css` | Estilos de la tabla de proveedores |
-| `suppliers.php` | Entrypoint del módulo |
+| `index.php` | Router (`suppliers`, `save_supplier`, `delete_supplier`, `new_purchase`, `purchase_history`, `receive_purchase`, `cancel_purchase`, `quick_product`) |
+| `Controllers/SuppliersController.php` | Hub unificado de abastecimiento, CRUD AJAX de proveedores, alta rápida de productos, órdenes de compra y control de recepción |
+| `Models/SupplierModel.php` | Consultas y transacciones de `proveedor`, `compra` y `detalle_compra` con impacto en `inventario` al recibir mercadería |
+| `Views/list.php` / `suppliers_list.js` / `suppliers_list.css` | Interfaz integral en 5 secciones: Directorio, Asistente de Reposición, Compra Manual, Pedidos/Recepción y Stock en Vivo |
 
 #### `modules/workshop/`
 | Archivo | Función |
 |---|---|
-| `Controllers/WorkshopController.php` | CRUD de reparaciones |
-| `Models/WorkshopModel.php` | Consultas del taller |
-| `Views/view.php` | Listado de órdenes de reparación |
-| `Views/track.php` | Portal público de seguimiento (sin login) |
-| `Views/print_receipt.php` | Comprobante imprimible de reparación |
-| `track.css` | Estilos del portal de seguimiento |
-| `print_receipt.css` | Estilos del comprobante |
-| `index.php` | Entrypoint del módulo |
-| `view.php` | Entrypoint de la vista de órdenes |
-
----
-
-## Páginas standalone (sin módulo)
-
-| Archivo | Función |
-|---|---|
-| `index.php` | Login + Registro (doble panel animado) |
-| `forgot_password.php` | Recuperación de contraseña |
-| `track.php` | Redirección al portal de seguimiento del taller |
-
----
-
-## Flujo de una petición PHP típica
-
-```
-Usuario → index.php / entrypoint.php
-  → includes/auth.php (verifica sesión)
-  → modules/<modulo>/Controllers/<Controlador>.php
-      → modules/<modulo>/Models/<Modelo>.php (consulta BD)
-      → modules/<modulo>/Views/<vista>.php (renderiza HTML)
-          → classes/Layout.php (head, sidebar, footer)
-          → modules/<modulo>/<vista>.js (lógica frontend)
-          → modules/<modulo>/<vista>.css (estilos)
-```
-
-## Flujo de una llamada AJAX
-
-```
-modules/<modulo>/Views/<vista>.php + <vista>.js
-  → fetch('/nokia1100/api/<endpoint>.php')
-      → api/<endpoint>.php
-          → modules/<modulo>/Controllers/<Controlador>.php
-              → modules/<modulo>/Models/<Modelo>.php
-                  → Base de datos MySQL
-          ← JSON response
-      ← Actualiza el DOM
-```
+| `index.php` | Router (`index`, `add`, `view`, `add_repuesto`, `remove_repuesto`, `update_status`, `send_to_cashier`, `add_image`, `delete_image`, `print_receipt`, `delivery_receipt`, `track`, `history`, `check_status`) |
+| `Controllers/WorkshopController.php` | Gestión de órdenes de reparación, ingreso con fotos, asignación de repuestos, derivación a caja, recibos y portal público de seguimiento |
+| `Models/WorkshopModel.php` | Transacciones de órdenes, repuestos (con descuento/devolución de stock), historial de estados, galería de imágenes y cobro/entrega atómica |
+| `Views/index.php` | Listado de órdenes del taller con alertas de nuevos ingresos y filtros por estado |
+| `Views/add.php` | Formulario de recepción de equipos en mostrador e historial rápido |
+| `Views/view.php` | Ficha técnica de la orden: cliente, equipo, galería con lightbox, repuestos, cambio de estado y envío a ventas |
+| `Views/history.php` | Historial paginado de reparaciones cobradas |
+| `Views/print_receipt.php` / `Views/delivery_receipt.php` / `print_receipt.css` | Recibo de ingreso con código QR SVG y acta de conformidad de entrega |
+| `Views/track.php` / `track.css` | Portal público de seguimiento en tiempo real con línea de progreso `.nkt` |
