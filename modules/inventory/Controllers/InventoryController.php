@@ -209,4 +209,38 @@ class InventoryController extends BaseController
         }
         exit();
     }
+
+    public function labels()
+    {
+        $this->check_access('inventario');
+
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['op'] ?? '') === 'generate_codes') {
+            if (!$this->verify_csrf($_POST['csrf_token'] ?? null)) {
+                $this->redirect("index.php?action=labels&error=" . urlencode("Token CSRF inválido."));
+            }
+            $count = $this->inventory_model->generate_missing_codes();
+            $msg = $count > 0
+                ? "Se generaron {$count} código(s) faltante(s)."
+                : "Todos los productos ya tenían código asignado.";
+            $this->redirect("index.php?action=labels&success=" . urlencode($msg));
+        }
+
+        $catalog = $this->inventory_model->get_all_products_catalog();
+        $products = array_values(array_filter($catalog, fn($p) => !empty($p['is_active'])));
+
+        $preselectedIds = [];
+        if (!empty($_GET['ids'])) {
+            foreach (explode(',', (string)$_GET['ids']) as $rawId) {
+                $idInt = (int)trim($rawId);
+                if ($idInt > 0) {
+                    $preselectedIds[] = $idInt;
+                }
+            }
+        }
+
+        $this->render_view(__DIR__ . '/../Views/labels.php', [
+            'products'       => $products,
+            'preselectedIds' => $preselectedIds,
+        ]);
+    }
 }

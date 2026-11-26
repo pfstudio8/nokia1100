@@ -129,6 +129,17 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                     <input type="hidden" name="id_reparacion" value="<?php echo $rep['id_reparacion']; ?>">
                                     <input type="hidden" name="presupuesto" value="<?php echo $total_a_cobrar; ?>">
                                     <input type="hidden" name="modo_pago" value="unico" class="input-modo-pago">
+                                    <?php $isFreeWarranty = ($total_a_cobrar <= 0 && !empty($rep['es_garantia'])); ?>
+                                    <?php if ($isFreeWarranty): ?>
+                                        <input type="hidden" name="metodo_pago" value="Efectivo" class="input-metodo-pago">
+                                        <div class="p-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-xs text-emerald-500 font-medium text-center">
+                                            Reingreso por garantía sin cargo adicional.
+                                        </div>
+                                        <button type="submit" data-confirm="¿Confirmar la entrega sin cargo por garantía?" data-confirm-title="Entregar por Garantía" class="btn-submit-repair w-full bg-emerald-500 hover:bg-emerald-600 text-background font-bold py-3.5 px-4 rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-lg">
+                                            <span class="material-symbols-outlined text-[20px] pointer-events-none">verified</span>
+                                            Entregar sin cargo (Garantía)
+                                        </button>
+                                    <?php else: ?>
                                     
                                     <div>
                                         <div class="flex items-center justify-between gap-2 mb-2.5">
@@ -192,6 +203,7 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                         <span class="material-symbols-outlined text-[20px] pointer-events-none">point_of_sale</span>
                                         Cobrar y Entregar
                                     </button>
+                                    <?php endif; ?>
                                 </form>
                             </div>
 

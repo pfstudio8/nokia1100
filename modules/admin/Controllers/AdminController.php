@@ -334,7 +334,9 @@ class AdminController extends BaseController
             $modulos = [];
         }
         // La gestión de usuarios/perfiles es exclusiva del administrador principal
+        require_once __DIR__ . '/../../../classes/Layout.php';
         $modulos = array_values(array_filter(array_map('trim', $modulos), fn($m) => $m !== '' && $m !== 'usuarios'));
+        $modulos = array_values(array_intersect($modulos, Layout::PERMISSION_IDS));
 
         if ($id_usuario === 0) {
             $this->redirect("index.php?action=users&error=" . urlencode("Usuario no válido"));

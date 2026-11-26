@@ -41,10 +41,10 @@ DB_NAME=nokia1100
 BASE_URL=/nokia1100
 ```
 
-### 4. Configurar el Envío de Correos (SMTP)
-El sistema envía correos de verificación al registrar cuentas y de recuperación de contraseñas. 
+### 4. Configurar el Envío de Correos (SMTP) y Notificaciones
+El sistema envía correos de verificación de cuenta, recuperación de contraseñas y avisos automáticos de estado de reparación en taller al cliente.
 
-1. En el mismo archivo `.env` que creaste en el paso anterior, edita la sección de SMTP con las credenciales de tu proveedor de correo (ej. Gmail, Outlook):
+1. En el mismo archivo `.env` que creaste en el paso anterior, edita la sección de SMTP y banderas opcionales:
 
 ```env
 # Configuración de Correo (SMTP)
@@ -54,7 +54,19 @@ SMTP_USER=tu_correo@gmail.com
 SMTP_PASS=tu_contraseña_de_aplicacion
 SMTP_FROM_EMAIL=tu_correo@gmail.com
 SMTP_FROM_NAME="Nokia 1100 System"
+
+# Notificaciones por correo al cliente en taller
+NOTIFY_CLIENT_EMAILS=true
 ```
+
+### 5. Ejecutar Tests Automatizados (PHPUnit)
+El proyecto incluye pruebas unitarias y de integración aisladas sobre la base de pruebas `nokia1100_test`:
+
+```powershell
+C:\xampp\php\php.exe vendor\phpunit\phpunit\phpunit --testdox
+```
+
+Si tu usuario `DB_USER` del `.env` no tiene permiso `CREATE DATABASE`, indicá credenciales administrativas en la consola antes de correr PHPUnit (`$env:DB_TEST_USER='root'; $env:DB_TEST_PASS=''`).
 
 ---
 

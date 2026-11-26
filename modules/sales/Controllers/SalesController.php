@@ -2,6 +2,7 @@
 // modules/sales/Controllers/SalesController.php
 
 require_once __DIR__ . '/../../../classes/BaseController.php';
+require_once __DIR__ . '/../../../classes/Layout.php';
 require_once __DIR__ . '/../Models/SalesModel.php';
 
 class SalesController extends BaseController
@@ -33,13 +34,18 @@ class SalesController extends BaseController
             'page' => $page,
             'total_pages' => $total_pages,
             'total_items' => $total_items,
-            'limit' => $limit
+            'limit' => $limit,
+            'can_annul' => Layout::can('venta_anular')
         ]);
     }
 
     public function new_sale()
     {
         $this->check_access('venta');
+
+        $maxPct = (($_SESSION['role'] ?? '') === 'admin')
+            ? SalesModel::DESCUENTO_MAX_PCT_ADMIN
+            : (Layout::can('venta_descuento') ? SalesModel::DESCUENTO_MAX_PCT_EMPLEADO : 0.0);
 
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $input = json_decode(file_get_contents('php://input'), true);
@@ -56,6 +62,7 @@ class SalesController extends BaseController
                 $metodo_pago = isset($input['metodo_pago']) && is_string($input['metodo_pago']) ? trim($input['metodo_pago']) : '';
                 $pagos = isset($input['pagos']) && is_array($input['pagos']) ? $input['pagos'] : [];
                 $descripcion = $input['descripcion'] ?? '';
+                $descuento = isset($input['descuento']) && is_array($input['descuento']) ? $input['descuento'] : [];
 
                 if (empty($items) || (empty($pagos) && $metodo_pago === '')) {
                     echo json_encode(['success' => false, 'message' => 'Datos incompletos']);
@@ -70,7 +77,7 @@ class SalesController extends BaseController
 
                 try {
                     $pagoPayload = !empty($pagos) ? $pagos : $metodo_pago;
-                    $id_venta = $this->sales_model->create_sale_transaction($items, $pagoPayload, $_SESSION['user_id'], $descripcion);
+                    $id_venta = $this->sales_model->create_sale_transaction($items, $pagoPayload, $_SESSION['user_id'], $descripcion, $descuento, $maxPct);
                     echo json_encode(['success' => true, 'message' => 'Venta registrada con éxito', 'id_venta' => $id_venta]);
                 } catch (Exception $e) {
                     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
@@ -84,8 +91,9 @@ class SalesController extends BaseController
         $has_open_caja = ($caja_model->get_open_caja() !== null);
 
         $this->render_view(__DIR__ . '/../Views/new_sale.php', [
-            'products'      => $products,
-            'has_open_caja' => $has_open_caja
+            'products'          => $products,
+            'has_open_caja'     => $has_open_caja,
+            'discount_max_pct'  => $maxPct
         ]);
     }
 
@@ -150,7 +158,15 @@ class SalesController extends BaseController
                 // Ejecuta verificación de estado, bloqueo por concurrencia y registro de cobro en una transacción atómica
                 $id_venta = $workshop_model->charge_and_deliver_repair($id_reparacion, $pagoPayload, (int)$_SESSION['user_id']);
 
-                $this->redirect("index.php?action=repairs_to_charge&success=" . urlencode("Reparación cobrada y entregada correctamente.") . "&charged_id=" . $id_reparacion . "&id_venta=" . $id_venta);
+                try {
+                    require_once __DIR__ . '/../../workshop/Services/RepairNotifier.php';
+                    RepairNotifier::notifyDelivered($id_reparacion, $id_venta === 0);
+                } catch (Throwable $mailErr) {
+                    error_log('notifyDelivered error: ' . $mailErr->getMessage());
+                }
+
+                $msgOk = ($id_venta === 0) ? "Equipo entregado sin cargo por garantía." : "Reparación cobrada y entregada correctamente.";
+                $this->redirect("index.php?action=repairs_to_charge&success=" . urlencode($msgOk) . "&charged_id=" . $id_reparacion . "&id_venta=" . $id_venta);
             } catch (Exception $e) {
                 $this->redirect("index.php?action=repairs_to_charge&error=" . urlencode($e->getMessage()));
             }
@@ -205,6 +221,11 @@ class SalesController extends BaseController
     {
         header('Content-Type: application/json');
         $this->check_access('venta', true);
+        if (!Layout::can('venta_anular')) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'message' => 'No tenés permiso para anular ventas.']);
+            exit;
+        }
         
         if ($_SERVER["REQUEST_METHOD"] == "POST") {
             $input = json_decode(file_get_contents('php://input'), true);

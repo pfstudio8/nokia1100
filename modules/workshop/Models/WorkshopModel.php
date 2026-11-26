@@ -3,9 +3,12 @@
 
 require_once __DIR__ . '/../../../classes/BaseModel.php';
 require_once __DIR__ . '/../../../classes/ServiceProduct.php';
+require_once __DIR__ . '/../../../classes/SerialHelper.php';
 
 class WorkshopModel extends BaseModel
 {
+    public const GARANTIA_DIAS = 20;
+    public const GARANTIA_CONDICIONES = 'Garantía de 20 días corridos desde la entrega, válida únicamente sobre la reparación realizada. No cubre equipos que hayan sufrido caídas, golpes o contacto con líquidos/humedad.';
     public function get_repairs($status = '', $search = '', $limit = 50, $offset = 0)
     {
         $where_parts = [];
@@ -101,6 +104,7 @@ class WorkshopModel extends BaseModel
     {
         $sql = "SELECT r.id_reparacion, r.codigo_orden, c.nombre AS cliente_nombre, c.telefono AS cliente_telefono, c.email AS cliente_email,
                        r.equipo_marca, r.equipo_modelo, r.equipo_imei, r.estado, r.fecha_ingreso, r.presupuesto, r.costo_total, r.falla_declarada, r.observaciones,
+                       r.es_garantia, r.id_reparacion_origen,
                        (SELECT rh.nota FROM reparacion_historial rh WHERE rh.id_reparacion = r.id_reparacion AND (rh.nota LIKE 'Finalizado por técnico%' OR rh.nota LIKE '%Listo%' OR rh.estado_nuevo = 'Listo') AND rh.nota != '' AND rh.nota NOT LIKE 'Cobrado%' ORDER BY rh.id_historial DESC LIMIT 1) AS resolucion_tecnica,
                        (SELECT u.nombre_usuario FROM reparacion_historial rh JOIN usuario u ON rh.id_usuario = u.id_usuario WHERE rh.id_reparacion = r.id_reparacion AND (rh.nota LIKE 'Finalizado por técnico%' OR rh.estado_nuevo = 'Listo') ORDER BY rh.id_historial DESC LIMIT 1) AS tecnico_nombre
                 FROM reparacion r
@@ -238,9 +242,11 @@ class WorkshopModel extends BaseModel
     {
         $limit = (int)$limit;
         $offset = (int)$offset;
-        $sql = "SELECT v.id_venta, v.fecha, v.total, v.metodo_de_pago, v.descripcion, u.nombre_usuario 
+        $sql = "SELECT v.id_venta, v.fecha, v.total, v.metodo_de_pago, v.descripcion, u.nombre_usuario,
+                       r.id_reparacion, r.codigo_orden, r.garantia_hasta, r.garantia_anulada, r.garantia_motivo_anulacion, r.es_garantia
                 FROM venta v
                 LEFT JOIN usuario u ON v.id_usuario = u.id_usuario
+                LEFT JOIN reparacion r ON r.codigo_orden = SUBSTRING_INDEX(SUBSTRING_INDEX(v.descripcion, '#', -1), ' -', 1)
                 WHERE v.descripcion LIKE 'Cobro de Reparación #%'
                 ORDER BY v.fecha DESC
                 LIMIT ? OFFSET ?";
@@ -293,7 +299,8 @@ class WorkshopModel extends BaseModel
         $cleanCode = ltrim(trim($code), '#');
         $sql = "SELECT id_reparacion, codigo_orden, equipo_marca, equipo_modelo, equipo_imei,
                        falla_declarada, observaciones, presupuesto, costo_total, estado,
-                       fecha_ingreso, fecha_entrega
+                       fecha_ingreso, fecha_entrega,
+                       garantia_hasta, garantia_anulada, garantia_motivo_anulacion, es_garantia, id_reparacion_origen
                 FROM reparacion
                 WHERE codigo_orden = ?";
         
@@ -391,14 +398,53 @@ public function get_active_products_in_stock()
         return $clients;
     }
 
-    public function create_repair_order(int $id_cliente_existente, string $client_name, string $client_phone, string $client_email, string $brand, string $model, string $imei, string $failure, string $notes, float $budget, int $user_id)
+    public function create_repair_order(int $id_cliente_existente, string $client_name, string $client_phone, string $client_email, string $brand, string $model, string $imei, string $failure, string $notes, float $budget, int $user_id, int $id_reparacion_origen = 0)
     {
         $id_cliente_existente = intval($id_cliente_existente);
         $user_id = intval($user_id);
+        $id_reparacion_origen = intval($id_reparacion_origen);
         $budget = max(0.0, round((float)$budget, 2));
+
+        $imeiNorm = SerialHelper::normalize($imei);
+        if ($imeiNorm !== '' && !SerialHelper::isValid($imeiNorm)) {
+            throw new Exception("IMEI / N° de serie inválido (4 a 30 caracteres alfanuméricos).");
+        }
+        $client_email = trim($client_email);
 
         $this->conn->begin_transaction();
         try {
+            $es_garantia = 0;
+            $origen_codigo = '';
+            $origen_id_val = null;
+            if ($id_reparacion_origen > 0) {
+                $stmtOrig = $this->conn->prepare("SELECT id_reparacion, codigo_orden, equipo_imei, estado, garantia_hasta, garantia_anulada FROM reparacion WHERE id_reparacion = ? LIMIT 1");
+                $stmtOrig->bind_param("i", $id_reparacion_origen);
+                $stmtOrig->execute();
+                $origen = $stmtOrig->get_result()->fetch_assoc();
+                $stmtOrig->close();
+
+                if (!$origen) {
+                    throw new Exception("La orden de origen para garantía no existe.");
+                }
+                $origImei = SerialHelper::normalize((string)($origen['equipo_imei'] ?? ''));
+                if ($imeiNorm === '' || $origImei === '' || $origImei !== $imeiNorm) {
+                    throw new Exception("El IMEI/Serie debe coincidir con la orden original para aplicar garantía.");
+                }
+                if (($origen['estado'] ?? '') !== 'Entregado') {
+                    throw new Exception("La orden original aún no fue entregada.");
+                }
+                if ((int)($origen['garantia_anulada'] ?? 0) === 1) {
+                    throw new Exception("La garantía de la orden #{$origen['codigo_orden']} fue anulada.");
+                }
+                if (empty($origen['garantia_hasta']) || $origen['garantia_hasta'] < date('Y-m-d')) {
+                    throw new Exception("La garantía de la orden #{$origen['codigo_orden']} se encuentra vencida.");
+                }
+                $es_garantia = 1;
+                $origen_id_val = $id_reparacion_origen;
+                $origen_codigo = (string)$origen['codigo_orden'];
+                $budget = 0.0;
+            }
+
             // Generar código de orden único verificando colisión en BD
             $codigo_orden = '';
             for ($attempt = 0; $attempt < 15; $attempt++) {
@@ -419,15 +465,31 @@ public function get_active_products_in_stock()
 
             if ($id_cliente_existente > 0) {
                 $id_cliente = $id_cliente_existente;
+                if ($client_email !== '' && filter_var($client_email, FILTER_VALIDATE_EMAIL)) {
+                    $stmtUpdMail = $this->conn->prepare("UPDATE cliente SET email = ? WHERE id_cliente = ? AND (email IS NULL OR TRIM(email) = '')");
+                    if ($stmtUpdMail) {
+                        $stmtUpdMail->bind_param("si", $client_email, $id_cliente);
+                        $stmtUpdMail->execute();
+                        $stmtUpdMail->close();
+                    }
+                }
             } else {
                 // Buscar cliente existente o crear uno nuevo con sentencia preparada
-                $stmt = $this->conn->prepare("SELECT id_cliente FROM cliente WHERE nombre = ? AND telefono = ? LIMIT 1");
+                $stmt = $this->conn->prepare("SELECT id_cliente, email FROM cliente WHERE nombre = ? AND telefono = ? LIMIT 1");
                 $stmt->bind_param("ss", $client_name, $client_phone);
                 $stmt->execute();
                 $res_client = $stmt->get_result();
                 if ($res_client && $row = $res_client->fetch_assoc()) {
                     $id_cliente = (int)$row['id_cliente'];
                     $stmt->close();
+                    if ($client_email !== '' && filter_var($client_email, FILTER_VALIDATE_EMAIL) && empty(trim((string)($row['email'] ?? '')))) {
+                        $stmtUpdMail = $this->conn->prepare("UPDATE cliente SET email = ? WHERE id_cliente = ?");
+                        if ($stmtUpdMail) {
+                            $stmtUpdMail->bind_param("si", $client_email, $id_cliente);
+                            $stmtUpdMail->execute();
+                            $stmtUpdMail->close();
+                        }
+                    }
                 } else {
                     $stmt->close();
                     $stmt_insert = $this->conn->prepare("INSERT INTO cliente (nombre, telefono, email) VALUES (?, ?, ?)");
@@ -442,8 +504,8 @@ public function get_active_products_in_stock()
                 }
             }
 
-            $stmt_rep = $this->conn->prepare("INSERT INTO reparacion (codigo_orden, id_cliente, equipo_marca, equipo_modelo, equipo_imei, falla_declarada, observaciones, presupuesto, id_usuario_recibe) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
-            $stmt_rep->bind_param("sisssssdi", $codigo_orden, $id_cliente, $brand, $model, $imei, $failure, $notes, $budget, $user_id);
+            $stmt_rep = $this->conn->prepare("INSERT INTO reparacion (codigo_orden, id_cliente, equipo_marca, equipo_modelo, equipo_imei, falla_declarada, observaciones, presupuesto, id_usuario_recibe, es_garantia, id_reparacion_origen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt_rep->bind_param("sisssssdiii", $codigo_orden, $id_cliente, $brand, $model, $imeiNorm, $failure, $notes, $budget, $user_id, $es_garantia, $origen_id_val);
 
             if (!$stmt_rep->execute()) {
                 $err = $stmt_rep->error;
@@ -454,8 +516,9 @@ public function get_active_products_in_stock()
             $stmt_rep->close();
 
             // Historial inicial preparado
-            $stmt_hist = $this->conn->prepare("INSERT INTO reparacion_historial (id_reparacion, estado_nuevo, nota, id_usuario) VALUES (?, 'Recibido', 'Ingreso inicial del equipo', ?)");
-            $stmt_hist->bind_param("ii", $id_reparacion, $user_id);
+            $histNota = $es_garantia ? "Reingreso por garantía de la orden #{$origen_codigo}" : "Ingreso inicial del equipo";
+            $stmt_hist = $this->conn->prepare("INSERT INTO reparacion_historial (id_reparacion, estado_nuevo, nota, id_usuario) VALUES (?, 'Recibido', ?, ?)");
+            $stmt_hist->bind_param("isi", $id_reparacion, $histNota, $user_id);
             if (!$stmt_hist->execute()) {
                 $err = $stmt_hist->error;
                 $stmt_hist->close();
@@ -602,6 +665,7 @@ public function get_active_products_in_stock()
             $stmt_cost->close();
 
             $this->conn->commit();
+
             return true;
         } catch (Exception $e) {
             $this->conn->rollback();
@@ -675,7 +739,7 @@ public function get_active_products_in_stock()
         $this->conn->begin_transaction();
         try {
             // 1. Bloquear y verificar orden para evitar condiciones de carrera o cobros duplicados
-            $stmt = $this->conn->prepare("SELECT id_reparacion, codigo_orden, equipo_marca, equipo_modelo, estado, presupuesto, costo_total FROM reparacion WHERE id_reparacion = ? FOR UPDATE");
+            $stmt = $this->conn->prepare("SELECT id_reparacion, codigo_orden, equipo_marca, equipo_modelo, estado, presupuesto, costo_total, es_garantia FROM reparacion WHERE id_reparacion = ? FOR UPDATE");
             $stmt->bind_param("i", $id_reparacion);
             $stmt->execute();
             $res = $stmt->get_result();
@@ -695,6 +759,26 @@ public function get_active_products_in_stock()
             $monto_total = round($presupuesto_base + $costo_repuestos, 2);
             $old_state = $repair['estado'];
 
+            // Rama sin cargo por reingreso en garantía
+            if ($monto_total <= 0 && (int)($repair['es_garantia'] ?? 0) === 1) {
+                $stmt_upd = $this->conn->prepare("UPDATE reparacion SET estado = 'Entregado', fecha_entrega = CURRENT_TIMESTAMP, garantia_hasta = DATE_ADD(CURDATE(), INTERVAL 20 DAY) WHERE id_reparacion = ?");
+                $stmt_upd->bind_param("i", $id_reparacion);
+                if (!$stmt_upd->execute()) {
+                    throw new Exception("Error al actualizar estado de la reparación en garantía.");
+                }
+                $stmt_upd->close();
+
+                $nota = 'Entregado sin cargo (reingreso por garantía)';
+                $estado_nuevo = 'Entregado';
+                $stmt_hist = $this->conn->prepare("INSERT INTO reparacion_historial (id_reparacion, estado_anterior, estado_nuevo, nota, id_usuario) VALUES (?, ?, ?, ?, ?)");
+                $stmt_hist->bind_param("isssi", $id_reparacion, $old_state, $estado_nuevo, $nota, $id_usuario);
+                $stmt_hist->execute();
+                $stmt_hist->close();
+
+                $this->conn->commit();
+                return 0;
+            }
+
             $pagos_raw = is_array($metodo_o_pagos) ? $metodo_o_pagos : [];
             $metodo_fallback = is_string($metodo_o_pagos) ? $metodo_o_pagos : '';
             $pago_info = SalesModel::validate_and_normalize_payments($pagos_raw, $metodo_fallback, $monto_total);
@@ -703,8 +787,8 @@ public function get_active_products_in_stock()
             $monto_efectivo = $pago_info['monto_efectivo'];
             $es_combinado = $pago_info['es_combinado'];
 
-            // 2. Actualizar estado a Entregado con fecha de entrega
-            $stmt_upd = $this->conn->prepare("UPDATE reparacion SET estado = 'Entregado', fecha_entrega = CURRENT_TIMESTAMP WHERE id_reparacion = ?");
+            // 2. Actualizar estado a Entregado con fecha de entrega y vencimiento de garantía (20 días)
+            $stmt_upd = $this->conn->prepare("UPDATE reparacion SET estado = 'Entregado', fecha_entrega = CURRENT_TIMESTAMP, garantia_hasta = DATE_ADD(CURDATE(), INTERVAL 20 DAY) WHERE id_reparacion = ?");
             $stmt_upd->bind_param("i", $id_reparacion);
             if (!$stmt_upd->execute()) {
                 throw new Exception("Error al actualizar estado de la reparación.");
@@ -971,5 +1055,134 @@ public function get_active_products_in_stock()
         }
         $stmt->close();
         return $repairs;
+    }
+
+    public function get_warranty_candidate(string $norm): ?array
+    {
+        $norm = SerialHelper::normalize($norm);
+        if ($norm === '') {
+            return null;
+        }
+        $stmt = $this->conn->prepare(
+            "SELECT r.id_reparacion, r.codigo_orden, r.equipo_marca, r.equipo_modelo, r.equipo_imei,
+                    r.fecha_entrega, r.garantia_hasta, c.nombre AS cliente_nombre
+             FROM reparacion r
+             LEFT JOIN cliente c ON r.id_cliente = c.id_cliente
+             WHERE UPPER(REPLACE(COALESCE(r.equipo_imei, ''), ' ', '')) = ?
+               AND r.estado = 'Entregado'
+               AND r.garantia_hasta IS NOT NULL
+               AND r.garantia_hasta >= CURDATE()
+               AND r.garantia_anulada = 0
+             ORDER BY r.fecha_entrega DESC, r.id_reparacion DESC
+             LIMIT 1"
+        );
+        if (!$stmt) {
+            return null;
+        }
+        $stmt->bind_param("s", $norm);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
+        $stmt->close();
+        return $row ?: null;
+    }
+
+    public function void_warranty(int $id_reparacion, string $motivo, int $user_id): bool
+    {
+        $allowed = ['Caída', 'Golpe', 'Humedad / líquido'];
+        $motivo = trim($motivo);
+        if (!in_array($motivo, $allowed, true)) {
+            throw new Exception("Motivo de anulación de garantía no válido.");
+        }
+
+        $this->conn->begin_transaction();
+        try {
+            $stmt = $this->conn->prepare("SELECT id_reparacion, codigo_orden, estado, es_garantia, id_reparacion_origen FROM reparacion WHERE id_reparacion = ? FOR UPDATE");
+            $stmt->bind_param("i", $id_reparacion);
+            $stmt->execute();
+            $rep = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$rep) {
+                throw new Exception("Orden de reparación no encontrada.");
+            }
+            if ((int)($rep['es_garantia'] ?? 0) !== 1) {
+                throw new Exception("Esta orden no figura como reingreso por garantía.");
+            }
+            if (in_array($rep['estado'], ['Entregado', 'Cancelado'], true)) {
+                throw new Exception("No se puede modificar la garantía de una orden cerrada.");
+            }
+
+            $stmtUpd = $this->conn->prepare("UPDATE reparacion SET es_garantia = 0, garantia_anulada = 1, garantia_motivo_anulacion = ? WHERE id_reparacion = ?");
+            $stmtUpd->bind_param("si", $motivo, $id_reparacion);
+            $stmtUpd->execute();
+            $stmtUpd->close();
+
+            $notaCur = "Garantía anulada por causal excluida: {$motivo}. La orden pasa a reparación regular.";
+            $stmtHist = $this->conn->prepare("INSERT INTO reparacion_historial (id_reparacion, estado_anterior, estado_nuevo, nota, id_usuario) VALUES (?, ?, ?, ?, ?)");
+            $stmtHist->bind_param("isssi", $id_reparacion, $rep['estado'], $rep['estado'], $notaCur, $user_id);
+            $stmtHist->execute();
+            $stmtHist->close();
+
+            $idOrig = (int)($rep['id_reparacion_origen'] ?? 0);
+            if ($idOrig > 0) {
+                $stmtOrig = $this->conn->prepare("UPDATE reparacion SET garantia_anulada = 1, garantia_motivo_anulacion = ? WHERE id_reparacion = ?");
+                $stmtOrig->bind_param("si", $motivo, $idOrig);
+                $stmtOrig->execute();
+                $stmtOrig->close();
+
+                $notaOrig = "Garantía anulada desde reingreso #{$rep['codigo_orden']} por: {$motivo}.";
+                $estadoOrig = 'Entregado';
+                $stmtHOrig = $this->conn->prepare("INSERT INTO reparacion_historial (id_reparacion, estado_anterior, estado_nuevo, nota, id_usuario) VALUES (?, ?, ?, ?, ?)");
+                $stmtHOrig->bind_param("isssi", $idOrig, $estadoOrig, $estadoOrig, $notaOrig, $user_id);
+                $stmtHOrig->execute();
+                $stmtHOrig->close();
+            }
+
+            $this->conn->commit();
+            return true;
+        } catch (Throwable $e) {
+            $this->conn->rollback();
+            throw $e;
+        }
+    }
+
+    public function log_notification(?int $id_reparacion, string $tipo, string $destinatario, string $asunto, string $estado, ?string $detalle = null): void
+    {
+        try {
+            $stmt = $this->conn->prepare(
+                "INSERT INTO notificacion_email (id_reparacion, tipo, destinatario, asunto, estado, detalle)
+                 VALUES (?, ?, ?, ?, ?, ?)"
+            );
+            if ($stmt) {
+                $stmt->bind_param("isssss", $id_reparacion, $tipo, $destinatario, $asunto, $estado, $detalle);
+                $stmt->execute();
+                $stmt->close();
+            }
+        } catch (Throwable $e) {
+            error_log("log_notification error: " . $e->getMessage());
+        }
+    }
+
+    public function get_repair_notifications(int $id_reparacion): array
+    {
+        $rows = [];
+        try {
+            $stmt = $this->conn->prepare(
+                "SELECT id_notificacion, tipo, destinatario, asunto, estado, detalle, created_at
+                 FROM notificacion_email
+                 WHERE id_reparacion = ?
+                 ORDER BY created_at DESC, id_notificacion DESC"
+            );
+            if ($stmt) {
+                $stmt->bind_param("i", $id_reparacion);
+                $stmt->execute();
+                $res = $stmt->get_result();
+                while ($row = $res->fetch_assoc()) {
+                    $rows[] = $row;
+                }
+                $stmt->close();
+            }
+        } catch (Throwable $e) {}
+        return $rows;
     }
 }

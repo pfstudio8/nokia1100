@@ -1,6 +1,31 @@
 <?php
 class Layout
 {
+    public const PERMISSION_IDS = [
+        'dashboard',
+        'venta',
+        'venta_anular',
+        'venta_descuento',
+        'cobrar_reparaciones',
+        'caja',
+        'caja_movimientos',
+        'cierre_caja',
+        'caja_admin',
+        'taller',
+        'registrar_equipo',
+        'inventario',
+        'clientes',
+        'reportes',
+        'reportes_financieros',
+        'proveedores',
+        'auditoria',
+    ];
+
+    public static function can(string $perm): bool
+    {
+        return self::hasAccess($perm);
+    }
+
     private static function getAssetVersion(string $path): int {
         $fullPath = __DIR__ . '/..' . $path;
         return file_exists($fullPath) ? filemtime($fullPath) : time();
@@ -96,7 +121,7 @@ class Layout
                     return array_values(array_filter(array_map('trim', explode(',', $trimmed))));
                 }
                 // Fallback seguro: Si es un empleado y no tiene módulos explícitos (NULL), limitar a módulos estándar
-                return ['dashboard', 'venta', 'inventario', 'clientes', 'caja', 'registrar_equipo', 'taller'];
+                return ['dashboard', 'venta', 'venta_anular', 'inventario', 'clientes', 'caja', 'caja_movimientos', 'registrar_equipo', 'taller'];
             }
             $stmt->close();
         }
@@ -304,6 +329,7 @@ class Layout
             'graficos'            => 'REPORTES',
             'proveedores'         => 'PROVEEDORES',
             'auditoria'           => 'AUDITORÍA',
+            'etiquetas'           => 'ETIQUETAS',
             'perfil'              => 'MI PERFIL',
             'ayuda'               => 'AYUDA',
         ];

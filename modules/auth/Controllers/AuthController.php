@@ -187,6 +187,26 @@ class AuthController extends BaseController
         }
     }
 
+    private function complete_login(array $user): string
+    {
+        session_regenerate_id(true);
+
+        $_SESSION['user_id'] = $user['id_usuario'];
+        $_SESSION['username'] = $user['nombre_usuario'];
+        $_SESSION['role'] = $user['rol'];
+
+        $session_token = bin2hex(random_bytes(32));
+        $_SESSION['session_token'] = $session_token;
+        $this->auth_model->update_session_token((int)$user['id_usuario'], $session_token);
+
+        audit_log($this->conn, 'LOGIN_OK', $user['id_usuario'], 'usuario', $user['id_usuario'], "Sesión iniciada correctamente");
+
+        $welcome_msg = urlencode("Bienvenido, " . $user['nombre_usuario']);
+        return ($user['rol'] === 'admin')
+            ? BASE_URL . "/modules/admin/index.php?success=" . $welcome_msg
+            : BASE_URL . "/modules/employee/index.php?success=" . $welcome_msg;
+    }
+
     public function login()
     {
         if ($_SERVER["REQUEST_METHOD"] !== "POST") {
@@ -246,23 +266,7 @@ class AuthController extends BaseController
             $fail("Tu cuenta aún no fue verificada. Ingresá el código de 6 dígitos que enviamos a tu correo.", $user['email'] ?? '');
         }
 
-        // Regenerar ID de sesión para prevenir Session Fixation
-        session_regenerate_id(true);
-
-        $_SESSION['user_id'] = $user['id_usuario'];
-        $_SESSION['username'] = $user['nombre_usuario'];
-        $_SESSION['role'] = $user['rol'];
-
-        $session_token = bin2hex(random_bytes(32));
-        $_SESSION['session_token'] = $session_token;
-        $this->auth_model->update_session_token($user['id_usuario'], $session_token);
-
-        audit_log($this->conn, 'LOGIN_OK', $user['id_usuario'], 'usuario', $user['id_usuario'], "Sesión iniciada correctamente");
-
-        $welcome_msg = urlencode("Bienvenido, " . $user['nombre_usuario']);
-        $redirectUrl = ($user['rol'] === 'admin')
-            ? BASE_URL . "/modules/admin/index.php?success=" . $welcome_msg
-            : BASE_URL . "/modules/employee/index.php?success=" . $welcome_msg;
+        $redirectUrl = $this->complete_login($user);
 
         if ($this->is_ajax()) {
             header('Content-Type: application/json; charset=utf-8');
@@ -844,6 +848,8 @@ class AuthController extends BaseController
         $_SESSION['username'] = $guest_name;
         $_SESSION['role'] = 'guest';
         $_SESSION['session_token'] = bin2hex(random_bytes(32));
+        $_SESSION['login_at'] = time();
+        $_SESSION['last_activity'] = time();
 
         audit_log($this->conn, 'LOGIN_GUEST', null, 'usuario', null, "Sesión de invitado iniciada: " . $guest_name);
 

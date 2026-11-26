@@ -1,50 +1,82 @@
 <?php
 // database/run_migrations.php
-// Ejecuta por única vez las migraciones estructurales de Caja, Pago Combinado, limpieza de DER y claves foráneas.
+// Ejecuta las migraciones estructurales idempotentes del sistema (v6 + v7).
 
-function apply_system_migrations(mysqli $conn): void
+function add_fk_if_missing(
+    mysqli $conn,
+    string $table,
+    string $column,
+    string $constraintName,
+    string $refTable,
+    string $refColumn,
+    string $onDelete = 'RESTRICT'
+): void {
+    try {
+        $stmtChk = $conn->prepare(
+            "SELECT CONSTRAINT_NAME
+             FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = ?
+               AND COLUMN_NAME = ?
+               AND REFERENCED_TABLE_NAME IS NOT NULL
+             LIMIT 1"
+        );
+        if ($stmtChk) {
+            $stmtChk->bind_param("ss", $table, $column);
+            $stmtChk->execute();
+            $exists = $stmtChk->get_result()->num_rows > 0;
+            $stmtChk->close();
+            if ($exists) {
+                return;
+            }
+        }
+        $conn->query(
+            "ALTER TABLE `{$table}` ADD CONSTRAINT `{$constraintName}`
+             FOREIGN KEY (`{$column}`) REFERENCES `{$refTable}` (`{$refColumn}`) ON DELETE {$onDelete}"
+        );
+    } catch (Throwable $e) {
+        error_log("FK migration warning ({$table}.{$column}): " . $e->getMessage());
+    }
+}
+
+function add_column_if_missing(mysqli $conn, string $table, string $column, string $alterSql): bool
+{
+    try {
+        $stmt = $conn->prepare(
+            "SELECT COLUMN_NAME
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?
+             LIMIT 1"
+        );
+        if ($stmt) {
+            $stmt->bind_param("ss", $table, $column);
+            $stmt->execute();
+            $exists = $stmt->get_result()->num_rows > 0;
+            $stmt->close();
+            if ($exists) {
+                return false;
+            }
+        }
+        $conn->query($alterSql);
+        return true;
+    } catch (Throwable $e) {
+        error_log("Column migration warning ({$table}.{$column}): " . $e->getMessage());
+        return false;
+    }
+}
+
+function apply_system_migrations(mysqli $conn, bool $isTestRun = false): void
+{
+    apply_v6_migrations($conn, $isTestRun);
+    apply_v7_feature_migrations($conn, $isTestRun);
+}
+
+function apply_v6_migrations(mysqli $conn, bool $isTestRun = false): void
 {
     $lockFile = __DIR__ . '/.schema_v6_remove_compra_iva.lock';
-    if (file_exists($lockFile)) {
+    if (!$isTestRun && file_exists($lockFile)) {
         return;
     }
-
-    $addFkIfMissing = static function (
-        mysqli $conn,
-        string $table,
-        string $column,
-        string $constraintName,
-        string $refTable,
-        string $refColumn,
-        string $onDelete = 'RESTRICT'
-    ): void {
-        try {
-            $stmtChk = $conn->prepare(
-                "SELECT CONSTRAINT_NAME
-                 FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE
-                 WHERE TABLE_SCHEMA = DATABASE()
-                   AND TABLE_NAME = ?
-                   AND COLUMN_NAME = ?
-                   AND REFERENCED_TABLE_NAME IS NOT NULL
-                 LIMIT 1"
-            );
-            if ($stmtChk) {
-                $stmtChk->bind_param("ss", $table, $column);
-                $stmtChk->execute();
-                $exists = $stmtChk->get_result()->num_rows > 0;
-                $stmtChk->close();
-                if ($exists) {
-                    return;
-                }
-            }
-            $conn->query(
-                "ALTER TABLE `{$table}` ADD CONSTRAINT `{$constraintName}`
-                 FOREIGN KEY (`{$column}`) REFERENCES `{$refTable}` (`{$refColumn}`) ON DELETE {$onDelete}"
-            );
-        } catch (Throwable $e) {
-            error_log("FK migration warning ({$table}.{$column}): " . $e->getMessage());
-        }
-    };
 
     try {
         // 1. Ampliar metodo_de_pago en venta
@@ -102,7 +134,7 @@ function apply_system_migrations(mysqli $conn): void
             $conn->query("UPDATE `caja` SET `monto_esperado` = NULL WHERE `estado` = 'abierta'");
         } catch (Throwable $e) {}
 
-        // 4. Tabla caja_movimiento (libro inmutable con medio_pago, motivo, id_venta, id_reparacion, id_movimiento_origen y fecha_creacion DATETIME)
+        // 4. Tabla caja_movimiento
         $conn->query("CREATE TABLE IF NOT EXISTS `caja_movimiento` (
           `id_movimiento` INT(11) NOT NULL AUTO_INCREMENT,
           `id_caja` INT(11) NOT NULL,
@@ -138,15 +170,10 @@ function apply_system_migrations(mysqli $conn): void
         ];
 
         foreach ($alterCols as $col => $sql) {
-            $resCol = $conn->query("SHOW COLUMNS FROM `caja_movimiento` LIKE '$col'");
-            if (!$resCol || $resCol->num_rows === 0) {
-                try {
-                    $conn->query($sql);
-                } catch (Throwable $e) {}
-            }
+            add_column_if_missing($conn, 'caja_movimiento', $col, $sql);
         }
 
-        // 5. Asegurar que los usuarios con rol 'empleado' que tenían el set por defecto anterior incluyan el módulo 'caja'
+        // 5. Asegurar módulo 'caja' en empleados con set anterior por defecto
         try {
             $conn->query("UPDATE `usuario`
                           SET `modulos_permitidos` = 'dashboard,venta,caja,inventario,clientes'
@@ -155,7 +182,6 @@ function apply_system_migrations(mysqli $conn): void
         } catch (Throwable $e) {}
 
         // 6. Limpieza de columnas/tablas redundantes (DER v5)
-        // 6a. Eliminar usuario.motivo_baja
         try {
             $resMotivo = $conn->query("SHOW COLUMNS FROM `usuario` LIKE 'motivo_baja'");
             if ($resMotivo && $resMotivo->num_rows > 0) {
@@ -163,7 +189,6 @@ function apply_system_migrations(mysqli $conn): void
             }
         } catch (Throwable $e) {}
 
-        // 6b. Eliminar detalle_venta.precio_copiado
         try {
             $resCopiado = $conn->query("SHOW COLUMNS FROM `detalle_venta` LIKE 'precio_copiado'");
             if ($resCopiado && $resCopiado->num_rows > 0) {
@@ -171,7 +196,6 @@ function apply_system_migrations(mysqli $conn): void
             }
         } catch (Throwable $e) {}
 
-        // 6c. Eliminar compra.iva
         try {
             $resIva = $conn->query("SHOW COLUMNS FROM `compra` LIKE 'iva'");
             if ($resIva && $resIva->num_rows > 0) {
@@ -179,7 +203,6 @@ function apply_system_migrations(mysqli $conn): void
             }
         } catch (Throwable $e) {}
 
-        // 6c. Consolidar producto_compra_historial dentro de detalle_compra
         try {
             $dcCols = [
                 'nombre_producto' => "ALTER TABLE `detalle_compra` ADD COLUMN `nombre_producto` VARCHAR(150) DEFAULT NULL AFTER `precio_compra`",
@@ -187,10 +210,7 @@ function apply_system_migrations(mysqli $conn): void
                 'modelo'          => "ALTER TABLE `detalle_compra` ADD COLUMN `modelo` VARCHAR(100) DEFAULT NULL AFTER `marca`",
             ];
             foreach ($dcCols as $col => $sql) {
-                $resDcCol = $conn->query("SHOW COLUMNS FROM `detalle_compra` LIKE '$col'");
-                if (!$resDcCol || $resDcCol->num_rows === 0) {
-                    $conn->query($sql);
-                }
+                add_column_if_missing($conn, 'detalle_compra', $col, $sql);
             }
 
             $resPch = $conn->query("SHOW TABLES LIKE 'producto_compra_historial'");
@@ -206,8 +226,7 @@ function apply_system_migrations(mysqli $conn): void
             }
         } catch (Throwable $e) {}
 
-        // 7. Claves foráneas faltantes para conectar el DER completo (Taller + Caja)
-        // Limpiar referencias huérfanas previas (ej. id_usuario = 0 o registros borrados antes de tener FK) en columnas anulables
+        // 7. Claves foráneas faltantes
         $nullableCleanup = [
             "UPDATE `reparacion` r LEFT JOIN `usuario` u ON r.id_usuario_recibe = u.id_usuario SET r.id_usuario_recibe = NULL WHERE r.id_usuario_recibe IS NOT NULL AND u.id_usuario IS NULL",
             "UPDATE `reparacion_historial` rh LEFT JOIN `usuario` u ON rh.id_usuario = u.id_usuario SET rh.id_usuario = NULL WHERE rh.id_usuario IS NOT NULL AND u.id_usuario IS NULL",
@@ -231,27 +250,134 @@ function apply_system_migrations(mysqli $conn): void
             }
         } catch (Throwable $e) {}
 
-        $addFkIfMissing($conn, 'reparacion', 'id_cliente', 'fk_reparacion_cliente', 'cliente', 'id_cliente', 'RESTRICT');
-        $addFkIfMissing($conn, 'reparacion', 'id_usuario_recibe', 'fk_reparacion_usuario', 'usuario', 'id_usuario', 'SET NULL');
-        $addFkIfMissing($conn, 'reparacion_historial', 'id_reparacion', 'fk_rep_hist_reparacion', 'reparacion', 'id_reparacion', 'CASCADE');
-        $addFkIfMissing($conn, 'reparacion_historial', 'id_usuario', 'fk_rep_hist_usuario', 'usuario', 'id_usuario', 'SET NULL');
-        $addFkIfMissing($conn, 'reparacion_imagen', 'id_reparacion', 'fk_rep_img_reparacion', 'reparacion', 'id_reparacion', 'CASCADE');
-        $addFkIfMissing($conn, 'reparacion_repuesto', 'id_reparacion', 'fk_rep_rep_reparacion', 'reparacion', 'id_reparacion', 'CASCADE');
-        $addFkIfMissing($conn, 'reparacion_repuesto', 'id_producto', 'fk_rep_rep_producto', 'producto', 'id_producto', 'RESTRICT');
+        add_fk_if_missing($conn, 'reparacion', 'id_cliente', 'fk_reparacion_cliente', 'cliente', 'id_cliente', 'RESTRICT');
+        add_fk_if_missing($conn, 'reparacion', 'id_usuario_recibe', 'fk_reparacion_usuario', 'usuario', 'id_usuario', 'SET NULL');
+        add_fk_if_missing($conn, 'reparacion_historial', 'id_reparacion', 'fk_rep_hist_reparacion', 'reparacion', 'id_reparacion', 'CASCADE');
+        add_fk_if_missing($conn, 'reparacion_historial', 'id_usuario', 'fk_rep_hist_usuario', 'usuario', 'id_usuario', 'SET NULL');
+        add_fk_if_missing($conn, 'reparacion_imagen', 'id_reparacion', 'fk_rep_img_reparacion', 'reparacion', 'id_reparacion', 'CASCADE');
+        add_fk_if_missing($conn, 'reparacion_repuesto', 'id_reparacion', 'fk_rep_rep_reparacion', 'reparacion', 'id_reparacion', 'CASCADE');
+        add_fk_if_missing($conn, 'reparacion_repuesto', 'id_producto', 'fk_rep_rep_producto', 'producto', 'id_producto', 'RESTRICT');
 
-        $addFkIfMissing($conn, 'caja', 'id_usuario_apertura', 'fk_caja_usr_apertura', 'usuario', 'id_usuario', 'SET NULL');
-        $addFkIfMissing($conn, 'caja', 'id_usuario_cierre', 'fk_caja_usr_cierre', 'usuario', 'id_usuario', 'SET NULL');
-        $addFkIfMissing($conn, 'caja_movimiento', 'id_caja', 'fk_caja_mov_caja', 'caja', 'id_caja', 'CASCADE');
-        $addFkIfMissing($conn, 'caja_movimiento', 'id_usuario', 'fk_caja_mov_usr', 'usuario', 'id_usuario', 'SET NULL');
-        $addFkIfMissing($conn, 'caja_movimiento', 'id_venta', 'fk_caja_mov_venta', 'venta', 'id_venta', 'SET NULL');
-        $addFkIfMissing($conn, 'caja_movimiento', 'id_reparacion', 'fk_caja_mov_reparacion', 'reparacion', 'id_reparacion', 'SET NULL');
-        $addFkIfMissing($conn, 'caja_movimiento', 'id_movimiento_origen', 'fk_caja_mov_origen', 'caja_movimiento', 'id_movimiento', 'SET NULL');
+        add_fk_if_missing($conn, 'caja', 'id_usuario_apertura', 'fk_caja_usr_apertura', 'usuario', 'id_usuario', 'SET NULL');
+        add_fk_if_missing($conn, 'caja', 'id_usuario_cierre', 'fk_caja_usr_cierre', 'usuario', 'id_usuario', 'SET NULL');
+        add_fk_if_missing($conn, 'caja_movimiento', 'id_caja', 'fk_caja_mov_caja', 'caja', 'id_caja', 'CASCADE');
+        add_fk_if_missing($conn, 'caja_movimiento', 'id_usuario', 'fk_caja_mov_usr', 'usuario', 'id_usuario', 'SET NULL');
+        add_fk_if_missing($conn, 'caja_movimiento', 'id_venta', 'fk_caja_mov_venta', 'venta', 'id_venta', 'SET NULL');
+        add_fk_if_missing($conn, 'caja_movimiento', 'id_reparacion', 'fk_caja_mov_reparacion', 'reparacion', 'id_reparacion', 'SET NULL');
+        add_fk_if_missing($conn, 'caja_movimiento', 'id_movimiento_origen', 'fk_caja_mov_origen', 'caja_movimiento', 'id_movimiento', 'SET NULL');
 
-        @unlink(__DIR__ . '/.schema_v3_immutable_caja.lock');
-        @unlink(__DIR__ . '/.schema_v4_immutable_caja.lock');
-        @unlink(__DIR__ . '/.schema_v5_clean_der.lock');
-        @file_put_contents($lockFile, date('c'));
+        if (!$isTestRun) {
+            @unlink(__DIR__ . '/.schema_v3_immutable_caja.lock');
+            @unlink(__DIR__ . '/.schema_v4_immutable_caja.lock');
+            @unlink(__DIR__ . '/.schema_v5_clean_der.lock');
+            @file_put_contents($lockFile, date('c'));
+        }
     } catch (Throwable $e) {
-        error_log("Migration warning: " . $e->getMessage());
+        error_log("Migration v6 warning: " . $e->getMessage());
+    }
+}
+
+function apply_v7_feature_migrations(mysqli $conn, bool $isTestRun = false): void
+{
+    $lockFile = __DIR__ . '/.schema_v7_features.lock';
+    if (!$isTestRun && file_exists($lockFile)) {
+        return;
+    }
+
+    try {
+        // 1. Garantías e IMEI en reparacion
+        add_column_if_missing($conn, 'reparacion', 'garantia_hasta', "ALTER TABLE `reparacion` ADD COLUMN `garantia_hasta` DATE NULL AFTER `fecha_entrega`");
+        add_column_if_missing($conn, 'reparacion', 'es_garantia', "ALTER TABLE `reparacion` ADD COLUMN `es_garantia` TINYINT(1) NOT NULL DEFAULT 0 AFTER `garantia_hasta`");
+        add_column_if_missing($conn, 'reparacion', 'id_reparacion_origen', "ALTER TABLE `reparacion` ADD COLUMN `id_reparacion_origen` INT(11) NULL AFTER `es_garantia`");
+        add_column_if_missing($conn, 'reparacion', 'garantia_anulada', "ALTER TABLE `reparacion` ADD COLUMN `garantia_anulada` TINYINT(1) NOT NULL DEFAULT 0 AFTER `id_reparacion_origen`");
+        add_column_if_missing($conn, 'reparacion', 'garantia_motivo_anulacion', "ALTER TABLE `reparacion` ADD COLUMN `garantia_motivo_anulacion` VARCHAR(255) NULL AFTER `garantia_anulada`");
+
+        try {
+            $resIdxImei = $conn->query("SHOW INDEX FROM `reparacion` WHERE Key_name = 'idx_reparacion_imei'");
+            if (!$resIdxImei || $resIdxImei->num_rows === 0) {
+                $conn->query("ALTER TABLE `reparacion` ADD KEY `idx_reparacion_imei` (`equipo_imei`)");
+            }
+        } catch (Throwable $e) {}
+
+        add_fk_if_missing($conn, 'reparacion', 'id_reparacion_origen', 'fk_reparacion_origen', 'reparacion', 'id_reparacion', 'SET NULL');
+
+        // Backfill de garantía 20 días para reparaciones ya entregadas
+        try {
+            $conn->query(
+                "UPDATE `reparacion`
+                 SET `garantia_hasta` = DATE_ADD(DATE(`fecha_entrega`), INTERVAL 20 DAY)
+                 WHERE `estado` = 'Entregado' AND `fecha_entrega` IS NOT NULL AND `garantia_hasta` IS NULL"
+            );
+        } catch (Throwable $e) {}
+
+        // 2. venta.descuento
+        add_column_if_missing($conn, 'venta', 'descuento', "ALTER TABLE `venta` ADD COLUMN `descuento` DECIMAL(10,2) NOT NULL DEFAULT 0.00 AFTER `total`");
+
+        // 3. Tabla notificacion_email
+        try {
+            $conn->query(
+                "CREATE TABLE IF NOT EXISTS `notificacion_email` (
+                  `id_notificacion` INT(11) NOT NULL AUTO_INCREMENT,
+                  `id_reparacion` INT(11) DEFAULT NULL,
+                  `tipo` VARCHAR(40) NOT NULL,
+                  `destinatario` VARCHAR(150) NOT NULL,
+                  `asunto` VARCHAR(200) NOT NULL,
+                  `estado` ENUM('enviado','fallido','omitido') NOT NULL DEFAULT 'enviado',
+                  `detalle` VARCHAR(255) DEFAULT NULL,
+                  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  PRIMARY KEY (`id_notificacion`),
+                  KEY `idx_ne_reparacion` (`id_reparacion`),
+                  CONSTRAINT `fk_ne_reparacion` FOREIGN KEY (`id_reparacion`) REFERENCES `reparacion` (`id_reparacion`) ON DELETE SET NULL
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci"
+            );
+        } catch (Throwable $e) {
+            error_log("notificacion_email migration warning: " . $e->getMessage());
+        }
+
+        // 4. Preservar permisos granulares para empleados existentes
+        try {
+            $resUsers = $conn->query(
+                "SELECT id_usuario, modulos_permitidos
+                 FROM usuario
+                 WHERE rol = 'empleado'
+                   AND modulos_permitidos IS NOT NULL
+                   AND TRIM(modulos_permitidos) <> ''"
+            );
+            if ($resUsers) {
+                $stmtUpd = $conn->prepare("UPDATE usuario SET modulos_permitidos = ? WHERE id_usuario = ?");
+                while ($uRow = $resUsers->fetch_assoc()) {
+                    $perms = array_values(array_filter(array_map('trim', explode(',', (string)$uRow['modulos_permitidos']))));
+                    $original = $perms;
+
+                    if ((in_array('venta', $perms, true) || in_array('ventas', $perms, true)) && !in_array('venta_anular', $perms, true)) {
+                        $perms[] = 'venta_anular';
+                    }
+                    if (in_array('caja', $perms, true) && !in_array('caja_movimientos', $perms, true)) {
+                        $perms[] = 'caja_movimientos';
+                    }
+                    if (in_array('reportes', $perms, true) && !in_array('reportes_financieros', $perms, true)) {
+                        $perms[] = 'reportes_financieros';
+                    }
+
+                    if ($perms !== $original && $stmtUpd) {
+                        $joined = implode(',', array_values(array_unique($perms)));
+                        $uid = (int)$uRow['id_usuario'];
+                        $stmtUpd->bind_param("si", $joined, $uid);
+                        $stmtUpd->execute();
+                    }
+                }
+                if ($stmtUpd) {
+                    $stmtUpd->close();
+                }
+            }
+        } catch (Throwable $e) {
+            error_log("Permissions migration warning: " . $e->getMessage());
+        }
+
+        if (!$isTestRun) {
+            @file_put_contents($lockFile, date('c'));
+        }
+    } catch (Throwable $e) {
+        error_log("Migration v7 warning: " . $e->getMessage());
     }
 }

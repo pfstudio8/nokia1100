@@ -2,7 +2,9 @@
 // modules/workshop/Controllers/WorkshopController.php
 
 require_once __DIR__ . '/../../../classes/BaseController.php';
+require_once __DIR__ . '/../../../classes/SerialHelper.php';
 require_once __DIR__ . '/../Models/WorkshopModel.php';
+require_once __DIR__ . '/../Services/RepairNotifier.php';
 
 class WorkshopController extends BaseController
 {
@@ -84,19 +86,32 @@ class WorkshopController extends BaseController
                 if ($budgetVal < 0) {
                     throw new Exception("El presupuesto no puede ser negativo.");
                 }
+                $emailInput = trim((string)($_POST['cliente_email'] ?? ''));
+                if ($emailInput !== '' && !filter_var($emailInput, FILTER_VALIDATE_EMAIL)) {
+                    throw new Exception("El formato del email del cliente no es válido.");
+                }
+                $idOrigen = (int)($_POST['id_reparacion_origen'] ?? 0);
+
                 $id_reparacion = $this->workshop_model->create_repair_order(
                     $_POST['id_cliente_existente'] ?? 0,
                     $_POST['cliente_nombre'] ?? '',
                     $_POST['cliente_telefono'] ?? '',
-                    '', // email
+                    $emailInput,
                     $_POST['equipo_marca'] ?? '',
                     $_POST['equipo_modelo'] ?? '',
                     $_POST['equipo_imei'] ?? '',
                     $_POST['falla_declarada'] ?? '',
                     $_POST['observaciones'] ?? '',
                     $budgetVal,
-                    $_SESSION['user_id']
+                    $_SESSION['user_id'],
+                    $idOrigen
                 );
+
+                try {
+                    RepairNotifier::notifyCreated($id_reparacion);
+                } catch (Throwable $mailErr) {
+                    error_log('notifyCreated error: ' . $mailErr->getMessage());
+                }
 
                 // Handle image uploads
                 if (isset($_FILES['fotos']) && is_array($_FILES['fotos']['tmp_name'])) {
@@ -203,7 +218,23 @@ class WorkshopController extends BaseController
                     : (float)($currentRepair['presupuesto'] ?? 0);
                 $nota = trim($_POST['nota_resolucion'] ?? '');
                 $this->workshop_model->send_repair_to_cashier($id_reparacion, $presupuesto, $nota, (int)$_SESSION['user_id']);
+                try {
+                    RepairNotifier::notifyReadyForPickup($id_reparacion);
+                } catch (Throwable $mailErr) {
+                    error_log('notifyReadyForPickup error: ' . $mailErr->getMessage());
+                }
                 $this->redirect("index.php?action=view&id=$id_reparacion&success=" . urlencode("¡Reparación enviada a Ventas para su cobro exitosamente!"));
+            } catch (Exception $e) {
+                $this->redirect("index.php?action=view&id=$id_reparacion&error=" . urlencode($e->getMessage()));
+            }
+        }
+
+        // Action: void_warranty
+        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'void_warranty') {
+            try {
+                $motivo = trim((string)($_POST['motivo_anulacion'] ?? ''));
+                $this->workshop_model->void_warranty($id_reparacion, $motivo, (int)$_SESSION['user_id']);
+                $this->redirect("index.php?action=view&id=$id_reparacion&success=" . urlencode("Garantía anulada correctamente ($motivo). La orden pasó a reparación regular."));
             } catch (Exception $e) {
                 $this->redirect("index.php?action=view&id=$id_reparacion&error=" . urlencode($e->getMessage()));
             }
@@ -212,6 +243,9 @@ class WorkshopController extends BaseController
         // Action: update_status
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
             try {
+                $prevRepair = $this->workshop_model->find_repair_by_id($id_reparacion);
+                $oldState = (string)($prevRepair['estado'] ?? '');
+
                 $estado = trim($_POST['estado'] ?? '');
                 $raw_presupuesto = str_replace(',', '.', (string)($_POST['presupuesto'] ?? ''));
                 $presupuesto = is_numeric($raw_presupuesto) ? (float)$raw_presupuesto : 0;
@@ -226,6 +260,12 @@ class WorkshopController extends BaseController
                     trim($_POST['nota_historial'] ?? ''),
                     $_SESSION['user_id']
                 );
+
+                try {
+                    RepairNotifier::notifyStatusChange($id_reparacion, $oldState, $estado);
+                } catch (Throwable $mailErr) {
+                    error_log('notifyStatusChange error: ' . $mailErr->getMessage());
+                }
                 
                 if ($estado === 'Listo') {
                     $msg = "¡Orden actualizada a 'Listo'! Ya puedes enviarla a Ventas para su cobro.";
@@ -329,6 +369,10 @@ class WorkshopController extends BaseController
         $historial = $this->workshop_model->get_repair_historial($id_reparacion);
         $productos_opt = $this->workshop_model->get_active_products_in_stock();
         $images = $this->workshop_model->get_repair_images($id_reparacion);
+        $notifications = $this->workshop_model->get_repair_notifications($id_reparacion);
+        $origin_repair = !empty($repair['id_reparacion_origen'])
+            ? $this->workshop_model->find_repair_by_id((int)$repair['id_reparacion_origen'])
+            : null;
 
         $this->render_view(__DIR__ . '/../Views/view.php', [
             'repair' => $repair,
@@ -336,6 +380,8 @@ class WorkshopController extends BaseController
             'historial' => $historial,
             'productos_opt' => $productos_opt,
             'images' => $images,
+            'notifications' => $notifications,
+            'origin_repair' => $origin_repair,
             'success' => $success,
             'error' => $error,
             'id_reparacion' => $id_reparacion
@@ -466,6 +512,32 @@ class WorkshopController extends BaseController
             'estado' => $repair['estado'],
             'fecha_entrega' => $repair['fecha_entrega'],
             'is_delivered' => ($repair['estado'] === 'Entregado')
+        ]);
+        exit();
+    }
+
+    public function imei_lookup()
+    {
+        $this->check_any_access(['taller', 'registrar_equipo'], true);
+        header('Content-Type: application/json; charset=utf-8');
+
+        $raw = (string)($_GET['imei'] ?? '');
+        $norm = SerialHelper::normalize($raw);
+        if ($norm === '' || !SerialHelper::isValid($norm)) {
+            echo json_encode([
+                'success'            => true,
+                'imei_norm'          => $norm,
+                'warranty_candidate' => null
+            ]);
+            exit();
+        }
+
+        $candidate = $this->workshop_model->get_warranty_candidate($norm);
+
+        echo json_encode([
+            'success'            => true,
+            'imei_norm'          => $norm,
+            'warranty_candidate' => $candidate
         ]);
         exit();
     }

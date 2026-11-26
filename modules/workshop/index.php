@@ -16,7 +16,11 @@ switch ($action) {
     case 'send_to_cashier':
     case 'add_image':
     case 'delete_image':
+    case 'void_warranty':
         $controller->view();
+        break;
+    case 'imei_lookup':
+        $controller->imei_lookup();
         break;
     case 'print_receipt':
         $controller->print_receipt();

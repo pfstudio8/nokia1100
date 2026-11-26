@@ -354,16 +354,16 @@ if (isset($_SESSION['user_id'])) {
 
             <!-- Badge y Título Oficial Nokia 1100 -->
             <div class="mb-2">
-                <span class="form-header-badge" style="background: var(--nk-sunk, #e5e1d6); border: 1px solid var(--nk-line, #d3cebf); font-family: var(--nk-f-mono, monospace); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: var(--nk-ink-3, #5c6165); padding: 3px 8px; border-radius: 2px; text-transform: uppercase;">
+                <span id="otpModalBadge" class="form-header-badge" style="background: var(--nk-sunk, #e5e1d6); border: 1px solid var(--nk-line, #d3cebf); font-family: var(--nk-f-mono, monospace); font-size: 10px; font-weight: 700; letter-spacing: 0.12em; color: var(--nk-ink-3, #5c6165); padding: 3px 8px; border-radius: 2px; text-transform: uppercase;">
                     SEGURIDAD · OTP
                 </span>
             </div>
             
-            <h3 class="text-xl font-extrabold text-text-main font-heading mb-1" style="font-family: var(--nk-f-head, 'Bricolage Grotesque', sans-serif); letter-spacing: -0.02em;">
+            <h3 id="otpModalTitle" class="text-xl font-extrabold text-text-main font-heading mb-1" style="font-family: var(--nk-f-head, 'Bricolage Grotesque', sans-serif); letter-spacing: -0.02em;">
                 Verificá tu cuenta
             </h3>
             
-            <p class="text-xs text-text-muted mb-2 max-w-xs leading-relaxed" style="font-family: var(--nk-f-body, sans-serif);">
+            <p id="otpModalDesc" class="text-xs text-text-muted mb-2 max-w-xs leading-relaxed" style="font-family: var(--nk-f-body, sans-serif);">
                 Ingresá el código numérico de <strong class="text-text-main font-semibold">6 dígitos</strong> enviado a:
             </p>
             <div class="mb-3">

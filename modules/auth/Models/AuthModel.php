@@ -8,11 +8,15 @@ class AuthModel extends BaseModel
     public function find_by_username(string $username): ?array
     {
         $stmt = $this->conn->prepare(
-            "SELECT id_usuario, nombre_usuario, contrasena, rol, verificado, is_active, email
-             FROM usuario
-             WHERE nombre_usuario = ? OR email = ?"
+            "SELECT u.id_usuario, u.nombre_usuario, u.contrasena, u.rol, u.verificado, u.is_active,
+                    COALESCE(NULLIF(TRIM(u.email), ''), p.email) AS email,
+                    p.nombre
+             FROM usuario u
+             LEFT JOIN persona p ON u.id_persona = p.id_persona
+             WHERE u.nombre_usuario = ? OR u.email = ? OR p.email = ?
+             LIMIT 1"
         );
-        $stmt->bind_param("ss", $username, $username);
+        $stmt->bind_param("sss", $username, $username, $username);
         $stmt->execute();
         $res = $stmt->get_result()->fetch_assoc();
         $stmt->close();

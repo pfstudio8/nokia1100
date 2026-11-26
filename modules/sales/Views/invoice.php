@@ -59,9 +59,15 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($detalles as $item): ?>
+                    <?php
+                    $subtotalBruto = 0.0;
+                    foreach ($detalles as $item):
+                        $subtotalBruto += ((float)$item['precio_unitario']) * ((int)$item['cantidad']);
+                    ?>
                     <tr>
-                        <td class="item-name"><?php echo htmlspecialchars($item['nombre_producto']); ?></td>
+                        <td class="item-name">
+                            <?php echo htmlspecialchars($item['nombre_producto']); ?>
+                        </td>
                         <td class="text-center"><?php echo $item['cantidad']; ?> u.</td>
                         <td class="text-right">$<?php echo number_format($item['precio_unitario'], 2); ?></td>
                         <td class="text-right">$<?php echo number_format($item['precio_unitario'] * $item['cantidad'], 2); ?></td>
@@ -70,15 +76,16 @@
                 </tbody>
             </table>
 
+            <?php $descuentoMonto = (float)($venta['descuento'] ?? 0); ?>
             <div class="total-section">
                 <div class="total-box">
                     <div class="total-row">
                         <span>Subtotal neto:</span>
-                        <span>$<?php echo number_format($venta['total'], 2); ?></span>
+                        <span>$<?php echo number_format($descuentoMonto > 0 ? $subtotalBruto : $venta['total'], 2); ?></span>
                     </div>
                     <div class="total-row">
                         <span>Descuentos:</span>
-                        <span>$0.00</span>
+                        <span><?php echo $descuentoMonto > 0 ? '-$' . number_format($descuentoMonto, 2) : '$0.00'; ?></span>
                     </div>
                     <div class="total-row grand-total">
                         <span>Total:</span>

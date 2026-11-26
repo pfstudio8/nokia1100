@@ -362,4 +362,27 @@ class InventoryModel extends BaseModel
         $stmt->close();
         return ['products' => $products, 'values' => $values];
     }
+
+    public function generate_missing_codes(): int
+    {
+        $serviceId = ServiceProduct::findId($this->conn);
+        if ($serviceId !== null) {
+            $stmt = $this->conn->prepare(
+                "UPDATE producto_detalle
+                 SET codigo = CONCAT('NK', LPAD(id_producto, 6, '0'))
+                 WHERE (codigo IS NULL OR TRIM(codigo) = '') AND id_producto <> ?"
+            );
+            $stmt->bind_param("i", $serviceId);
+            $stmt->execute();
+            $affected = (int)$stmt->affected_rows;
+            $stmt->close();
+            return $affected;
+        }
+        $this->conn->query(
+            "UPDATE producto_detalle
+             SET codigo = CONCAT('NK', LPAD(id_producto, 6, '0'))
+             WHERE (codigo IS NULL OR TRIM(codigo) = '')"
+        );
+        return (int)$this->conn->affected_rows;
+    }
 }

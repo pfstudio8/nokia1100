@@ -90,6 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const otpModal = document.getElementById('otpModal');
     const otpModalCard = document.getElementById('otpModalCard');
+    const otpModalBadge = document.getElementById('otpModalBadge');
+    const otpModalTitle = document.getElementById('otpModalTitle');
+    const otpModalDesc = document.getElementById('otpModalDesc');
     const otpMount = document.getElementById('otpMount');
     const otpTargetEmail = document.getElementById('otpTargetEmail');
     const otpStatusMsg = document.getElementById('otpStatusMsg');
@@ -105,6 +108,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function openOtpModal(email) {
         currentVerifyEmail = email || '';
+
+        if (otpModalBadge) {
+            otpModalBadge.textContent = 'SEGURIDAD · OTP';
+        }
+        if (otpModalTitle) {
+            otpModalTitle.textContent = 'Verificá tu cuenta';
+        }
+        if (otpModalDesc) {
+            otpModalDesc.innerHTML = 'Ingresá el código numérico de <strong class="text-text-main font-semibold">6 dígitos</strong> enviado a:';
+        }
         if (otpTargetEmail) {
             otpTargetEmail.textContent = currentVerifyEmail || 'tu correo';
         }
@@ -137,8 +150,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     try {
                         const formData = new FormData();
                         formData.append('csrf_token', getCsrfToken());
-                        formData.append('email', currentVerifyEmail);
                         formData.append('code', code);
+                        formData.append('email', currentVerifyEmail);
 
                         const response = await fetch('modules/auth/index.php?action=verify_otp', {
                             method: 'POST',
@@ -156,7 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 otpStatusMsg.innerHTML = '<span style="color: #22c55e;" class="font-bold">¡Cuenta verificada exitosamente!</span>';
                             }
                             if (typeof showToast === 'function') {
-                                showToast(data.message || '¡Cuenta verificada!', 'success');
+                                showToast(data.message || '¡Verificado!', 'success');
                             }
 
                             setTimeout(() => {
@@ -181,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         }
                     } catch (err) {
-                        console.error('Error al verificar OTP:', err);
+                        console.error('Error al verificar código:', err);
                         api.reject();
                         if (otpStatusMsg) {
                             otpStatusMsg.innerHTML = '<span style="color: #ef4444;">Error de conexión con el servidor</span>';

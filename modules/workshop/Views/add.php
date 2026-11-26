@@ -49,21 +49,26 @@ $back_url = $has_taller_access ? 'index.php' : (BASE_URL . '/modules/employee/in
                     <p class="text-text-muted mt-1 text-sm">Registrar el ingreso de un equipo y enviarlo con notificación inmediata al Taller Técnico</p>
                 </div>
             </div>
-            <?php if (($_SESSION['role'] ?? '') !== 'admin'): ?>
-            <div class="flex items-center gap-2 self-start sm:self-auto">
+            <div class="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                <a href="index.php?action=imei" class="no-transition bg-surface text-text-main hover:bg-surface-hover px-4 py-2 border border-border rounded-lg font-medium text-sm transition-all flex items-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">fingerprint</span>
+                    <span>Historial IMEI</span>
+                </a>
+                <?php if (($_SESSION['role'] ?? '') !== 'admin'): ?>
                 <a href="#historial-equipos" class="no-transition bg-surface text-text-main hover:bg-surface-hover px-4 py-2 border border-border rounded-lg font-medium text-sm transition-all flex items-center gap-2">
                     <span class="material-symbols-outlined text-[18px]">receipt_long</span>
                     <span>Historial de Equipos Registrados</span>
                     <span class="px-1.5 py-0.5 rounded-[2px] text-[11px] font-mono font-bold bg-[#15181a] text-[#c6e24a]"><?php echo (int)$total_items; ?></span>
                 </a>
+                <?php endif; ?>
             </div>
-            <?php endif; ?>
         </div>
 
 
 
         <form method="POST" action="" enctype="multipart/form-data" class="glass-card rounded-2xl p-6 md:p-8">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+            <input type="hidden" name="id_reparacion_origen" id="id_reparacion_origen" value="0">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <?php // CLIENTE ?>
                 <div>
@@ -77,7 +82,7 @@ $back_url = $has_taller_access ? 'index.php' : (BASE_URL . '/modules/employee/in
                             <select name="id_cliente_existente" id="id_cliente_existente" class="w-full bg-surface border border-border px-4 py-2.5 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
                                 <option value="0">-- Crear Nuevo Cliente --</option>
                                 <?php foreach($clients as $c): ?>
-                                    <option value="<?php echo $c['id_cliente']; ?>" data-telefono="<?php echo htmlspecialchars($c['telefono']); ?>" data-nombre="<?php echo htmlspecialchars($c['nombre']); ?>"><?php echo htmlspecialchars($c['nombre']); ?></option>
+                                    <option value="<?php echo $c['id_cliente']; ?>" data-telefono="<?php echo htmlspecialchars($c['telefono'] ?? ''); ?>" data-email="<?php echo htmlspecialchars($c['email'] ?? ''); ?>" data-nombre="<?php echo htmlspecialchars($c['nombre']); ?>"><?php echo htmlspecialchars($c['nombre']); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -86,9 +91,15 @@ $back_url = $has_taller_access ? 'index.php' : (BASE_URL . '/modules/employee/in
                                 <label class="block text-xs font-medium text-text-muted mb-1">Nombre Completo *</label>
                                 <input type="text" name="cliente_nombre" id="cliente_nombre" required class="w-full bg-surface border border-border px-4 py-2.5 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
                             </div>
-                            <div>
-                                <label class="block text-xs font-medium text-text-muted mb-1">Teléfono (WhatsApp)</label>
-                                <input type="tel" name="cliente_telefono" id="cliente_telefono" class="w-full bg-surface border border-border px-4 py-2.5 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-medium text-text-muted mb-1">Teléfono (WhatsApp)</label>
+                                    <input type="tel" name="cliente_telefono" id="cliente_telefono" class="w-full bg-surface border border-border px-4 py-2.5 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-text-muted mb-1">Email (para avisos de estado)</label>
+                                    <input type="email" name="cliente_email" id="cliente_email" placeholder="cliente@correo.com" class="w-full bg-surface border border-border px-4 py-2.5 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -113,7 +124,8 @@ $back_url = $has_taller_access ? 'index.php' : (BASE_URL . '/modules/employee/in
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-text-muted mb-1">IMEI / Nro Serie</label>
-                            <input type="text" name="equipo_imei" class="w-full bg-surface border border-border px-4 py-2.5 rounded-xl text-sm text-text-main focus:outline-none focus:border-primary transition-colors">
+                            <input type="text" name="equipo_imei" id="equipo_imei" autocomplete="off" class="w-full bg-surface border border-border px-4 py-2.5 rounded-xl text-sm font-mono uppercase text-text-main focus:outline-none focus:border-primary transition-colors">
+                            <div id="imei_lookup_box" class="hidden mt-2.5 p-3 rounded-xl border border-border bg-surface/60 text-xs space-y-2"></div>
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-text-muted mb-1">Falla Declarada (Motivo de ingreso) *</label>
@@ -362,24 +374,102 @@ document.getElementById('id_cliente_existente').addEventListener('change', funct
     const newClientFields = document.getElementById('new_client_fields');
     const nameInput = document.getElementById('cliente_nombre');
     const phoneInput = document.getElementById('cliente_telefono');
+    const emailInput = document.getElementById('cliente_email');
     
     if (this.value === '0') {
         newClientFields.style.display = 'block';
         nameInput.required = true;
         nameInput.value = '';
         phoneInput.value = '';
+        if (emailInput) { emailInput.value = ''; emailInput.readOnly = false; }
         nameInput.readOnly = false;
         phoneInput.readOnly = false;
     } else {
         newClientFields.style.display = 'block';
         nameInput.required = false;
         const selectedOption = this.options[this.selectedIndex];
-        nameInput.value = selectedOption.getAttribute('data-nombre');
-        phoneInput.value = selectedOption.getAttribute('data-telefono');
+        nameInput.value = selectedOption.getAttribute('data-nombre') || '';
+        phoneInput.value = selectedOption.getAttribute('data-telefono') || '';
+        const existingEmail = selectedOption.getAttribute('data-email') || '';
+        if (emailInput) {
+            emailInput.value = existingEmail;
+            // Si no tenía email cargado, permitir completarlo ahora
+            emailInput.readOnly = existingEmail !== '';
+        }
         nameInput.readOnly = true;
         phoneInput.readOnly = true;
     }
 });
+
+(function() {
+    const imeiInput = document.getElementById('equipo_imei');
+    const lookupBox = document.getElementById('imei_lookup_box');
+    const originHidden = document.getElementById('id_reparacion_origen');
+    let debounceTimer = null;
+
+    function esc(v) {
+        return String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+    }
+
+    async function runImeiLookup() {
+        if (!imeiInput || !lookupBox || !originHidden) return;
+        const raw = imeiInput.value.trim();
+        if (raw.length < 4) {
+            lookupBox.classList.add('hidden');
+            lookupBox.innerHTML = '';
+            originHidden.value = '0';
+            return;
+        }
+        try {
+            const res = await fetch(`index.php?action=imei_lookup&imei=${encodeURIComponent(raw)}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const data = await res.json();
+            if (!data || !data.success) return;
+
+            const cand = data.warranty_candidate || null;
+
+            if (!cand) {
+                lookupBox.classList.add('hidden');
+                lookupBox.innerHTML = '';
+                originHidden.value = '0';
+                return;
+            }
+
+            const venceFmt = cand.garantia_hasta ? cand.garantia_hasta.split('-').reverse().join('/') : '';
+            const html = `
+            <label class="flex items-start gap-2.5 p-2.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 cursor-pointer">
+                <input type="checkbox" id="chk_reingreso_garantia" class="mt-0.5 rounded border-border text-primary">
+                <span>
+                    <strong class="text-emerald-600 dark:text-emerald-400 block">Garantía vigente detectada (Orden #${esc(cand.codigo_orden)}, vence ${esc(venceFmt)})</strong>
+                    <span class="text-text-muted">Marcar para ingresar este equipo como <strong>reingreso por garantía</strong> (presupuesto base $0).</span>
+                </span>
+            </label>`;
+
+            lookupBox.innerHTML = html;
+            lookupBox.classList.remove('hidden');
+
+            const chk = document.getElementById('chk_reingreso_garantia');
+            if (chk && cand) {
+                chk.addEventListener('change', function() {
+                    originHidden.value = this.checked ? String(cand.id_reparacion) : '0';
+                    const presInput = document.querySelector('input[name="presupuesto"]');
+                    if (presInput && this.checked) {
+                        presInput.value = '0';
+                    }
+                });
+            }
+        } catch (e) {}
+    }
+
+    if (imeiInput) {
+        imeiInput.addEventListener('blur', runImeiLookup);
+        imeiInput.addEventListener('input', () => {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(runImeiLookup, 450);
+        });
+    }
+})();
 
 // Gestión de múltiples fotos con acumulación, previsualización interactiva y eliminación individual
 const fotosInput = document.getElementById('fotos-input');

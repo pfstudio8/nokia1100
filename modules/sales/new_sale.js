@@ -31,7 +31,102 @@ document.addEventListener('DOMContentLoaded', () => {
             select.dispatchEvent(new Event('change'));
         }
     }
+
+    // Escáner en input dedicado
+    const scanInput = document.getElementById('scan_code');
+    if (scanInput) {
+        scanInput.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const val = scanInput.value;
+                scanInput.value = '';
+                await handleBarcodeScan(val);
+                scanInput.focus();
+            }
+        });
+    }
+
+    // Captura global de lector de código de barras (funciona como teclado)
+    let scanBuffer = '';
+    let lastKeyTime = 0;
+    document.addEventListener('keydown', async (e) => {
+        const payModal = document.getElementById('payment-modal');
+        if (payModal && !payModal.classList.contains('hidden')) {
+            return;
+        }
+        const tag = (document.activeElement?.tagName || '').toUpperCase();
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+            return;
+        }
+        const now = Date.now();
+        if (now - lastKeyTime > 60) {
+            scanBuffer = '';
+        }
+        lastKeyTime = now;
+
+        if (e.key === 'Enter') {
+            if (scanBuffer.length >= 3) {
+                e.preventDefault();
+                const code = scanBuffer;
+                scanBuffer = '';
+                await handleBarcodeScan(code);
+            } else {
+                scanBuffer = '';
+            }
+            return;
+        }
+        if (e.key && e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            scanBuffer += e.key;
+        }
+    });
+
+    // Listeners de descuento
+    const descTipo = document.getElementById('desc_tipo');
+    const descValor = document.getElementById('desc_valor');
+    const onDiscountChange = () => {
+        const res = computeTotals();
+        const mode = document.getElementById('modal_modo_pago')?.value || 'unico';
+        if (mode === 'combinado') {
+            const half1 = Math.round((currentTotal / 2) * 100) / 100;
+            const half2 = Math.round((currentTotal - half1) * 100) / 100;
+            const c1 = document.getElementById('combo_monto_1');
+            const c2 = document.getElementById('combo_monto_2');
+            if (c1) c1.value = half1 > 0 ? half1.toFixed(2) : '';
+            if (c2) c2.value = half2 > 0 ? half2.toFixed(2) : '';
+            validateCombinedPayment();
+        } else {
+            const recInput = document.getElementById('monto_recibido');
+            if (recInput) recInput.value = currentTotal;
+            selectPaymentMethod(document.getElementById('modal_metodo_pago')?.value || 'Efectivo');
+        }
+        if (!res.valid) {
+            const confirmBtn = document.getElementById('btn-confirm-sale');
+            if (confirmBtn) confirmBtn.disabled = true;
+        }
+    };
+    if (descTipo) descTipo.addEventListener('change', onDiscountChange);
+    if (descValor) descValor.addEventListener('input', onDiscountChange);
 });
+
+async function handleBarcodeScan(rawCode) {
+    const code = String(rawCode || '').trim().toUpperCase();
+    if (!code) return;
+    const select = document.getElementById('id_producto');
+    if (!select) return;
+
+    const match = Array.from(select.options).find(opt => (opt.dataset.codigo || '').toUpperCase() === code);
+    if (!match) {
+        showToast(`Código no encontrado: ${code}`, 'error');
+        return;
+    }
+
+    select.value = match.value;
+    const cantInput = document.getElementById('cantidad');
+    if (cantInput) cantInput.value = 1;
+    await addToCart();
+    const scanInput = document.getElementById('scan_code');
+    if (scanInput) scanInput.focus();
+}
 
 async function addToCart() {
     const select  = document.getElementById('id_producto');
@@ -45,7 +140,7 @@ async function addToCart() {
     const precio  = parseFloat(option.dataset.precio);
     const cantidad = parseInt(cantInput.value);
 
-    if (cantidad <= 0) { showToast('La cantidad debe ser mayor a 0', 'error'); return; }
+    if (cantidad <= 0 || isNaN(cantidad)) { showToast('La cantidad debe ser mayor a 0', 'error'); return; }
 
     // Validación de stock en tiempo real mediante API
     try {
@@ -66,8 +161,11 @@ async function addToCart() {
             return;
         }
 
-        if (existingItem) { existingItem.cantidad += cantidad; }
-        else              { cart.push({ id, nombre, precio, cantidad }); }
+        if (existingItem) {
+            existingItem.cantidad += cantidad;
+        } else {
+            cart.push({ id, nombre, precio, cantidad });
+        }
 
         updateCartTable();
         select.value    = '';
@@ -117,6 +215,78 @@ function updateCartTable() {
 
 let currentTotal = 0;
 
+function computeTotals() {
+    const subtotal = Math.round(cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0) * 100) / 100;
+    const maxPct = Number(window.DISCOUNT_MAX_PCT || 0);
+    const tipoEl = document.getElementById('desc_tipo');
+    const valEl = document.getElementById('desc_valor');
+    const errEl = document.getElementById('desc_error');
+    const subRow = document.getElementById('modal-subtotal-row');
+    const discRow = document.getElementById('modal-discount-row');
+    const subAmt = document.getElementById('modal-subtotal-amount');
+    const discAmt = document.getElementById('modal-discount-amount');
+    const totalEl = document.getElementById('modal-total-amount');
+
+    let discount = 0;
+    let valid = true;
+    let error = '';
+
+    if (maxPct > 0 && valEl && tipoEl) {
+        const rawVal = parseFloat(valEl.value || '0');
+        if (isNaN(rawVal) || rawVal < 0) {
+            valid = false;
+            error = 'El descuento no puede ser negativo.';
+        } else if (rawVal > 0) {
+            const tipo = tipoEl.value || 'porcentaje';
+            let pct = 0;
+            if (tipo === 'porcentaje') {
+                pct = rawVal;
+                discount = Math.round((subtotal * rawVal / 100) * 100) / 100;
+            } else {
+                discount = Math.round(rawVal * 100) / 100;
+                pct = subtotal > 0 ? (discount / subtotal) * 100 : 100;
+            }
+            if (pct > maxPct + 0.001) {
+                valid = false;
+                error = `El descuento supera el máximo permitido (${maxPct}%).`;
+            } else if (discount >= subtotal) {
+                valid = false;
+                error = 'El descuento no puede ser igual o mayor al subtotal.';
+            }
+        }
+    }
+
+    if (errEl) {
+        if (!valid && error) {
+            errEl.textContent = error;
+            errEl.classList.remove('hidden');
+        } else {
+            errEl.textContent = '';
+            errEl.classList.add('hidden');
+        }
+    }
+
+    const total = valid ? Math.max(0, Math.round((subtotal - discount) * 100) / 100) : subtotal;
+    currentTotal = total;
+
+    if (subRow && discRow && subAmt && discAmt) {
+        if (valid && discount > 0) {
+            subRow.classList.remove('hidden');
+            discRow.classList.remove('hidden');
+            subAmt.textContent = `$${formatArs(subtotal)}`;
+            discAmt.textContent = `-$${formatArs(discount)}`;
+        } else {
+            subRow.classList.add('hidden');
+            discRow.classList.add('hidden');
+        }
+    }
+    if (totalEl) {
+        totalEl.textContent = `$${formatArs(currentTotal)}`;
+    }
+
+    return { valid, subtotal, discount, total, error };
+}
+
 function formatArs(num) {
     return Number(num || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -140,11 +310,14 @@ function getEffectiveCashAmountToPay() {
 function openPaymentModal() {
     if (cart.length === 0) { showToast('El carrito está vacío', 'warning'); return; }
     
-    // Update modal UI with cart details
-    currentTotal = Math.round(cart.reduce((sum, item) => sum + (item.precio * item.cantidad), 0) * 100) / 100;
+    const descTipo = document.getElementById('desc_tipo');
+    const descValor = document.getElementById('desc_valor');
+    if (descTipo) descTipo.value = 'porcentaje';
+    if (descValor) descValor.value = '0';
+
+    computeTotals();
     
     document.getElementById('modal-items-count').textContent = cart.length === 1 ? '1 artículo' : `${cart.length} artículos`;
-    document.getElementById('modal-total-amount').textContent = `$${formatArs(currentTotal)}`;
     
     const firstItem = cart[0];
     document.getElementById('modal-first-item-name').textContent = firstItem.nombre;
@@ -450,6 +623,18 @@ function calculateChange() {
 async function submitSaleFromModal() {
     const confirmBtn = document.getElementById('btn-confirm-sale');
     if (confirmBtn.disabled) return;
+
+    const totalsRes = computeTotals();
+    if (!totalsRes.valid) {
+        showToast(totalsRes.error || 'Descuento inválido.', 'error');
+        return;
+    }
+
+    const descTipoEl = document.getElementById('desc_tipo');
+    const descValorEl = document.getElementById('desc_valor');
+    const descuentoPayload = (Number(window.DISCOUNT_MAX_PCT || 0) > 0 && descValorEl && descTipoEl)
+        ? { tipo: descTipoEl.value || 'porcentaje', valor: parseFloat(descValorEl.value || '0') || 0 }
+        : { tipo: 'porcentaje', valor: 0 };
     
     const mode = document.getElementById('modal_modo_pago')?.value || 'unico';
     const descripcion = document.getElementById('venta_descripcion') ? document.getElementById('venta_descripcion').value : '';
@@ -488,6 +673,7 @@ async function submitSaleFromModal() {
                 items: cart, 
                 metodo_pago: metodoPago,
                 pagos: pagos,
+                descuento: descuentoPayload,
                 descripcion: descripcion,
                 csrf_token: window.CSRF_TOKEN || ''
             })

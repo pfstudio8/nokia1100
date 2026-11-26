@@ -216,6 +216,28 @@ $images = $images ?? [];
                     </div>
                 </div>
 
+                <?php if (($repair['estado'] ?? '') === 'Entregado' && !empty($repair['garantia_hasta'])):
+                    $garFecha = date('d/m/Y', strtotime((string)$repair['garantia_hasta']));
+                    $garAnulada = !empty($repair['garantia_anulada']);
+                    $garActiva = !$garAnulada && ($repair['garantia_hasta'] >= date('Y-m-d'));
+                ?>
+                <div class="nk-subcard p-5 border-l-4 <?php echo $garActiva ? 'border-l-[#16a34a]' : ($garAnulada ? 'border-l-[#dc2626]' : 'border-l-[#6b7075]'); ?>">
+                    <span class="text-[11px] font-mono font-bold uppercase tracking-wider flex items-center gap-1.5 mb-1.5 <?php echo $garActiva ? 'text-[#15803d]' : ($garAnulada ? 'text-error' : 'text-text-muted'); ?>">
+                        <span class="material-symbols-outlined text-[16px]">verified_user</span>
+                        <?php if ($garAnulada): ?>
+                            GARANTÍA ANULADA (<?php echo htmlspecialchars((string)($repair['garantia_motivo_anulacion'] ?? 'Exclusión')); ?>)
+                        <?php elseif ($garActiva): ?>
+                            GARANTÍA VIGENTE HASTA <?php echo $garFecha; ?>
+                        <?php else: ?>
+                            GARANTÍA VENCIDA EL <?php echo $garFecha; ?>
+                        <?php endif; ?>
+                    </span>
+                    <p class="text-xs text-text-muted leading-relaxed">
+                        <?php echo htmlspecialchars(WorkshopModel::GARANTIA_CONDICIONES); ?>
+                    </p>
+                </div>
+                <?php endif; ?>
+
                 <!-- Galería de Fotos del Equipo / Desarme -->
                 <div id="imagesSectionWrapper" class="pt-1 <?php echo !empty($images) ? '' : 'hidden'; ?>">
                     <h3 class="text-xs font-mono font-bold uppercase tracking-wider text-text-muted flex items-center gap-1.5 mb-3">

@@ -14,6 +14,7 @@ $open_caja = $open_caja ?? null;
 $last_closed = $last_closed ?? null;
 $cajas = $cajas ?? [];
 $can_supervise = $can_supervise ?? (($_SESSION['role'] ?? '') === 'admin');
+$can_move = $can_move ?? ($can_supervise || Layout::can('caja_movimientos'));
 $limite_retiro = $limite_retiro ?? 50000.00;
 
 Layout::renderHead('Caja - Nokia 1100', ['/modules/caja/caja.css']);
@@ -149,9 +150,11 @@ krsort($uniqueMonths);
         <?php endif; ?>
         <p>Toda operación queda asentada en el <strong>libro inmutable de movimientos</strong>. Al terminar la jornada, contá los billetes físicos y realizá el <strong>cierre ciego</strong> (el esperado y la diferencia se revelan al confirmar).</p>
         <div class="btn-row">
-          <button type="button" class="nk-btn big" data-action="focus-mov">
-            <span class="material-symbols-outlined text-[19px]">add</span> Registrar movimiento
-          </button>
+          <?php if ($can_move): ?>
+            <button type="button" class="nk-btn big" data-action="focus-mov">
+              <span class="material-symbols-outlined text-[19px]">add</span> Registrar movimiento
+            </button>
+          <?php endif; ?>
           <?php if ($can_supervise): ?>
             <button type="button" class="nk-btn nk-btn--primary big" data-action="close-caja" id="btnClose">
               <span class="material-symbols-outlined text-[19px]">lock</span> Cerrar caja (Arqueo ciego)
@@ -176,6 +179,7 @@ krsort($uniqueMonths);
           </div>
         </div>
 
+        <?php if ($can_move): ?>
         <!-- Formulario para agregar movimiento -->
         <form class="mv-form" id="mvForm" novalidate>
           <div>
@@ -215,6 +219,7 @@ krsort($uniqueMonths);
             <span class="material-symbols-outlined text-[17px]">add</span> Agregar
           </button>
         </form>
+        <?php endif; ?>
 
         <!-- Tabla de movimientos de la caja abierta -->
         <div class="nk-table-wrap">

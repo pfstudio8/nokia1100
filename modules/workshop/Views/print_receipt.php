@@ -185,7 +185,7 @@ $qrSvg = QRCodeSVG::render($trackingUrl, 138, 1, '#15171a', '#ffffff');
             <section class="terms-section">
                 <p class="field-caption">TÉRMINOS Y CONDICIONES</p>
                 <p class="terms-text">
-                    Custodia: el taller conserva el equipo en resguardo mientras dure el diagnóstico y la reparación. Retiro: el equipo debe retirarse dentro de los 90 días del aviso de reparación terminada (pasado dicho plazo se considerará abandonado conforme a la ley vigente). Garantía de repuestos: 30 días desde la entrega, sujeta al uso normal del equipo. Todo equipo ingresa sin chip SIM, memoria ni funda; el taller no se responsabiliza por pérdida de accesorios no declarados.
+                    Custodia: el taller conserva el equipo en resguardo mientras dure el diagnóstico y la reparación. Retiro: el equipo debe retirarse dentro de los 90 días del aviso de reparación terminada (pasado dicho plazo se considerará abandonado conforme a la ley vigente). <?php echo htmlspecialchars(WorkshopModel::GARANTIA_CONDICIONES); ?> Todo equipo ingresa sin chip SIM, memoria ni funda; el taller no se responsabiliza por pérdida de accesorios no declarados.
                 </p>
             </section>
 

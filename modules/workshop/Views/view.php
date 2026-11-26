@@ -7,6 +7,8 @@ $repuestos = $repuestos ?? [];
 $historial = $historial ?? [];
 $productos_opt = $productos_opt ?? [];
 $images = $images ?? [];
+$notifications = $notifications ?? [];
+$origin_repair = $origin_repair ?? null;
 $id_reparacion = $id_reparacion ?? 0;
 $error = $error ?? '';
 $success = $success ?? '';
@@ -49,6 +51,24 @@ if ($_SESSION['role'] === 'admin') {
                             <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
                             <?php echo htmlspecialchars($st); ?>
                         </span>
+                        <?php if (!empty($repair['es_garantia'])): ?>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border border-emerald-500/40 bg-emerald-500/10 text-emerald-500">
+                                <span class="material-symbols-outlined text-[14px]">verified_user</span>
+                                Reingreso Garantía<?php echo $origin_repair ? ' (de #' . htmlspecialchars($origin_repair['codigo_orden']) . ')' : ''; ?>
+                            </span>
+                        <?php endif; ?>
+                        <?php if (!empty($repair['garantia_anulada'])): ?>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border border-red-500/40 bg-red-500/10 text-red-500">
+                                Garantía anulada: <?php echo htmlspecialchars((string)($repair['garantia_motivo_anulacion'] ?? 'Exclusión')); ?>
+                            </span>
+                        <?php elseif (!empty($repair['garantia_hasta'])):
+                            $garVenceFmt = date('d/m/Y', strtotime((string)$repair['garantia_hasta']));
+                            $garVigente = $repair['garantia_hasta'] >= date('Y-m-d');
+                        ?>
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold border <?php echo $garVigente ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-500' : 'border-border bg-surface text-text-muted'; ?>">
+                                <?php echo $garVigente ? "Garantía vigente hasta {$garVenceFmt}" : "Garantía vencida ({$garVenceFmt})"; ?>
+                            </span>
+                        <?php endif; ?>
                     </div>
                     <p class="text-text-muted mt-1 text-xs flex items-center gap-1.5">
                         <span class="material-symbols-outlined text-[15px]">event</span>
@@ -175,7 +195,8 @@ if ($_SESSION['role'] === 'admin') {
                             <p class="text-base font-semibold text-text-main"><?php echo htmlspecialchars($repair['equipo_marca'] . ' ' . $repair['equipo_modelo']); ?></p>
                             <p class="text-xs text-text-muted mt-2">
                                 <span class="font-mono text-text-main font-medium bg-background/80 px-2 py-1 rounded border border-border/50 text-[11px]">
-                                    IMEI / Serie: <?php echo htmlspecialchars($repair['equipo_imei'] ?: 'No registrado'); ?>
+                                    IMEI / Serie:
+                                    <?php echo !empty($repair['equipo_imei']) ? htmlspecialchars($repair['equipo_imei']) : 'No registrado'; ?>
                                 </span>
                             </p>
                         </div>
@@ -759,6 +780,54 @@ if ($_SESSION['role'] === 'admin') {
                         <?php endif; ?>
                     </div>
                 </form>
+
+                <?php if (!empty($repair['es_garantia']) && !in_array($repair['estado'], ['Entregado', 'Cancelado'], true)): ?>
+                <form method="POST" action="" class="glass-card rounded-2xl p-5 border border-red-500/30 bg-red-500/5 space-y-3">
+                    <input type="hidden" name="action" value="void_warranty">
+                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>">
+                    <h4 class="text-sm font-display font-semibold text-red-500 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[18px]">gpp_bad</span> Anular Garantía (Causal de exclusión)
+                    </h4>
+                    <p class="text-[11px] text-text-muted leading-relaxed">Si durante la revisión se detecta daño físico no cubierto, anulá la garantía para pasar la orden a reparación regular.</p>
+                    <select name="motivo_anulacion" required class="w-full bg-surface border border-border px-3 py-2 rounded-xl text-xs font-medium text-text-main">
+                        <option value="">Seleccionar motivo...</option>
+                        <option value="Caída">Caída</option>
+                        <option value="Golpe">Golpe</option>
+                        <option value="Humedad / líquido">Humedad / líquido</option>
+                    </select>
+                    <button type="submit" class="w-full bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl py-2 text-xs transition-all cursor-pointer"
+                            data-confirm="¿Anular la cobertura de garantía de esta orden y de la orden origen?" data-confirm-title="Anular Garantía">
+                        Confirmar Anulación de Garantía
+                    </button>
+                </form>
+                <?php endif; ?>
+
+                <div class="glass-card rounded-2xl p-6">
+                    <h3 class="text-base font-display font-medium text-text-main mb-3 border-b border-border/50 pb-2 flex items-center gap-2">
+                        <span class="material-symbols-outlined text-lg text-primary">mail</span> Avisos por Correo
+                    </h3>
+                    <?php if (!empty($notifications)): ?>
+                        <div class="space-y-2 max-h-52 overflow-y-auto custom-scrollbar">
+                            <?php foreach ($notifications as $n):
+                                $nSt = $n['estado'] ?? '';
+                                $nCls = $nSt === 'enviado'
+                                    ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/30'
+                                    : ($nSt === 'fallido' ? 'bg-red-500/10 text-red-500 border-red-500/30' : 'bg-surface text-text-muted border-border');
+                            ?>
+                                <div class="p-2.5 rounded-xl bg-surface/50 border border-border/50 text-[11px]">
+                                    <div class="flex items-center justify-between gap-2 mb-1">
+                                        <span class="font-mono font-bold uppercase text-text-main"><?php echo htmlspecialchars((string)$n['tipo']); ?></span>
+                                        <span class="px-1.5 py-0.5 rounded border text-[10px] font-semibold <?php echo $nCls; ?>"><?php echo htmlspecialchars($nSt); ?></span>
+                                    </div>
+                                    <p class="text-text-muted truncate"><?php echo htmlspecialchars($n['destinatario'] !== '' ? $n['destinatario'] : ($n['detalle'] ?? 'Sin destinatario')); ?></p>
+                                    <p class="text-[10px] text-text-muted font-mono mt-0.5"><?php echo date('d/m/Y H:i', strtotime((string)$n['created_at'])); ?> hs</p>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <p class="text-xs text-text-muted">No se registraron avisos por correo para esta orden.</p>
+                    <?php endif; ?>
+                </div>
 
                 <script>
                     // Validaciones u otros scripts del form si son necesarios

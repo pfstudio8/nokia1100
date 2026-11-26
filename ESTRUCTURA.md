@@ -80,10 +80,12 @@ modules/<modulo>/
 
 | Archivo | Función |
 |---|---|
-| `BaseController.php` | Controlador padre: inicia sesión, valida sesión única (`check_auth`), permisos por módulo (`check_access`, `check_any_access`, `require_primary_admin`), CSRF (`verify_csrf`), detección AJAX (`is_ajax`), política de contraseñas (`validate_password`) y renderizado (`render_view`) |
+| `BaseController.php` | Controlador padre: inicia sesión, valida sesión única (`check_auth`), permisos por módulo y sub-permisos (`check_access`, `check_any_access`, `require_permission`, `require_primary_admin`), CSRF (`verify_csrf`), detección AJAX (`is_ajax`), política de contraseñas (`validate_password`) y renderizado (`render_view`) |
 | `BaseModel.php` | Modelo padre que inyecta la conexión global `$conn` (`mysqli`) |
 | `Database.php` | Conecta a MySQL con `utf8mb4` y zona horaria `-03:00`, y ejecuta `apply_system_migrations()` |
-| `Layout.php` | Renderiza `<head>`, barra superior, sidebars de Admin/Empleado/Invitado, botones de exportación Excel/PDF, insignias de medios de pago, paginación y control de permisos por rol y `modulos_permitidos` |
+| `Layout.php` | Renderiza `<head>`, barra superior, sidebars de Admin/Empleado/Invitado, botones de exportación Excel/PDF, insignias de medios de pago, paginación y control de permisos jerárquicos (`Layout::can()`) |
+| `Mailer.php` | Servicio centralizado de envío SMTP con PHPMailer y bandera de entorno `MAIL_DISABLED` |
+| `SerialHelper.php` | Normalización y validación de IMEI / números de serie (4–30 caracteres alfanuméricos) |
 | `QRCodeSVG.php` | Generador nativo autónomo de códigos QR en formato SVG (ISO/IEC 18004, versiones 1 a 10) |
 | `ServiceProduct.php` | Gestiona e identifica por nombre el producto contable `"Servicio Técnico Taller"` y provee `excludeSql()` para ocultarlo de métricas y listados de stock físico |
 
@@ -146,13 +148,13 @@ modules/<modulo>/
 | Archivo | Función |
 |---|---|
 | `index.php` | Router (`dashboard`, `users`, `add_user`, `edit_user`, `delete_user`, `save_user_modules`, `update_user_role`, `profile`, `audit`, `get_dashboard_data`) |
-| `Controllers/AdminController.php` | Controlador del panel gerencial, gestión de usuarios (exclusiva del admin principal), perfil y auditoría |
-| `Models/AdminModel.php` | Consultas de KPIs, usuarios/personas, asignación de módulos/roles, auditoría de inventario y estadísticas financieras |
+| `Controllers/AdminController.php` | Controlador del panel gerencial, gestión de usuarios/permisos granulares, perfil y auditoría |
+| `Models/AdminModel.php` | Consultas de KPIs, usuarios/personas, asignación de módulos y sub-permisos, auditoría de inventario y estadísticas financieras |
 | `Views/dashboard.php` | Panel principal del administrador con carga asíncrona de métricas y ventas recientes |
-| `Views/users.php` | ABM de usuarios con baja lógica, filtros de estado y drawer de permisos por módulo |
+| `Views/users.php` | ABM de usuarios con baja lógica, filtros de estado y drawer jerárquico de permisos |
 | `Views/profile.php` | Edición de datos personales y nombre de usuario del administrador |
 | `Views/audit.php` | Historial paginado de auditoría de inventario |
-| `admin_users.js` / `admin_users.css` | Lógica de modales de usuario, validador de reglas de contraseña y estilos de administración |
+| `admin_users.js` / `admin_users.css` | Lógica de modales de usuario, sub-permisos padre/hijo, validador de reglas de contraseña y estilos de administración |
 
 #### `modules/auth/`
 | Archivo | Función |
@@ -191,10 +193,11 @@ modules/<modulo>/
 #### `modules/inventory/`
 | Archivo | Función |
 |---|---|
-| `index.php` | Router (`inventory`, `change_status`, `check_stock`, `ajax_save_product`) |
-| `Controllers/InventoryController.php` | Carga del catálogo completo y endpoints AJAX de alta/edición, cambio de estado y consulta de stock |
+| `index.php` | Router (`inventory`, `change_status`, `check_stock`, `ajax_save_product`, `labels`) |
+| `Controllers/InventoryController.php` | Carga del catálogo completo, generación e impresión de etiquetas CODE128 y endpoints AJAX de alta/edición, cambio de estado y consulta de stock |
 | `Models/InventoryModel.php` | Transacciones sobre `producto`, `producto_detalle` e `inventario`, KPIs y métricas para reportes |
 | `Views/inventory.php` | Interfaz reactiva Nokia 1100 de inventario (alimentada por `assets/js/inventory.js` y `assets/css/inventory.css`) |
+| `Views/labels.php` | Plancha imprimible A4 (50×30 mm) de etiquetas con códigos de barras CODE128 (JsBarcode) |
 
 #### `modules/reports/`
 | Archivo | Función |
@@ -225,12 +228,23 @@ modules/<modulo>/
 #### `modules/workshop/`
 | Archivo | Función |
 |---|---|
-| `index.php` | Router (`index`, `add`, `view`, `add_repuesto`, `remove_repuesto`, `update_status`, `send_to_cashier`, `add_image`, `delete_image`, `print_receipt`, `delivery_receipt`, `track`, `history`, `check_status`) |
-| `Controllers/WorkshopController.php` | Gestión de órdenes de reparación, ingreso con fotos, asignación de repuestos, derivación a caja, recibos y portal público de seguimiento |
-| `Models/WorkshopModel.php` | Transacciones de órdenes, repuestos (con descuento/devolución de stock), historial de estados, galería de imágenes y cobro/entrega atómica |
+| `index.php` | Router (`index`, `add`, `view`, `add_repuesto`, `remove_repuesto`, `update_status`, `send_to_cashier`, `add_image`, `delete_image`, `print_receipt`, `delivery_receipt`, `track`, `history`, `check_status`, `imei_lookup`, `void_warranty`) |
+| `Controllers/WorkshopController.php` | Gestión de órdenes de reparación, avisos automáticos por email, garantías de 20 días y anulaciones, asignación de repuestos, derivación a caja y portal de seguimiento |
+| `Models/WorkshopModel.php` | Transacciones de órdenes, garantías (`garantia_hasta`, reingresos a \$0, anulaciones) y registro en `notificacion_email` |
+| `Services/RepairNotifier.php` | Envío de notificaciones automáticas por email ante cambios de estado (`En reparación`, `Listo`, `Entregado`, `Cancelado`) |
 | `Views/index.php` | Listado de órdenes del taller con alertas de nuevos ingresos y filtros por estado |
-| `Views/add.php` | Formulario de recepción de equipos en mostrador e historial rápido |
-| `Views/view.php` | Ficha técnica de la orden: cliente, equipo, galería con lightbox, repuestos, cambio de estado y envío a ventas |
+| `Views/add.php` | Formulario de recepción de equipos en mostrador con detección automática de garantía por IMEI |
+| `Views/view.php` | Ficha técnica de la orden: cliente, equipo, garantía vigente/anulación, log de emails enviados, galería, repuestos y envío a ventas |
 | `Views/history.php` | Historial paginado de reparaciones cobradas |
-| `Views/print_receipt.php` / `Views/delivery_receipt.php` / `print_receipt.css` | Recibo de ingreso con código QR SVG y acta de conformidad de entrega |
-| `Views/track.php` / `track.css` | Portal público de seguimiento en tiempo real con línea de progreso `.nkt` |
+| `Views/print_receipt.php` / `Views/delivery_receipt.php` / `print_receipt.css` | Recibo de ingreso con QR SVG y acta de conformidad con cláusula de garantía de 20 días |
+| `Views/track.php` / `track.css` | Portal público de seguimiento en tiempo real con estado de garantía y línea de progreso `.nkt` |
+
+---
+
+### 8. `tests/` — Pruebas Automatizadas PHPUnit
+
+| Ruta | Función |
+|---|---|
+| `phpunit.xml` / `tests/bootstrap.php` / `tests/DatabaseTestCase.php` | Entorno aislado de pruebas automatizadas contra `nokia1100_test` con correos deshabilitados |
+| `tests/Unit/` | Tests unitarios (`PaymentValidationTest`, `SerialHelperTest`) |
+| `tests/Integration/` | Tests de integración con BD (`SalesModelTest`, `CajaModelTest`, `StockTest`, `WarrantyTest`) |

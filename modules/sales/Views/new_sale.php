@@ -38,7 +38,20 @@ else Layout::renderEmployeeSidebar('venta');
             </div>
         <?php endif; ?>
 
-        <?php // Selector de producto ?>
+        <?php // Escáner de código de barras + Selector de producto ?>
+        <div class="mb-4 bg-surface/40 p-4 rounded-2xl border border-border/40">
+            <label for="scan_code" class="block text-xs font-semibold text-text-muted mb-1.5 uppercase tracking-wide flex items-center gap-1.5">
+                <span class="material-symbols-outlined text-[16px] text-primary">barcode_scanner</span>
+                Código / Escáner de barras
+            </label>
+            <div class="flex flex-col sm:flex-row gap-2 sm:items-center">
+                <input type="text" id="scan_code" autofocus autocomplete="off"
+                       placeholder="Escaneá o escribí el código del producto y presioná Enter..."
+                       class="flex-1 bg-surface border border-border px-3.5 py-2.5 rounded-xl focus:outline-none focus:border-primary transition-colors text-sm font-mono uppercase text-text-main">
+                <span class="text-[11px] text-text-muted">Escaneá o escribí el código y presioná <kbd class="px-1.5 py-0.5 rounded bg-surface border border-border font-mono text-[10px]">Enter</kbd></span>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-12 gap-6 mb-8 bg-surface/30 p-6 rounded-2xl border border-border/30">
             <div class="md:col-span-8">
                 <label class="block text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Producto</label>
@@ -79,7 +92,8 @@ else Layout::renderEmployeeSidebar('venta');
                                 <option value="<?php echo (int)$p['id_producto']; ?>"
                                         data-nombre="<?php echo htmlspecialchars($fullNombre); ?>"
                                         data-precio="<?php echo htmlspecialchars((string)$p['precio']); ?>"
-                                        data-stock="<?php echo (int)$p['cantidad']; ?>">
+                                        data-stock="<?php echo (int)$p['cantidad']; ?>"
+                                        data-codigo="<?php echo htmlspecialchars(strtoupper(trim((string)($p['codigo'] ?? '')))); ?>">
                                     <?php echo htmlspecialchars($labelTxt); ?>
                                 </option>
                             <?php endforeach; ?>
@@ -176,14 +190,46 @@ else Layout::renderEmployeeSidebar('venta');
                 </div>
             </div>
 
+            <?php $discountMaxPct = (float)($discount_max_pct ?? 0); ?>
+            <?php if ($discountMaxPct > 0): ?>
+            <div id="discount-block" class="bg-background/40 border border-border/40 rounded-xl p-3.5 space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                    <span class="text-[10px] font-bold text-text-muted uppercase tracking-widest flex items-center gap-1">
+                        <span class="material-symbols-outlined text-[14px] text-primary">percent</span> Descuento
+                    </span>
+                    <span class="text-[10px] text-text-muted font-mono">Máximo: <?php echo number_format($discountMaxPct, 0); ?>%</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <select id="desc_tipo" class="bg-surface border border-border rounded-lg px-2.5 py-1.5 text-xs font-semibold text-text-main">
+                        <option value="porcentaje">%</option>
+                        <option value="monto">$ (ARS)</option>
+                    </select>
+                    <input type="number" id="desc_valor" min="0" step="0.01" value="0"
+                           class="col-span-2 bg-surface border border-border rounded-lg px-3 py-1.5 text-sm font-mono font-semibold text-text-main focus:outline-none focus:border-primary"
+                           placeholder="0">
+                </div>
+                <p id="desc_error" class="hidden text-[11px] text-red-400 font-medium"></p>
+            </div>
+            <?php endif; ?>
+
             <?php // Total a Pagar ?>
             <div>
-                <div class="bg-surface-hover border border-primary/30 rounded-lg p-4 flex justify-between items-center shadow-[inset_0_0_15px_rgba(0,0,0,0.2)]">
-                    <div>
-                        <h4 class="text-xs font-bold text-text-muted uppercase tracking-wider mb-0.5">Total a Pagar</h4>
+                <div class="bg-surface-hover border border-primary/30 rounded-lg p-4 space-y-1.5 shadow-[inset_0_0_15px_rgba(0,0,0,0.2)]">
+                    <div id="modal-subtotal-row" class="hidden flex justify-between items-center text-xs text-text-muted">
+                        <span>Subtotal</span>
+                        <span id="modal-subtotal-amount" class="font-mono">$0.00</span>
                     </div>
-                    <div id="modal-total-amount" class="text-2xl font-display font-bold text-primary">
-                        $0.00
+                    <div id="modal-discount-row" class="hidden flex justify-between items-center text-xs text-emerald-400">
+                        <span>Descuento aplicado</span>
+                        <span id="modal-discount-amount" class="font-mono">-$0.00</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <h4 class="text-xs font-bold text-text-muted uppercase tracking-wider mb-0.5">Total a Pagar</h4>
+                        </div>
+                        <div id="modal-total-amount" class="text-2xl font-display font-bold text-primary">
+                            $0.00
+                        </div>
                     </div>
                 </div>
             </div>
@@ -357,8 +403,10 @@ else Layout::renderEmployeeSidebar('venta');
         </div>
     </div>
 </div>
+
 <script>
     window.CSRF_TOKEN = '<?php echo htmlspecialchars($_SESSION['session_token'] ?? '', ENT_QUOTES, 'UTF-8'); ?>';
+    window.DISCOUNT_MAX_PCT = <?php echo json_encode((float)($discount_max_pct ?? 0)); ?>;
 </script>
 <script src="<?php echo BASE_URL; ?>/modules/sales/new_sale.js?v=<?php echo time(); ?>"></script>
 <?php Layout::renderFooter(); ?>

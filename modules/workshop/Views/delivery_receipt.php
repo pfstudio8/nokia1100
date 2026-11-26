@@ -199,21 +199,26 @@ $fecha_entrega = !empty($repair['fecha_entrega']) ? date('d/m/Y H:i', strtotime(
                     </tr>
                 <?php endforeach; ?>
                 <tr style="border-top: 2px solid #222; font-weight: bold; font-size: 14px;">
-                    <td colspan="3" style="text-align: right; padding-top: 10px;">TOTAL ABONADO (<?php echo strtoupper(htmlspecialchars($metodo_pago)); ?>):</td>
+                    <td colspan="3" style="text-align: right; padding-top: 10px;">
+                        <?php echo ($total_pagado <= 0 && !empty($repair['es_garantia'])) ? 'ENTREGADO SIN CARGO (GARANTÍA):' : 'TOTAL ABONADO (' . strtoupper(htmlspecialchars($metodo_pago)) . '):'; ?>
+                    </td>
                     <td style="text-align: right; color: #0f766e; padding-top: 10px;">$<?php echo number_format($total_pagado, 2); ?></td>
                 </tr>
             </tbody>
         </table>
 
+        <?php
+        $garHastaFmt = !empty($repair['garantia_hasta'])
+            ? date('d/m/Y', strtotime((string)$repair['garantia_hasta']))
+            : date('d/m/Y', strtotime('+' . WorkshopModel::GARANTIA_DIAS . ' days'));
+        ?>
         <div class="warranty-box">
             <div class="warranty-title">
                 <span class="material-symbols-outlined" style="font-size: 16px;">verified</span>
-                Póliza de Garantía Oficial (90 Días Corridos)
+                Póliza de Garantía Oficial (<?php echo WorkshopModel::GARANTIA_DIAS; ?> Días Corridos · Vence: <?php echo $garHastaFmt; ?>)
             </div>
             <p class="warranty-text">
-                El presente servicio técnico cuenta con una garantía de <strong>90 días</strong> a partir de la fecha de entrega sobre el trabajo realizado y los repuestos nuevos instalados detallados en este comprobante.
-                <br>
-                <strong>Exclusiones de Garantía:</strong> La garantía queda sin efecto si el equipo presenta roturas posteriores, golpes, rajaduras en display/táctil, ingreso de humedad o líquidos, evidencias de sulfatación o desarme/manipulación técnica por personas ajenas a nuestro taller.
+                <?php echo htmlspecialchars(WorkshopModel::GARANTIA_CONDICIONES); ?>
             </p>
         </div>
 

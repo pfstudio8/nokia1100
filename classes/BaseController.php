@@ -118,6 +118,22 @@ class BaseController
         $this->redirect(BASE_URL . "/modules/employee/index.php?error=" . urlencode("No tiene permiso para acceder a ese módulo"));
     }
 
+    protected function require_permission(string $perm, bool $json = false): void
+    {
+        $this->check_auth($json);
+        require_once __DIR__ . '/Layout.php';
+        if (Layout::can($perm)) {
+            return;
+        }
+        if ($json) {
+            http_response_code(403);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => false, 'message' => 'No tenés permiso para realizar esta acción.']);
+            exit();
+        }
+        $this->redirect(BASE_URL . "/modules/employee/index.php?error=" . urlencode("No tenés permiso para realizar esta acción."));
+    }
+
     protected function require_primary_admin(bool $json = false): void
     {
         $this->check_auth($json);

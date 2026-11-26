@@ -162,6 +162,9 @@ if ($isAdmin) {
         <p class="sub">Control de stock, repuestos y equipos tecnológicos</p>
       </div>
       <div class="head-actions">
+        <a href="index.php?action=labels" class="btn" title="Imprimir etiquetas con código de barras">
+          <span class="material-symbols-outlined" style="font-size:16px">qr_code_2</span>Etiquetas
+        </a>
         <button type="button" class="btn btn-export" data-action="excel" title="Exportar a Excel">
           <svg class="i" aria-hidden="true">
             <use href="#i-down" />

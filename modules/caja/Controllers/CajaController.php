@@ -42,6 +42,7 @@ class CajaController extends BaseController
             'last_closed'   => $last_closed,
             'cajas'         => $cajas,
             'can_supervise' => $this->has_supervisor_permission(),
+            'can_move'      => Layout::can('caja_movimientos') || $this->has_supervisor_permission(),
             'limite_retiro' => CajaModel::LIMITE_RETIRO_EMPLEADO
         ]);
     }
@@ -111,6 +112,11 @@ class CajaController extends BaseController
         $csrf = $_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null;
         if (!$this->verify_csrf($csrf)) {
             $this->respond_error('Token de seguridad inválido.');
+            return;
+        }
+
+        if (!Layout::can('caja_movimientos') && !$this->has_supervisor_permission()) {
+            $this->respond_error('No tenés permiso para registrar movimientos manuales en caja.', 403);
             return;
         }
 

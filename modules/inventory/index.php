@@ -15,6 +15,9 @@ switch ($action) {
     case 'ajax_save_product':
         $controller->ajax_save_product();
         break;
+    case 'labels':
+        $controller->labels();
+        break;
     case 'inventory':
         $controller->inventory();
         break;

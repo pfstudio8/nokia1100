@@ -68,9 +68,15 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($detalles as $item): ?>
+                    <?php
+                    $subtotalBruto = 0.0;
+                    foreach ($detalles as $item):
+                        $subtotalBruto += ((float)$item['precio_unitario']) * ((int)$item['cantidad']);
+                    ?>
                     <tr>
-                        <td class="item-name"><span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle; color: #dc2626;">undo</span> <?php echo htmlspecialchars($item['nombre_producto']); ?></td>
+                        <td class="item-name">
+                            <span class="material-symbols-outlined" style="font-size: 14px; vertical-align: middle; color: #dc2626;">undo</span> <?php echo htmlspecialchars($item['nombre_producto']); ?>
+                        </td>
                         <td class="text-center">-<?php echo $item['cantidad']; ?> u.</td>
                         <td class="text-right">$<?php echo number_format($item['precio_unitario'], 2); ?></td>
                         <td class="text-right text-red">-$<?php echo number_format($item['precio_unitario'] * $item['cantidad'], 2); ?></td>
@@ -79,12 +85,19 @@
                 </tbody>
             </table>
 
+            <?php $descuentoMonto = (float)($venta['descuento'] ?? 0); ?>
             <div class="total-section">
                 <div class="total-box">
                     <div class="total-row">
                         <span>Subtotal a devolver:</span>
-                        <span class="text-red">-$<?php echo number_format($venta['total'], 2); ?></span>
+                        <span class="text-red">-$<?php echo number_format($descuentoMonto > 0 ? $subtotalBruto : $venta['total'], 2); ?></span>
                     </div>
+                    <?php if ($descuentoMonto > 0): ?>
+                    <div class="total-row">
+                        <span>Descuento original:</span>
+                        <span>$<?php echo number_format($descuentoMonto, 2); ?></span>
+                    </div>
+                    <?php endif; ?>
                     <div class="total-row grand-total" style="color: #dc2626; border-top-color: #dc2626;">
                         <span>Total Reintegrado:</span>
                         <span>-$<?php echo number_format($venta['total'], 2); ?></span>

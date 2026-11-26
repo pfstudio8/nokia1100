@@ -115,13 +115,17 @@ if (editPasswordInput) {
 const allSystemModules = [
     { id: 'dashboard', label: 'Inicio', icon: 'home', desc: 'Panel principal de operaciones' },
     { id: 'venta', label: 'Generar Venta / Ventas', icon: 'payments', desc: 'Punto de venta y registro de transacciones' },
+    { id: 'venta_anular', parent: 'venta', label: 'Anular ventas / Notas de crédito', icon: 'cancel', desc: 'Permite anular ventas registradas y emitir notas de crédito' },
+    { id: 'venta_descuento', parent: 'venta', label: 'Aplicar descuentos (hasta 15%)', icon: 'percent', desc: 'Habilita descuentos en el punto de venta hasta el tope de empleado' },
     { id: 'caja', label: 'Caja', icon: 'point_of_sale', desc: 'Apertura, arqueo, movimientos de efectivo y consulta de caja' },
-    { id: 'cierre_caja', label: 'Supervisión y Cierre de Caja', icon: 'lock_person', desc: 'Autoriza cerrar caja, registrar contra-asientos y retiros mayores a $50.000' },
+    { id: 'caja_movimientos', parent: 'caja', label: 'Registrar ingresos/egresos manuales', icon: 'swap_vert', desc: 'Permite cargar movimientos manuales en la caja abierta' },
+    { id: 'cierre_caja', parent: 'caja', label: 'Supervisión y Cierre de Caja', icon: 'lock_person', desc: 'Autoriza cerrar caja, registrar contra-asientos y retiros mayores a $50.000' },
     { id: 'cobrar_reparaciones', label: 'Cobrar Reparaciones', icon: 'price_check', desc: 'Caja para entrega de reparaciones terminadas' },
     { id: 'taller', label: 'Taller', icon: 'home_repair_service', desc: 'Gestión y servicio técnico de reparaciones' },
     { id: 'inventario', label: 'Consultar Stock / Inventario', icon: 'inventory_2', desc: 'Catálogo de productos, existencias y precios' },
     { id: 'clientes', label: 'Clientes', icon: 'contact_page', desc: 'Directorio e historial de clientes' },
     { id: 'reportes', label: 'Reportes y Estadísticas', icon: 'analytics', desc: 'Métricas financieras, ventas y taller' },
+    { id: 'reportes_financieros', parent: 'reportes', label: 'Ver pestaña Finanzas (ingresos y rentabilidad)', icon: 'account_balance', desc: 'Muestra ingresos netos, rentabilidad y métricas financieras' },
     { id: 'proveedores', label: 'Proveedores y Compras', icon: 'local_shipping', desc: 'Directorio de proveedores y órdenes de compra' },
     { id: 'auditoria', label: 'Auditoría del Sistema', icon: 'security', desc: 'Registro de seguridad y eventos' }
 ];
@@ -138,6 +142,23 @@ function toggleModuleRow(event, checkboxId) {
     const cb = document.getElementById(checkboxId);
     if (cb) {
         cb.checked = !cb.checked;
+        cb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+}
+
+function handlePermissionCheckboxChange(cb) {
+    const id = cb.value;
+    const parentId = cb.dataset.parent || '';
+    if (cb.checked && parentId) {
+        const parentCb = document.getElementById(`mod-${parentId}`);
+        if (parentCb && !parentCb.checked) {
+            parentCb.checked = true;
+        }
+    }
+    if (!cb.checked) {
+        document.querySelectorAll(`#modules-list input[name="modulos[]"][data-parent="${id}"]`).forEach(childCb => {
+            childCb.checked = false;
+        });
     }
 }
 
@@ -166,7 +187,7 @@ function openModulePermissions(id, fullName, role, modulosStr) {
         allowed = modulosStr ? modulosStr.split(',').map(s => s.trim()).filter(Boolean) : [];
     } else {
         // Por defecto para operarios/empleados: módulos base iniciales
-        allowed = ['dashboard', 'venta', 'caja', 'inventario', 'clientes'];
+        allowed = ['dashboard', 'venta', 'venta_anular', 'caja', 'caja_movimientos', 'inventario', 'clientes'];
     }
     
     // Renderizar la lista con checkboxes y selector rápido
@@ -186,17 +207,20 @@ function openModulePermissions(id, fullName, role, modulosStr) {
     modules.forEach(mod => {
         const isChecked = allowed.includes(mod.id);
         const checkboxId = `mod-${mod.id}`;
+        const parentAttr = mod.parent ? `data-parent="${mod.parent}"` : '';
+        const childIndent = mod.parent ? 'ml-6 pl-3 border-l-2 border-primary/30' : '';
         
         html += `
-            <div onclick="toggleModuleRow(event, '${checkboxId}')" class="flex items-center justify-between p-3.5 rounded-xl border border-border/70 bg-surface/40 hover:bg-surface hover:border-primary/40 transition-all cursor-pointer select-none">
+            <div onclick="toggleModuleRow(event, '${checkboxId}')" class="${childIndent} flex items-center justify-between p-3.5 rounded-xl border border-border/70 bg-surface/40 hover:bg-surface hover:border-primary/40 transition-all cursor-pointer select-none">
                 <div class="flex items-center gap-3">
-                    <span class="material-symbols-outlined text-primary text-[22px] flex-shrink-0">${mod.icon}</span>
+                    <span class="material-symbols-outlined text-primary ${mod.parent ? 'text-[19px]' : 'text-[22px]'} flex-shrink-0">${mod.icon}</span>
                     <div>
                         <label for="${checkboxId}" class="text-sm font-semibold text-text-main cursor-pointer select-none block leading-tight tracking-wide">${mod.label}</label>
                         <span class="text-[11px] text-text-muted block mt-1">${mod.desc}</span>
                     </div>
                 </div>
-                <input type="checkbox" name="modulos[]" value="${mod.id}" id="${checkboxId}" ${isChecked ? 'checked' : ''}
+                <input type="checkbox" name="modulos[]" value="${mod.id}" id="${checkboxId}" ${parentAttr} ${isChecked ? 'checked' : ''}
+                       onchange="handlePermissionCheckboxChange(this)"
                        class="w-4 h-4 rounded border-border text-primary bg-background focus:ring-primary/20 cursor-pointer ml-3 flex-shrink-0" onclick="event.stopPropagation()">
             </div>
         `;

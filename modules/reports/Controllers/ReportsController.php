@@ -55,16 +55,22 @@ class ReportsController extends BaseController
         $start_dt = ($desde !== '') ? ($desde . ' ' . $hora_desde . ':00') : null;
         $end_dt = ($hasta !== '') ? ($hasta . ' ' . $hora_hasta . ':59') : null;
 
-        $allowedTabs = ['tab-finanzas', 'tab-inventario', 'tab-ventas', 'tab-taller'];
-        $active_tab = trim((string)($_GET['tab'] ?? 'tab-finanzas'));
+        require_once __DIR__ . '/../../../classes/Layout.php';
+        $can_fin = Layout::can('reportes_financieros');
+
+        $allowedTabs = $can_fin
+            ? ['tab-finanzas', 'tab-inventario', 'tab-ventas', 'tab-taller']
+            : ['tab-inventario', 'tab-ventas', 'tab-taller'];
+        $defaultTab = $can_fin ? 'tab-finanzas' : 'tab-inventario';
+        $active_tab = trim((string)($_GET['tab'] ?? $defaultTab));
         if (!in_array($active_tab, $allowedTabs, true)) {
-            $active_tab = 'tab-finanzas';
+            $active_tab = $defaultTab;
         }
 
-        // Data 1: Financiero
-        $financial_stats = $this->admin_model->get_financial_stats($start_dt, $end_dt, $hora_desde, $hora_hasta);
-        $revenue_category = $this->sales_model->get_revenue_by_category($start_dt, $end_dt, $hora_desde, $hora_hasta);
-        $top_profitable = $this->sales_model->get_top_profitable_products(5, $start_dt, $end_dt, $hora_desde, $hora_hasta);
+        // Data 1: Financiero (solo si tiene permiso)
+        $financial_stats = $can_fin ? $this->admin_model->get_financial_stats($start_dt, $end_dt, $hora_desde, $hora_hasta) : [];
+        $revenue_category = $can_fin ? $this->sales_model->get_revenue_by_category($start_dt, $end_dt, $hora_desde, $hora_hasta) : [];
+        $top_profitable = $can_fin ? $this->sales_model->get_top_profitable_products(5, $start_dt, $end_dt, $hora_desde, $hora_hasta) : [];
 
         // Data 2: Inventario
         $stock_stats = $this->inventory_model->get_stock_stats($start_dt, $end_dt, $hora_desde, $hora_hasta);
@@ -89,6 +95,7 @@ class ReportsController extends BaseController
             'hora_desde' => $hora_desde,
             'hora_hasta' => $hora_hasta,
             'active_tab' => $active_tab,
+            'can_fin' => $can_fin,
             'financial' => $financial_stats,
             'revenue_category' => $revenue_category,
             'top_profitable' => $top_profitable,

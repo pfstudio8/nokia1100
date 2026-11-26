@@ -8,6 +8,8 @@ require_once __DIR__ . '/../../caja/Models/CajaModel.php';
 class SalesModel extends BaseModel
 {
     public const METODOS_PAGO = ['Efectivo', 'Transferencia', 'Tarjeta'];
+    public const DESCUENTO_MAX_PCT_EMPLEADO = 15.0;
+    public const DESCUENTO_MAX_PCT_ADMIN    = 50.0;
 
     public function __construct()
     {
@@ -215,7 +217,7 @@ class SalesModel extends BaseModel
 
     public function find_sale_by_id(int $id)
     {
-        $stmt = $this->conn->prepare("SELECT v.id_venta, v.fecha, v.total, COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), 'N/A') AS metodo_de_pago, v.estado, v.descripcion FROM venta v WHERE v.id_venta = ?");
+        $stmt = $this->conn->prepare("SELECT v.id_venta, v.fecha, v.total, COALESCE(v.descuento, 0) AS descuento, COALESCE(NULLIF(TRIM(v.metodo_de_pago), ''), 'N/A') AS metodo_de_pago, v.estado, v.descripcion FROM venta v WHERE v.id_venta = ?");
         $stmt->bind_param("i", $id);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
@@ -256,7 +258,7 @@ class SalesModel extends BaseModel
 
     public function get_sale_details(int $id_venta)
     {
-        $stmt = $this->conn->prepare("SELECT nombre_producto, cantidad, precio_unitario 
+        $stmt = $this->conn->prepare("SELECT id_detalle_venta, id_producto, nombre_producto, cantidad, precio_unitario 
                                      FROM detalle_venta 
                                      WHERE id_venta = ?");
         $stmt->bind_param("i", $id_venta);
@@ -531,7 +533,7 @@ class SalesModel extends BaseModel
         return ['labels' => $labels, 'values' => $values, 'details' => $details];
     }
 
-    public function create_sale_transaction(array $items, string|array $metodo_o_pagos, int|string $user_id, string $descripcion = '')
+    public function create_sale_transaction(array $items, string|array $metodo_o_pagos, int|string $user_id, string $descripcion = '', array $descuento = [], float $descuento_max_pct = 0.0)
     {
         require_once __DIR__ . '/../../../config/audit.php';
         
@@ -560,11 +562,11 @@ class SalesModel extends BaseModel
             foreach ($items as $item) {
                 $id = (int)$item['id'];
                 $cant = (int)$item['cantidad'];
-                
+
                 if ($cant <= 0) {
                     throw new Exception("La cantidad debe ser mayor a cero.");
                 }
-                
+
                 if (isset($grouped_items[$id])) {
                     $grouped_items[$id]['cantidad'] += $cant;
                 } else {
@@ -584,7 +586,8 @@ class SalesModel extends BaseModel
 
             foreach ($items as $item) {
                 $stmt = $this->conn->prepare(
-                    "SELECT p.precio, i.cantidad, p.is_active FROM inventario i
+                    "SELECT p.precio, i.cantidad, p.is_active
+                     FROM inventario i
                      JOIN producto p ON i.id_producto = p.id_producto
                      WHERE p.id_producto = ? FOR UPDATE"
                 );
@@ -602,10 +605,40 @@ class SalesModel extends BaseModel
                 if ($prod['cantidad'] < $item['cantidad']) {
                     throw new Exception("Stock insuficiente para el producto ID " . $item['id']);
                 }
+
                 $total_venta += $prod['precio'] * $item['cantidad'];
             }
 
-            $total_venta = round((float)$total_venta, 2);
+            $subtotal_venta = round((float)$total_venta, 2);
+            $descuento_monto = 0.0;
+            if (!empty($descuento) && isset($descuento['valor'])) {
+                $rawDescVal = str_replace(',', '.', (string)$descuento['valor']);
+                $descVal = is_numeric($rawDescVal) ? (float)$rawDescVal : 0.0;
+                if ($descVal < 0) {
+                    throw new Exception("El descuento no puede ser negativo.");
+                }
+                if ($descVal > 0) {
+                    if ($descuento_max_pct <= 0) {
+                        throw new Exception("No tenés permiso para aplicar descuentos.");
+                    }
+                    $descTipo = (string)($descuento['tipo'] ?? 'porcentaje');
+                    if ($descTipo === 'porcentaje') {
+                        $pct = $descVal;
+                        $descuento_monto = round($subtotal_venta * $descVal / 100, 2);
+                    } else {
+                        $descuento_monto = round($descVal, 2);
+                        $pct = $subtotal_venta > 0 ? ($descuento_monto / $subtotal_venta) * 100 : 100.0;
+                    }
+                    if ($pct > ($descuento_max_pct + 0.001)) {
+                        throw new Exception("El descuento supera el máximo permitido ({$descuento_max_pct}%).");
+                    }
+                    if ($descuento_monto >= $subtotal_venta) {
+                        throw new Exception("El descuento no puede ser igual o mayor al subtotal de la venta.");
+                    }
+                }
+            }
+
+            $total_venta = round($subtotal_venta - $descuento_monto, 2);
 
             // Validar y normalizar el pago (único o combinado de hasta 2 medios) contra el total exacto de la venta
             $pagos_raw = is_array($metodo_o_pagos) ? $metodo_o_pagos : [];
@@ -616,8 +649,8 @@ class SalesModel extends BaseModel
             $monto_efectivo = $pago_info['monto_efectivo'];
             $es_combinado = $pago_info['es_combinado'];
 
-            $stmt = $this->conn->prepare("INSERT INTO venta (fecha, total, metodo_de_pago, id_usuario, descripcion) VALUES (?, ?, ?, ?, ?)");
-            $stmt->bind_param("sdsis", $fecha, $total_venta, $metodo_pago_resumen, $user_id, $descripcion);
+            $stmt = $this->conn->prepare("INSERT INTO venta (fecha, total, descuento, metodo_de_pago, id_usuario, descripcion) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("sddsis", $fecha, $total_venta, $descuento_monto, $metodo_pago_resumen, $user_id, $descripcion);
             if (!$stmt->execute()) throw new Exception("Error al crear venta");
             $id_venta = $this->conn->insert_id;
             $stmt->close();

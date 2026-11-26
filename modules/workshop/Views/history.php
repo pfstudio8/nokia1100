@@ -35,19 +35,34 @@ if ($_SESSION['role'] === 'admin') {
                         <th class="p-4 font-semibold">Fecha de Cobro</th>
                         <th class="p-4 font-semibold">Descripción (Orden / Equipo)</th>
                         <th class="p-4 font-semibold text-center">Método</th>
+                        <th class="p-4 font-semibold text-center">Garantía</th>
                         <th class="p-4 font-semibold text-right">Monto</th>
                         <th class="p-4 font-semibold text-right">Cobrado Por</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-border/50">
                     <?php if (count($paid_repairs) > 0): ?>
-                        <?php foreach($paid_repairs as $r): ?>
+                        <?php foreach($paid_repairs as $r):
+                            $hoy = date('Y-m-d');
+                            $garTxt = '<span class="text-xs text-text-muted">—</span>';
+                            if (!empty($r['garantia_anulada'])) {
+                                $garTxt = '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-red-500/10 text-red-500 border border-red-500/30">Anulada</span>';
+                            } elseif (!empty($r['garantia_hasta'])) {
+                                $vFmt = date('d/m/Y', strtotime((string)$r['garantia_hasta']));
+                                if ($r['garantia_hasta'] >= $hoy) {
+                                    $garTxt = '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/10 text-emerald-500 border border-emerald-500/30">Hasta ' . $vFmt . '</span>';
+                                } else {
+                                    $garTxt = '<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-surface text-text-muted border border-border">Vencida (' . $vFmt . ')</span>';
+                                }
+                            }
+                        ?>
                             <tr class="hover:bg-surface-hover/30 transition-colors">
                                 <td class="p-4 text-text-muted text-sm"><?php echo date('d/m/Y H:i', strtotime($r['fecha'])); ?></td>
                                 <td class="p-4 font-medium text-text-main"><?php echo htmlspecialchars($r['descripcion']); ?></td>
                                 <td class="p-4 text-center">
                                     <?php echo Layout::renderPaymentBadge($r['metodo_de_pago'] ?? 'N/A'); ?>
                                 </td>
+                                <td class="p-4 text-center"><?php echo $garTxt; ?></td>
                                 <td class="p-4 text-right font-medium text-primary">
                                     $<?php echo number_format($r['total'], 2); ?>
                                 </td>
@@ -57,7 +72,7 @@ if ($_SESSION['role'] === 'admin') {
                             </tr>
                         <?php endforeach; ?>
                     <?php else: ?>
-                        <tr><td colspan="5" class="p-12 text-center text-text-muted">No hay cobros de reparaciones registrados aún.</td></tr>
+                        <tr><td colspan="6" class="p-12 text-center text-text-muted">No hay cobros de reparaciones registrados aún.</td></tr>
                     <?php endif; ?>
                 </tbody>
             </table>

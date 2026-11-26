@@ -125,12 +125,15 @@ html.dark .glass-card p {
             </div>
         </form>
 
+        <?php $can_fin = $can_fin ?? true; ?>
         <?php // Pestañas de Reportes ?>
         <div class="border-b border-[#d3cebf] mb-7">
             <nav class="flex flex-wrap gap-2 sm:gap-5" aria-label="Pestañas de reportes">
+                <?php if ($can_fin): ?>
                 <button type="button" class="tab-btn inline-flex items-center gap-2 px-3.5 py-2.5 border-b-2 font-semibold text-sm <?php echo $active_tab === 'tab-finanzas' ? 'text-[#15171a] border-[#15171a] is-active' : 'text-[#6b7075] border-transparent hover:text-[#15171a] hover:border-[#b5af9c]'; ?> transition-colors" data-tab="tab-finanzas" data-active="<?php echo $active_tab === 'tab-finanzas' ? 'true' : 'false'; ?>">
                     <span class="material-symbols-outlined text-[18px]">monitoring</span>Financiero
                 </button>
+                <?php endif; ?>
                 <button type="button" class="tab-btn inline-flex items-center gap-2 px-3.5 py-2.5 border-b-2 font-semibold text-sm <?php echo $active_tab === 'tab-inventario' ? 'text-[#15171a] border-[#15171a] is-active' : 'text-[#6b7075] border-transparent hover:text-[#15171a] hover:border-[#b5af9c]'; ?> transition-colors" data-tab="tab-inventario" data-active="<?php echo $active_tab === 'tab-inventario' ? 'true' : 'false'; ?>">
                     <span class="material-symbols-outlined text-[18px]">inventory_2</span>Inventario
                 </button>
@@ -143,6 +146,7 @@ html.dark .glass-card p {
             </nav>
         </div>
 
+        <?php if ($can_fin): ?>
         <?php // CONTENIDO: FINANCIERO ?>
         <div id="tab-finanzas" class="tab-content <?php echo $active_tab === 'tab-finanzas' ? 'block' : 'hidden'; ?>">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
@@ -181,6 +185,7 @@ html.dark .glass-card p {
                 </div>
             </div>
         </div>
+        <?php endif; ?>
 
         <?php // CONTENIDO: INVENTARIO ?>
         <div id="tab-inventario" class="tab-content <?php echo $active_tab === 'tab-inventario' ? 'block' : 'hidden'; ?>">

@@ -8,6 +8,7 @@
 $sales = $sales ?? [];
 $page = $page ?? 1;
 $total_pages = $total_pages ?? 1;
+$can_annul = $can_annul ?? true;
 
 Layout::renderHead('Historial de Ventas - Nokia 1100');
 if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
@@ -79,14 +80,16 @@ if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') {
                                 <td class="sale-actions-cell">
                                     <div class="sale-actions-grid">
                                         <?php if (!$isVoided): ?>
-                                        <a href="index.php?action=invoice&id=<?php echo (int)$row['id_venta']; ?>" target="_blank" class="sale-action-btn sale-btn-invoice">
+                                        <a href="index.php?action=invoice&id=<?php echo (int)$row['id_venta']; ?>" target="_blank" class="sale-action-btn sale-btn-invoice<?php echo $can_annul ? '' : ' sale-btn-solo'; ?>">
                                             <span class="material-symbols-outlined">print</span>
                                             <span>Factura</span>
                                         </a>
+                                        <?php if ($can_annul): ?>
                                         <button type="button" onclick="confirmRollback(<?php echo (int)$row['id_venta']; ?>)" class="sale-action-btn sale-btn-rollback">
                                             <span class="material-symbols-outlined">undo</span>
                                             <span>Anular</span>
                                         </button>
+                                        <?php endif; ?>
                                         <?php else: ?>
                                         <a href="index.php?action=credit_note&id=<?php echo (int)$row['id_venta']; ?>" target="_blank" class="sale-action-btn sale-btn-creditnote sale-btn-solo">
                                             <span class="material-symbols-outlined">receipt_long</span>
